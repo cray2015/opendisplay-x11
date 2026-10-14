@@ -36,6 +36,12 @@ STATUS_ICON = {state.OK: ("emblem-ok-symbolic", "success"),
                state.NEUTRAL: ("system-shutdown-symbolic", "dim-label")}
 
 
+def installed_version() -> str:
+    """The package version when installed (what the user upgraded to), else the source's."""
+    from . import upgrade
+    return upgrade.read_version() or __version__
+
+
 def _service(*args) -> subprocess.CompletedProcess:
     return subprocess.run(["systemctl", "--user", *args, "odx11.service"], capture_output=True, text=True)
 
@@ -194,6 +200,9 @@ class Window(Adw.ApplicationWindow):
         readme.add_suffix(Gtk.Image.new_from_icon_name("adw-external-link-symbolic"))
         readme.connect("activated", lambda *_: self._open_uri(checks.README))
         group.add(readme)
+        version = Adw.ActionRow(title=_("Version"), subtitle=_("Unofficial sender for the OpenDisplay iPad app"))
+        version.add_suffix(Gtk.Label(label=installed_version(), css_classes=["dim-label"], selectable=True))
+        group.add(version)
         return group
 
     def _build_remove(self):
@@ -473,7 +482,7 @@ class App(Adw.Application):
 
     def _about(self, *_a):
         about = Adw.AboutDialog(
-            application_name=_("OpenDisplay for X11"), application_icon=APP_ID, version=__version__,
+            application_name=_("OpenDisplay for X11"), application_icon=APP_ID, version=installed_version(),
             developer_name="vibhanshu", website=checks.README, issue_url=checks.README + "/issues",
             comments=_("Use an iPad as a second monitor over USB.\n\n"
                        "An unofficial sender for the OpenDisplay iPad app — not affiliated with the "

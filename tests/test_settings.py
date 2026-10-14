@@ -113,3 +113,14 @@ def test_permission_check_names_the_group(tmp_path):
 def test_app_check_is_proven_by_a_connection():
     assert checks.app({"state": "streaming"}).ok is True
     assert checks.app({"state": "dialing"}).ok is None
+
+
+def test_version_is_the_same_everywhere():
+    """pyproject.toml, the Debian changelog and the AppStream release list must agree."""
+    import re
+    root = os.path.join(os.path.dirname(__file__), "..")
+    py = tomllib.load(open(os.path.join(root, "pyproject.toml"), "rb"))["project"]["version"]
+    deb = re.match(r"\S+ \(([^)]+)\)", open(os.path.join(root, "debian", "changelog")).readline()).group(1)
+    meta = open(os.path.join(root, "packaging", "io.github.cray2015.OpenDisplayX11.metainfo.xml")).read()
+    newest = re.search(r'<release version="([^"]+)"', meta).group(1)
+    assert py == deb == newest

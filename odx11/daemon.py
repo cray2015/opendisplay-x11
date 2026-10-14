@@ -642,7 +642,8 @@ def facts(daemon, display) -> dict:
           Daemon.PAUSED: state.PAUSED}.get(daemon.state)
     if daemon.state == Daemon.CONNECTED:
         st = state.STREAMING if streaming else state.DIALING
-    out = {"state": st, "pid": os.getpid(), "version": __version__, "refused": daemon.refused,
+    out = {"state": st, "pid": os.getpid(), "version": upgrade.read_version() or __version__,
+           "refused": daemon.refused,
            "connector": getattr(display, "connector", None)}
     if daemon.state == Daemon.GRACE_WAIT and daemon.grace_until:
         out["grace_until"] = round(daemon.grace_until, 1)

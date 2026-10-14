@@ -1,3 +1,10 @@
+opendisplay-x11 (0.2.5) unstable; urgency=medium
+
+  * Show the version in the settings window (Help → Version) as well as in
+    About; the service reports the installed package version.
+
+ -- vibhanshu <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 01:00:00 +0530
+
 opendisplay-x11 (0.2.4) unstable; urgency=medium
 
   * After an upgrade, restart the service only if its own code changed
