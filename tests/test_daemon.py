@@ -234,7 +234,7 @@ class SDisplay:
     def __init__(self):
         self.attached = []
 
-    def attach(self, w, h, dc):
+    def attach(self, w, h, dc, limits=None):
         self.attached.append((w, h))
         return Geometry(0, 0, *((1568, 1088) if w >= h else (1088, 1568)))
 
@@ -331,7 +331,7 @@ def gated(idle=1.0):
     def make(*a, **kw):
         pipes.append(GatePipe())
         return pipes[-1]
-    s = Session(config.parse({"video": {"idle_pause_s": idle}}), lambda b: None, SDisplay(), SInjector(),
+    s = Session(config.parse({"video": {"preset": "custom", "idle_pause_s": idle}}), lambda b: None, SDisplay(), SInjector(),
                 make, call_later=clock.call_later, monotonic=lambda: clock.now)
     s.on_payload(hello(2360, 1640))
     return s, clock, pipes
@@ -518,7 +518,7 @@ def hello_with(rate=None):
 def cursor_session(rate=None, fps=60):
     clock, sent = Clock(), []
     FpsPipe.made = []
-    s = Session(config.parse({"video": {"fps": fps}}), sent.append, SDisplay(), SInjector(), FpsPipe,
+    s = Session(config.parse({"video": {"preset": "custom", "fps": fps}}), sent.append, SDisplay(), SInjector(), FpsPipe,
                 call_later=clock.call_later, monotonic=lambda: clock.now, cursor_source=FakeCursorSource())
     s.on_payload(hello_with(rate))
     return s, clock, [json.loads(f[4:]) for f in sent], sent

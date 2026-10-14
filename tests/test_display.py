@@ -146,3 +146,12 @@ def test_auto_with_no_free_port_is_explained(tmp_path):
     root = drm(tmp_path, **{"HDMI-A-3": ("connected", 256)})
     assert resolve_connector("auto", root) is None
     assert "no free video port" in connector_problem(display_cfg("auto"), root)
+
+
+def test_mode_shrinks_to_the_decode_ceiling_keeping_shape():
+    from odx11.display import fit_mode
+    assert fit_mode(1568, 1088, "normal") == (1568, 1088)                 # no limit
+    assert fit_mode(1568, 1088, "normal", 1280, 1080) == (1280, 880)      # 0.816 → floor16
+    assert fit_mode(1568, 1088, "left", 1088, 1200) == (1200, 832)        # portrait: limits are rotated
+    w, h = fit_mode(1568, 1088, "normal", 1000, None)
+    assert w % 16 == 0 and h % 16 == 0 and w <= 1000

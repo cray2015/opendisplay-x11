@@ -106,3 +106,25 @@ def test_video_without_timestamps_has_no_prefix():
 def test_ping_carries_health_fields():
     msg = json.loads(protocol.ping(capFps=29.5, encDrops=3, netDrops=0)[4:])
     assert msg == {"type": "ping", "capFps": 29.5, "encDrops": 3, "netDrops": 0}
+
+
+# --- per-iPad decode limits ---------------------------------------------------------
+
+AIR5 = {"type": "hello", "displayMaxFrameRate": 60,
+        "videoCaps": [{"codec": "h264", "maxFrameRate": 60},
+                      {"maxWidth": 2360, "maxHeight": 2360, "codec": "hevc", "maxFrameRate": 60}]}
+
+
+def test_ipad_air_5_has_no_size_limit_for_h264():
+    assert protocol.decode_limits(AIR5) == (None, None, 60, None)
+
+
+def test_legacy_ceiling_and_videocaps_both_apply():
+    hello = {"maxEncodeWide": 2048, "maxEncodeHigh": 1536,
+             "videoCaps": [{"codec": "h264", "maxWidth": 1920, "maxHeight": 2000, "maxFrameRate": 30}]}
+    assert protocol.decode_limits(hello) == (1920, 1536, 30, None)
+
+
+def test_hevc_entries_do_not_limit_h264_and_garbage_is_ignored():
+    hello = {"maxEncodeWide": "big", "videoCaps": [{"codec": "hevc", "maxWidth": 100}, "x", {"codec": "h264"}]}
+    assert protocol.decode_limits(hello) == (None, None, None, None)

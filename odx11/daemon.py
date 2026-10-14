@@ -52,6 +52,7 @@ class Session:
         self.cfg = cfg
         self.cursor_source = cursor_source   # pointer_position(), cursor_image() — the X side
         self.max_fps = 60                    # the iPad's displayMaxFrameRate (absent = 60, upstream)
+        self.limits = protocol.DecodeLimits()     # decode ceiling, current orientation
         self.cursor = (cursor.CursorSender(cfg.cursor, self._send_control, monotonic, call_later)
                        if call_later else None)
         self.on_change = on_change       # something the state file shows changed (may be any thread)
@@ -96,6 +97,7 @@ class Session:
     def _on_hello(self, msg):
         self.send(protocol.welcome())            # reply to every hello, repeats included
         panel = protocol.panel_pixels(msg)
+        self.limits = protocol.decode_limits(msg)  # every hello: limits swap with orientation
         if panel is None:
             log.error("hello without a usable panel size: %s", msg)
             self.end("bad hello", TEARDOWN)
@@ -134,14 +136,19 @@ class Session:
     def _apply_panel(self, panel):
         self.panel = panel
         self._stop_pipeline()
-        self._start_pipeline(self.display.attach(panel[0], panel[1], self.cfg.device(self.device_id)))
+        self._start_pipeline(self.display.attach(panel[0], panel[1], self.cfg.device(self.device_id),
+                                                 limits=self.limits))
 
     def _start_pipeline(self, geom):
         self.geom = geom
         self.injector.set_geometry(geom)
         self._gen += 1
         gen = self._gen
-        fps = min(self.cfg.video.fps, self.max_fps)
+        fps = min(self.cfg.video.effective("fps"), self.max_fps)
+        if self.limits.max_fps:
+            fps = min(fps, int(self.limits.max_fps))
+        if self.limits.max_pps:
+            fps = max(1, min(fps, int(self.limits.max_pps // (geom.w * geom.h))))
         self.pipeline = self.make_pipeline(geom, self._send_au, lambda m: self._pipeline_error(m, gen), fps=fps)
         self.pipeline.start()                    # a fresh encoder opens with an IDR
         self._reset_cursor(geom)
@@ -217,16 +224,18 @@ class Session:
             self.pipeline.resume()
             log.debug("activity: capture resumed")
             self._changed()
-        if self._cancel_idle is None and self.call_later and self.cfg.video.idle_pause_s > 0:
-            self._cancel_idle = self.call_later(self.cfg.video.idle_pause_s, self._idle_check)
+        idle = self.cfg.video.effective("idle_pause_s")
+        if self._cancel_idle is None and self.call_later and idle > 0:
+            self._cancel_idle = self.call_later(idle, self._idle_check)
 
     def _idle_check(self):
         self._cancel_idle = None
         if self.pipeline is None or self.ended or self.paused:
             return
         quiet = self.monotonic() - self._last_activity
-        if quiet < self.cfg.video.idle_pause_s:
-            self._cancel_idle = self.call_later(self.cfg.video.idle_pause_s - quiet, self._idle_check)
+        idle = self.cfg.video.effective("idle_pause_s")
+        if quiet < idle:
+            self._cancel_idle = self.call_later(idle - quiet, self._idle_check)
             return
         self.paused = True
         self.pipeline.pause()                    # the receiver keeps showing the last frame

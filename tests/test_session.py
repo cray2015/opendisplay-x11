@@ -14,7 +14,7 @@ class FakeDisplay:
         self.attached = []
         self.current = None
 
-    def attach(self, w, h, device_cfg):
+    def attach(self, w, h, device_cfg, limits=None):
         self.attached.append((w, h, device_cfg.side))
         self.current = Geometry(1920, 0, 1568, 1088) if w >= h else Geometry(1920, 0, 1088, 1568)
         return self.current

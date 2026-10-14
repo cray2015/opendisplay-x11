@@ -28,6 +28,8 @@ connect_timeout_s = 5.0               # how long to wait for the forced output t
 settle_timeout_s = 3.0                # how long to let Cinnamon restore its saved layout first
 
 [video]
+preset = "balanced"                   # power_saver | balanced | best_quality | custom — the three
+                                      # settings below only apply with "custom"
 fps = 60                              # frames per second while the screen changes; capped at the iPad's maximum
 qp = 26                               # CQP quantiser, 0..51: lower = sharper and bigger
 keyframe_period = 1000000             # frames between unprompted IDRs; large = effectively never

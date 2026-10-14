@@ -48,7 +48,7 @@ def describe(geom, video, display_name: str, fps: int | None = None) -> str:
     """gst-launch description for capturing `geom` of the X screen. `video` is [video] config;
     `fps` overrides video.fps (the session caps it at the iPad's maximum)."""
     x, y, w, h = geom
-    fps = fps or video.fps
+    fps = fps or video.effective("fps")
     return (
         f"ximagesrc display-name={display_name} startx={x} starty={y} "
         f"endx={x + w - 1} endy={y + h - 1} use-damage=false "
@@ -57,7 +57,7 @@ def describe(geom, video, display_name: str, fps: int | None = None) -> str:
         "! queue name=q leaky=downstream max-size-buffers=1 max-size-bytes=0 max-size-time=0 "
         f"! videoconvert name=conv n-threads={video.convert_threads} ! video/x-raw,format=NV12 "
         # vaapih264enc, not vah264lpenc: the latter answers force-key-unit with a non-IDR I-frame.
-        f"! vaapih264enc tune=low-power rate-control=cqp init-qp={video.qp} max-bframes=0 "
+        f"! vaapih264enc tune=low-power rate-control=cqp init-qp={video.effective("qp")} max-bframes=0 "
         f"keyframe-period={video.keyframe_period} "
         "! h264parse config-interval=-1 "
         "! video/x-h264,stream-format=byte-stream,alignment=au "

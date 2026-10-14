@@ -50,3 +50,22 @@ def test_service_enabled_by_default_and_switchable():
 def test_removed_helper_key_is_rejected():
     with pytest.raises(ValueError, match="helper"):
         config.parse({"display": {"helper": "/usr/local/sbin/odx11-connector"}})
+
+
+def test_presets_override_and_custom_uses_own_values():
+    v = config.parse({"video": {"fps": 24, "qp": 34}}).video          # preset defaults to balanced
+    assert (v.effective("fps"), v.effective("qp")) == (60, 26)
+    v = config.parse({"video": {"preset": "power_saver", "fps": 24}}).video
+    assert (v.effective("fps"), v.effective("qp"), v.effective("idle_pause_s")) == (30, 30, 0.5)
+    v = config.parse({"video": {"preset": "custom", "fps": 24, "qp": 34}}).video
+    assert (v.effective("fps"), v.effective("qp")) == (24, 34)
+
+
+def test_unknown_preset_is_rejected():
+    with pytest.raises(ValueError):
+        config.parse({"video": {"preset": "turbo"}})
+
+
+def test_every_preset_value_is_valid_on_its_own():
+    for values in config.PRESETS.values():
+        config.parse({"video": {"preset": "custom", **values}})

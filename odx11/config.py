@@ -47,14 +47,30 @@ class DisplayConfig:
     settle_timeout_s: float = 3.0           # wait for Cinnamon to restore its saved layout
 
 
+# Performance presets (PROJECT_SPEC.md §8.8): named bundles of the settings that cost CPU,
+# power or USB bandwidth. With a preset chosen they override fps/qp/idle_pause_s; the
+# values in [video] are the user's Custom ones and survive switching back to "custom".
+PRESETS = {
+    "power_saver":  {"fps": 30, "qp": 30, "idle_pause_s": 0.5},
+    "balanced":     {"fps": 60, "qp": 26, "idle_pause_s": 1.0},
+    "best_quality": {"fps": 60, "qp": 22, "idle_pause_s": 2.0},
+}
+CUSTOM = "custom"
+
+
 @dataclass
 class VideoConfig:
-    fps: int = 60                           # capped at the iPad's displayMaxFrameRate
+    preset: str = "balanced"                # power_saver | balanced | best_quality | custom
+    fps: int = 60                           # (custom) capped at the iPad's displayMaxFrameRate
     qp: int = 26                            # CQP: the only rate control on this encoder (§4)
     keyframe_period: int = 1_000_000        # large = no periodic IDRs; 0 means auto (every 30)
     show_pointer: bool = False              # draw the cursor into the video (the [cursor] channel replaces it)
     convert_threads: int = 2                # videoconvert worker threads
     idle_pause_s: float = 1.0               # pause capture after this long with no screen change; 0 = never
+
+    def effective(self, key: str):
+        """The value in force: the preset's, or the user's own with preset = "custom"."""
+        return PRESETS[self.preset][key] if self.preset in PRESETS else getattr(self, key)
 
 
 @dataclass
@@ -126,6 +142,8 @@ def _validate(cfg: Config):
     need(cfg.video.fps > 0, "video.fps must be > 0")
     need(0 <= cfg.video.qp <= 51, "video.qp must be 0..51")
     need(cfg.video.idle_pause_s >= 0, "video.idle_pause_s must be >= 0")
+    need(cfg.video.preset in PRESETS or cfg.video.preset == CUSTOM,
+         f"video.preset must be one of {sorted(PRESETS) + [CUSTOM]}")
     need(cfg.video.keyframe_period > 0, "video.keyframe_period must be > 0 (0 means every 30 frames)")
     need(1 <= cfg.cursor.max_rate_hz <= 240, "cursor.max_rate_hz must be 1..240")
     need(cfg.input.scroll_step_px > 0, "input.scroll_step_px must be > 0")

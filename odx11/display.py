@@ -40,6 +40,16 @@ def logical_mode(panel_w: int, panel_h: int, divisor: float, override=None):
     return mw, mh, rotation
 
 
+def fit_mode(mw: int, mh: int, rotation: str, max_w=None, max_h=None) -> tuple[int, int]:
+    """Shrink a landscape mode, keeping its shape, until the stream fits the receiver's
+    decode ceiling. The ceiling is in the current orientation, the mode is landscape."""
+    ow, oh = (mw, mh) if rotation == "normal" else (mh, mw)
+    scale = min(1.0, (max_w / ow) if max_w else 1.0, (max_h / oh) if max_h else 1.0)
+    if scale >= 1.0:
+        return mw, mh
+    return max(16, floor16(mw * scale)), max(16, floor16(mh * scale))
+
+
 def placement(main: Geometry, w: int, h: int, side: str, align: str) -> tuple[int, int]:
     """Top-left of a w×h output placed on `side` of `main`, aligned along that edge."""
     def along(main_start, main_len, length):
@@ -177,7 +187,7 @@ class VirtualDisplay:
         self.mode_name = name
         return name
 
-    def attach(self, panel_w: int, panel_h: int, device_cfg) -> Geometry:
+    def attach(self, panel_w: int, panel_h: int, device_cfg, limits=None) -> Geometry:
         """Bring the virtual output up at the logical mode for this panel.
 
         Placement belongs to Cinnamon (§4): the mode is added before the connector is
@@ -185,6 +195,11 @@ class VirtualDisplay:
         itself. We only fix up what it leaves wrong — the mode/rotation if the iPad's
         orientation differs, or the position if Cinnamon has no saved layout at all."""
         mw, mh, rotation = logical_mode(panel_w, panel_h, self.cfg.divisor, device_cfg.mode)
+        if limits is not None:
+            fitted = fit_mode(mw, mh, rotation, limits.max_w, limits.max_h)
+            if fitted != (mw, mh):
+                log.info("%dx%d is above this iPad's decode limit — using %dx%d", mw, mh, *fitted)
+                mw, mh = fitted
         ow, oh = (mw, mh) if rotation == "normal" else (mh, mw)
         if not self.forced:
             self.connector = resolve_connector(self.cfg.connector)

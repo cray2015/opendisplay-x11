@@ -112,3 +112,37 @@ def panel_pixels(hello: dict):
     if _int_at_least(pw, 2) and _int_at_least(ph, 2):
         return pw, ph
     return None
+
+
+class DecodeLimits(tuple):
+    """(max_w, max_h, max_fps, max_pixels_per_s) for H.264 in the current orientation; None = no limit."""
+    __slots__ = ()
+
+    def __new__(cls, max_w=None, max_h=None, max_fps=None, max_pps=None):
+        return super().__new__(cls, (max_w, max_h, max_fps, max_pps))
+
+    max_w = property(lambda s: s[0])
+    max_h = property(lambda s: s[1])
+    max_fps = property(lambda s: s[2])
+    max_pps = property(lambda s: s[3])
+
+
+def decode_limits(hello: dict) -> DecodeLimits:
+    """What this receiver can decode for H.264 (upstream §6.5): the legacy ceiling
+    `maxEncodeWide/High` and the h264 `videoCaps` entry must *both* be satisfied. Several
+    h264 entries are alternatives; the roomiest one is used. Malformed values are ignored."""
+    def pos(v):
+        return v if isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0 else None
+
+    def tighter(a, b):
+        return b if a is None else a if b is None else min(a, b)
+
+    w, h = pos(hello.get("maxEncodeWide")), pos(hello.get("maxEncodeHigh"))
+    fps = pps = None
+    caps = hello.get("videoCaps")
+    entries = [c for c in caps if isinstance(c, dict) and c.get("codec") == "h264"] if isinstance(caps, list) else []
+    if entries:
+        best = max(entries, key=lambda c: (pos(c.get("maxWidth")) or 1e9) * (pos(c.get("maxHeight")) or 1e9))
+        w, h = tighter(w, pos(best.get("maxWidth"))), tighter(h, pos(best.get("maxHeight")))
+        fps, pps = pos(best.get("maxFrameRate")), pos(best.get("maxPixelsPerSecond"))
+    return DecodeLimits(w, h, fps, pps)
