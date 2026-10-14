@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 """touch/scroll → XTest pointer events on the virtual output (PROJECT_SPEC.md §7.6).
 
 `touch.x/y` are normalised 0..1 against the video; `scroll.dx/dy` are video

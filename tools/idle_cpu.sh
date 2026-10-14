@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 # AC 23: measure the odx11 service's CPU over an idle period (PROJECT_SPEC.md §10, §11).
 # Leave the desktop alone while it runs; the iPad stays connected.
 #   bash tools/idle_cpu.sh [minutes]        default 10

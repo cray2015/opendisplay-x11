@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 # odx11 config — copy to ~/.config/odx11/config.toml and edit.
 # Every key is optional; the values below are the defaults.
 # Unknown keys are rejected, so a typo fails loudly instead of being ignored.

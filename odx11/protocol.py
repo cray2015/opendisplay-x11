@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 """OpenDisplay wire format: framing, demux rule and control messages.
 
 The only module that knows the wire format (PROJECT_SPEC.md §7.2). Protocol v4

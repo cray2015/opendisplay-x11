@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Minimal usbmuxd client over /var/run/usbmuxd (PROJECT_SPEC.md §7.1).
 
 Each request: 16-byte little-endian header + XML plist. After a successful

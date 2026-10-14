@@ -1,5 +1,7 @@
 # OpenDisplay for X11 (opendisplay-x11) — project spec
 
+**Licence (decided 2026-10-15): GPL-3.0-or-later**, © 2026 vibhanshu — others can contribute (DCO sign-off, `CONTRIBUTING.md`), credit is kept in every copy, and changed versions must stay open; matches upstream OpenDisplay and the Linux Wayland fork (both GPL-3.0). No code was copied from them (the protocol was implemented from its published description). Every source file carries REUSE/SPDX headers; the AppStream file is CC0-1.0.
+
 **Name (decided 2026-10-14):** users see **OpenDisplay for X11**, always next to "unofficial sender for the OpenDisplay iPad app" — it follows the ecosystem's "OpenDisplay + platform" pattern (`OpenDisplay Linux Fork`, `opendisplay-android`) while making clear it is not part of upstream, which states it makes no commitment to third-party implementations. Technical identifiers stay `opendisplay-x11` (package, repo) and `odx11` (command, Python package).
 
 ## 1. Overview

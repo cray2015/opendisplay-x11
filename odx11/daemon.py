@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Sessions, the device state machine, and the event loop; owns every timer
 (PROJECT_SPEC.md §7.3–7.4, §8.4).
 

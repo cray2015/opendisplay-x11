@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Developer install from a git checkout. End users don't need this: they double-click the
 # .deb. This checks the machine, builds the same .deb from the source tree, and installs it
 # through the package manager — so developers run exactly what users run.

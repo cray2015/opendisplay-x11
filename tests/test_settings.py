@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Settings window logic: choices, ports, canonical config writing, checklist."""
 import os
 import tomllib

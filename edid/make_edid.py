@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Write the virtual monitor's EDID for a logical mode (PROJECT_SPEC.md §6).
 
   python3 edid/make_edid.py 1568 1088 --name "iPad" --id <hello.id> -o odx11.bin
-  sudo /usr/local/sbin/odx11-connector edid < odx11.bin
 
-The daemon builds the same blob itself on every attach; this is for manual
-testing and for the boot-time `drm.edid_firmware=` fallback.
+For the boot-time `drm.edid_firmware=` fallback (PROJECT_SPEC.md §4): the runtime
+debugfs override is blocked by Secure Boot lockdown, so the daemon does not use it.
 """
 import argparse
 import os

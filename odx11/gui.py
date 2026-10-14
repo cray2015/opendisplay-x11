@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The OpenDisplay for X11 settings window — GTK 4 + libadwaita (PROJECT_SPEC.md §8.8).
 
 A separate process (`odx11 settings`); the daemon never depends on it. It
@@ -23,6 +25,7 @@ from .i18n import _, ngettext  # noqa: E402
 log = logging.getLogger(__name__)
 
 APP_ID = "io.github.cray2015.OpenDisplayX11"
+ICON_NAME = APP_ID              # the installed icon; also used by source-tree (.Devel) runs
 # A source-tree run gets the conventional ".Devel" ID, so it never merges into an installed
 # window (GApplication single instance) and can run side by side with it.
 if not os.path.abspath(__file__).startswith("/usr/"):
@@ -482,8 +485,9 @@ class App(Adw.Application):
 
     def _about(self, *_a):
         about = Adw.AboutDialog(
-            application_name=_("OpenDisplay for X11"), application_icon=APP_ID, version=installed_version(),
+            application_name=_("OpenDisplay for X11"), application_icon=ICON_NAME, version=installed_version(),
             developer_name="vibhanshu", website=checks.README, issue_url=checks.README + "/issues",
+            copyright="© 2026 vibhanshu", license_type=Gtk.License.GPL_3_0,
             comments=_("Use an iPad as a second monitor over USB.\n\n"
                        "An unofficial sender for the OpenDisplay iPad app — not affiliated with the "
                        "OpenDisplay project."))

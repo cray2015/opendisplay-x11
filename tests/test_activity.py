@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 from odx11.activity import Tracker
 
 VIRT = (239, 1080, 1568, 1088)          # the iPad monitor, below the main one

@@ -263,6 +263,18 @@ Remove **opendisplay-x11** in your software manager (or `sudo apt remove
 opendisplay-x11`). Running sessions are stopped and the port released. Your
 `~/.config/odx11/config.toml` and the desktop's saved monitor layout are left in place.
 
+## Contributing
+
+Contributions are welcome — see [`CONTRIBUTING.md`](CONTRIBUTING.md). Every commit
+needs a `Signed-off-by` line (`git commit -s`).
+
+## License
+
+OpenDisplay for X11 is free software: GPL-3.0-or-later (see [`LICENSE`](LICENSE)).
+© 2026 vibhanshu and contributors. You may use, change and share it; if you share a
+changed version, it must stay under the same licence with its source available.
+OpenDisplay (the iPad app) is a separate project by its own authors.
+
 ## Development
 
 ```bash

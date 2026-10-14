@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The §8.4 state machine, driven with a fake clock — no sockets, X or GLib."""
 import json
 import os

@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-FileCopyrightText: 2026 vibhanshu -->
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
 <!-- OpenDisplay for X11 app icon: a desktop monitor extended onto a tablet. -->
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
   <!-- monitor -->

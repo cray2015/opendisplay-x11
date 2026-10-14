@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Capture → encode pipeline (PROJECT_SPEC.md §8.3).
 
 Backpressure: the appsink callback sends synchronously, so a slow socket

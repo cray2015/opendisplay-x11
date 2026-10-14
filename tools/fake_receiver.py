@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 """A strict stand-in for the iPad receiver, for testing without one.
 
 Listens like the real receiver, sends `hello` and a ping every 2 s, then

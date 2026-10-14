@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 """TOML config: ~/.config/odx11/config.toml (PROJECT_SPEC.md §8.6).
 
 Every tunable lives here; code keeps only values the protocol or hardware fixes.

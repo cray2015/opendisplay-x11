@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 """State file, its wording, notifications, and live settings (PROJECT_SPEC.md §8.8)."""
 import json
 import os

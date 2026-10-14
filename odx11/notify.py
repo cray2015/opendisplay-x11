@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Desktop notifications from the daemon (PROJECT_SPEC.md §8.8).
 
 Sent through the freedesktop notification service on the session bus — an

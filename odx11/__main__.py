@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 """CLI. End users never type these: the package's autostart entry runs `autostart`, the user
 service runs `daemon` and `release`. `run` and `list` are for developers and diagnostics."""
 import argparse

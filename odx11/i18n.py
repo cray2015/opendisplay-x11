@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Translations (gettext). User-visible strings are wrapped in _() so translations can be
 added later as /usr/share/locale/<lang>/LC_MESSAGES/opendisplay-x11.mo; until then the
 English text is used as is."""

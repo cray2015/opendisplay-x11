@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-FileCopyrightText: 2026 vibhanshu -->
+<!-- SPDX-License-Identifier: CC0-1.0 -->
 <component type="desktop-application">
   <id>io.github.cray2015.OpenDisplayX11</id>
   <metadata_license>CC0-1.0</metadata_license>
-  <project_license>LicenseRef-proprietary</project_license>
+  <project_license>GPL-3.0-or-later</project_license>
   <name>OpenDisplay for X11</name>
   <summary>Use your iPad as a second monitor over USB</summary>
   <developer id="io.github.cray2015">
@@ -44,6 +46,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.2.7" date="2026-10-15">
+      <description>
+        <p>Now free software under the GNU GPL, version 3 or later.</p>
+      </description>
+    </release>
     <release version="0.2.6" date="2026-10-15">
       <description>
         <p>Tidier Version row.</p>

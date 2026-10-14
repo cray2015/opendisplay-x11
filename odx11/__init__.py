@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 """opendisplay-x11: an X11 sender for the OpenDisplay protocol."""
 try:
     from importlib.metadata import version as _version

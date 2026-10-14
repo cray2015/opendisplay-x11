@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 # M0 spike — AC 4/5/6/8 and the HuC/EDID open questions. Run in your own
 # terminal (needs sudo). Reverts itself after the hold, on Ctrl-C and on error.
 #   bash spike/m0_connector.sh [HDMI-A-1|HDMI-A-2] [hold seconds] [WxH]

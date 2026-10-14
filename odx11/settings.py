@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 """What the settings window shows and writes (PROJECT_SPEC.md §8.8) — pure, no GTK.
 
 Each control maps to config values through the choice lists below, so the

@@ -1,3 +1,5 @@
+# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The setup checklist (PROJECT_SPEC.md §8.8). Each check answers one question a
 user can act on; slow probes (encoder, pairing) are separate so the window can
 run them in the background. No GTK here."""
