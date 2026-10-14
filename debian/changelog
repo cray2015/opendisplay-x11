@@ -1,3 +1,9 @@
+opendisplay-x11 (0.2.6) unstable; urgency=medium
+
+  * Version row: just the number (the "unofficial" note stays in About).
+
+ -- vibhanshu <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 01:10:00 +0530
+
 opendisplay-x11 (0.2.5) unstable; urgency=medium
 
   * Show the version in the settings window (Help → Version) as well as in

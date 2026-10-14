@@ -44,6 +44,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.2.6" date="2026-10-15">
+      <description>
+        <p>Tidier Version row.</p>
+      </description>
+    </release>
     <release version="0.2.5" date="2026-10-15">
       <description>
         <p>The version is shown in the settings window.</p>

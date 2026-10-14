@@ -200,7 +200,7 @@ class Window(Adw.ApplicationWindow):
         readme.add_suffix(Gtk.Image.new_from_icon_name("adw-external-link-symbolic"))
         readme.connect("activated", lambda *_: self._open_uri(checks.README))
         group.add(readme)
-        version = Adw.ActionRow(title=_("Version"), subtitle=_("Unofficial sender for the OpenDisplay iPad app"))
+        version = Adw.ActionRow(title=_("Version"))
         version.add_suffix(Gtk.Label(label=installed_version(), css_classes=["dim-label"], selectable=True))
         group.add(version)
         return group
