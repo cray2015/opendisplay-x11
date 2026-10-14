@@ -49,12 +49,18 @@ class DisplayConfig:
 
 @dataclass
 class VideoConfig:
-    fps: int = 30
+    fps: int = 60                           # capped at the iPad's displayMaxFrameRate
     qp: int = 26                            # CQP: the only rate control on this encoder (§4)
     keyframe_period: int = 1_000_000        # large = no periodic IDRs; 0 means auto (every 30)
-    show_pointer: bool = True               # bake the cursor into the video until M4
+    show_pointer: bool = False              # draw the cursor into the video (the [cursor] channel replaces it)
     convert_threads: int = 2                # videoconvert worker threads
     idle_pause_s: float = 1.0               # pause capture after this long with no screen change; 0 = never
+
+
+@dataclass
+class CursorConfig:
+    enabled: bool = True                    # send the cursor as messages; the iPad draws it (fast)
+    max_rate_hz: int = 120                  # position updates per second at most (upstream: 120)
 
 
 @dataclass
@@ -90,6 +96,7 @@ class Config:
     transport: TransportConfig = field(default_factory=TransportConfig)
     display: DisplayConfig = field(default_factory=DisplayConfig)
     video: VideoConfig = field(default_factory=VideoConfig)
+    cursor: CursorConfig = field(default_factory=CursorConfig)
     input: InputConfig = field(default_factory=InputConfig)
     session: SessionConfig = field(default_factory=SessionConfig)
     devices: dict[str, DeviceConfig] = field(default_factory=dict)
@@ -120,6 +127,7 @@ def _validate(cfg: Config):
     need(0 <= cfg.video.qp <= 51, "video.qp must be 0..51")
     need(cfg.video.idle_pause_s >= 0, "video.idle_pause_s must be >= 0")
     need(cfg.video.keyframe_period > 0, "video.keyframe_period must be > 0 (0 means every 30 frames)")
+    need(1 <= cfg.cursor.max_rate_hz <= 240, "cursor.max_rate_hz must be 1..240")
     need(cfg.input.scroll_step_px > 0, "input.scroll_step_px must be > 0")
     need(cfg.input.tap_slop_px >= 0, "input.tap_slop_px must be >= 0")
     need(cfg.input.long_press_ms > 0, "input.long_press_ms must be > 0")
@@ -154,6 +162,7 @@ def parse(raw: dict) -> Config:
         transport=_section(TransportConfig, raw.get("transport", {}), "transport"),
         display=_section(DisplayConfig, raw.get("display", {}), "display"),
         video=_section(VideoConfig, raw.get("video", {}), "video"),
+        cursor=_section(CursorConfig, raw.get("cursor", {}), "cursor"),
         input=_section(InputConfig, raw.get("input", {}), "input"),
         session=_section(SessionConfig, raw.get("session", {}), "session"),
         devices=devices,

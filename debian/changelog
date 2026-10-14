@@ -1,3 +1,13 @@
+opendisplay-x11 (0.3.0) unstable; urgency=medium
+
+  * Faster: 60 frames per second by default (capped at the iPad's maximum).
+  * The cursor is sent separately and drawn by the iPad, so it moves at input
+    speed (up to 120 updates a second) instead of with the video; shape
+    changes are sent as images. Moving the mouse no longer wakes the paused
+    stream.
+
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 02:30:00 +0530
+
 opendisplay-x11 (0.2.7) unstable; urgency=medium
 
   * Licensed under GPL-3.0-or-later (LICENSE, REUSE/SPDX headers, Debian

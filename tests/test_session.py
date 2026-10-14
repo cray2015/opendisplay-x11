@@ -61,7 +61,7 @@ def make(raw=None):
     sent, pipes = [], []
     cfg = config.parse(raw or {})
     s = Session(cfg, sent.append, FakeDisplay(), FakeInjector(),
-                lambda g, a, e: pipes.append(FakePipeline(g, a, e)) or pipes[-1], clock=lambda: 777)
+                lambda g, a, e, **kw: pipes.append(FakePipeline(g, a, e)) or pipes[-1], clock=lambda: 777)
     return s, sent, pipes
 
 

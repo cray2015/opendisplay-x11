@@ -43,7 +43,7 @@ for M2's named monitor and persistent placement). Throwaway spike scripts live i
 - **[never]** Wayland session support — Cinnamon on X11 is the target; Wayland senders already exist upstream (tixwho/opendisplay-linux for KDE and Hyprland).
 - **[never]** Game-streaming latency — tuned for desktop work; Sunshine/Moonlight is the tool for games and is explicitly out of the brief.
 - **[v2]** Apple Pencil pressure/tilt — needs `pencil`/`proximity` handling, a uinput tablet device, and `welcome.pv` raised to 3 (M5).
-- **[v2]** Separate cursor channel (`cursor` + `cursorImg` via XFixes) — v1 bakes the cursor into the video (M4).
+- **[superseded 2026-10-15]** Separate cursor channel (`cursor` + `cursorImg` via XFixes) — v1 bakes the cursor into the video (M4). *Built in 0.3.0 at the user's request for a faster-feeling cursor.*
 - **[v2]** Wi-Fi transport via Avahi `_opensidecar._tcp` — USB first (M6).
 - **[v2]** KMS zero-copy capture — only if XShm capture misses the CPU budget in M3.
 - **[superseded 2026-10-14]** Cinnamon panel applet for status/toggle — only if event-driven (see §4, CPU constraint). *Rejected by the user: an applet ties the project to one desktop.*
@@ -183,7 +183,7 @@ TCP_NODELAY on the usbmux socket. Reassemble across reads; never assume one read
 | → | `pong` | As above |
 | → | `ping` | Every 2 s with health fields `capFps` (AUs/s since the last ping), `encDrops` (raw frames dropped by the leaky queue), `netDrops` (always 0: encoded frames are never dropped) |
 | → | video | One AU per frame behind the telemetry prefix `{"cap":<ms>,"snd":<ms>}` (`cap` from the buffer's capture timestamp) — gives the receiver real `e2e`/`enc` stats |
-| → | `cursor`, `cursorImg` | Not sent in v1 (M4) |
+| → | `cursor`, `cursorImg` | Sent (0.3.0, `odx11/cursor.py`): position normalised to the video at up to `[cursor] max_rate_hz` (120) per second, deduplicated, trailing update after bursts, `v:0` off the virtual monitor; the sprite (XFixes, PNG ≤ 24000 bytes) on every *image* change and with every new stream. Capture no longer draws the cursor (`show_pointer = false`), so pointer motion alone never wakes the paused stream |
 | → | `streamConfig` | Not sent in v1; receivers assume legacy H.264 without it |
 
 ### 7.5 Video stream contract
@@ -194,7 +194,7 @@ TCP_NODELAY on the usbmux socket. Reassemble across reads; never assume one read
 - First frame after every (re)connect is an IDR; `kf` makes the next frame an IDR.
 - Resolution change = new SPS/PPS + IDR; receiver takes size from the SPS, not `hello`.
 - AUD NALs (type 9) stripped; SEI allowed.
-- Defaults: 30 fps, CQP (the only rate control this encoder offers, §4). Even dimensions, multiples of 16.
+- Defaults: **60 fps** (0.3.0; capped at `hello.displayMaxFrameRate`, absent = 60), CQP (the only rate control this encoder offers, §4). Even dimensions, multiples of 16. Measured at 1568×1088 on the HD 530: 30 fps 25.6 % / 60 fps 48.4 % of one core while the screen changes — capture 1.5 %, software BGRx→NV12 ~32 %, encode upload ~13 %; the encoder takes only NV12/YV12/I420 and the iHD driver has no VPP, so the conversion stays in software until KMS zero-copy capture (v2). Idle cost is unchanged (the gate pauses capture).
 
 ### 7.6 Input mapping
 `G = (gx, gy, gw, gh)` = virtual output geometry in X root coordinates, re-queried after every xrandr change (post-rotation).
@@ -365,7 +365,7 @@ No file under `/etc` except the autostart entry (a conffile); no per-user state 
 - [x] M1 — MVP CLI: `odx11 run` extends the desktop to the iPad over USB with touch and scroll
 - [ ] M2 — Seamless daemon: systemd user service, usbmuxd attach/detach, grace, rotation, per-device placement
 - [ ] M3 — Hardening: backpressure with IDR recovery, liveness, CPU budget measured and met, 2-hour soak
-- [ ] M4 (backlog) — Cursor channel via XFixes (`cursor` + `cursorImg`)
+- [x] M4 — Cursor channel via XFixes (`cursor` + `cursorImg`) — built 2026-10-15 (0.3.0) for a cursor that moves at input speed
 - [ ] M5 (backlog) — Apple Pencil via uinput tablet device, `welcome.pv` raised to 3
 - [ ] M6 (backlog) — Wi-Fi transport via Avahi `_opensidecar._tcp`
 - [ ] M7 — Packaging: one `.deb`, udev privilege (no root at runtime), install and uninstall with no terminal (§8.7)

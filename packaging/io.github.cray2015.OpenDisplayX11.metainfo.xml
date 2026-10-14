@@ -46,6 +46,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.3.0" date="2026-10-15">
+      <description>
+        <p>Smoother and snappier: 60 frames per second, and a cursor drawn by the iPad that follows your hand.</p>
+      </description>
+    </release>
     <release version="0.2.7" date="2026-10-15">
       <description>
         <p>Now free software under the GNU GPL, version 3 or later.</p>

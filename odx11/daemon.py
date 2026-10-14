@@ -20,7 +20,7 @@ import time
 
 from dataclasses import fields
 
-from . import __version__, config, notify, protocol, state, upgrade, usbmux
+from . import __version__, config, cursor, notify, protocol, state, upgrade, usbmux
 from .activity import ActivityMonitor
 
 log = logging.getLogger(__name__)
@@ -47,8 +47,13 @@ class Session:
     on_hello(): a valid hello arrived (the daemon ends its grace period)."""
 
     def __init__(self, cfg, send, display, injector, make_pipeline, clock=now_ms,
-                 on_end=None, on_hello=None, call_later=None, monotonic=time.monotonic, on_change=None):
+                 on_end=None, on_hello=None, call_later=None, monotonic=time.monotonic, on_change=None,
+                 cursor_source=None):
         self.cfg = cfg
+        self.cursor_source = cursor_source   # pointer_position(), cursor_image() — the X side
+        self.max_fps = 60                    # the iPad's displayMaxFrameRate (absent = 60, upstream)
+        self.cursor = (cursor.CursorSender(cfg.cursor, self._send_control, monotonic, call_later)
+                       if call_later else None)
         self.on_change = on_change       # something the state file shows changed (may be any thread)
         self.device_name = None
         self.on_end = on_end
@@ -98,6 +103,9 @@ class Session:
         if self.panel is None:
             self.device_id = msg.get("id")
             self.device_name = msg.get("device") if isinstance(msg.get("device"), str) else None
+            rate = msg.get("displayMaxFrameRate")
+            if isinstance(rate, int) and not isinstance(rate, bool) and rate > 0:
+                self.max_fps = rate
             log.info("hello from %s %s: panel %dx%d, pv %s", msg.get("device", "?"),
                      self.device_id, panel[0], panel[1], msg.get("pv", 1))
             if self.on_hello:
@@ -133,8 +141,10 @@ class Session:
         self.injector.set_geometry(geom)
         self._gen += 1
         gen = self._gen
-        self.pipeline = self.make_pipeline(geom, self._send_au, lambda m: self._pipeline_error(m, gen))
+        fps = min(self.cfg.video.fps, self.max_fps)
+        self.pipeline = self.make_pipeline(geom, self._send_au, lambda m: self._pipeline_error(m, gen), fps=fps)
         self.pipeline.start()                    # a fresh encoder opens with an IDR
+        self._reset_cursor(geom)
         self.paused = False
         self.on_activity()
         self._changed()
@@ -142,6 +152,39 @@ class Session:
     def _changed(self):
         if self.on_change:
             self.on_change()
+
+    # --- cursor channel ------------------------------------------------------------------
+    def _send_control(self, data: bytes):
+        try:
+            self.send(data)
+        except OSError as e:
+            self.end(f"send failed: {e}", GRACE)
+
+    def _reset_cursor(self, geom):
+        if self.cursor is None:
+            return
+        sprite = pointer = None
+        if self.cursor_source is not None:
+            try:
+                sprite, pointer = self.cursor_source.cursor_image(), self.cursor_source.pointer_position()
+            except Exception as e:                # X hiccup: the next event resends
+                log.debug("cursor state unavailable: %s", e)
+        self.cursor.reset(geom, sprite, pointer)
+
+    def on_pointer(self, x: int, y: int):
+        if self.cursor is not None and self.geom is not None and not self.ended:
+            self.cursor.update(x, y)
+
+    def on_cursor_changed(self):
+        if self.cursor is None or self.cursor_source is None or self.ended:
+            return
+        try:
+            self.cursor.sprite(*self.cursor_source.cursor_image())
+            # Programs that warp the pointer produce no raw motion; a shape change is a cheap
+            # moment to resync the position too.
+            self.cursor.update(*self.cursor_source.pointer_position())
+        except Exception as e:
+            log.debug("cursor image unavailable: %s", e)
 
     def rebuild_display(self, new_port: bool):
         """Text size or port changed: rebuild the monitor in place and restart the stream —
@@ -272,6 +315,8 @@ class Session:
         if self._cancel_idle:
             self._cancel_idle()
             self._cancel_idle = None
+        if self.cursor is not None:
+            self.cursor.stop()
         self._stop_pipeline()
         self.injector.release_all()
 
@@ -469,7 +514,8 @@ def glib_call_later(seconds, fn):
 class Connection:
     """One receiver socket on the GLib loop: reader, ping/silence tick, a Session."""
 
-    def __init__(self, cfg, sock, display, injector, make_pipeline, on_end, on_hello, on_change=None):
+    def __init__(self, cfg, sock, display, injector, make_pipeline, on_end, on_hello, on_change=None,
+                 cursor_source=None):
         from gi.repository import GLib
         self._GLib = GLib
         self.cfg = cfg
@@ -485,7 +531,7 @@ class Connection:
                                on_end=lambda: GLib.idle_add(self._finish_from_session),
                                on_hello=on_hello, call_later=glib_call_later,
                                on_change=(lambda: GLib.idle_add(lambda: on_change() and False))
-                               if on_change else None)
+                               if on_change else None, cursor_source=cursor_source)
         self.deframer = protocol.Deframer()
         self.last_rx = time.monotonic()
         self.display = display
@@ -740,7 +786,7 @@ def run(cfg, display, injector, make_pipeline, tcp=None, udid=None, config_path=
 
     def open_connection(sock, on_end, on_hello):
         return Connection(cfg, sock, display, injector, make_pipeline, on_end, on_hello,
-                          on_change=schedule_publish)
+                          on_change=schedule_publish, cursor_source=activity)
 
     daemon = Daemon(cfg, dial, display, open_connection, glib_call_later)
     daemon.on_change = schedule_publish
@@ -778,8 +824,15 @@ def run(cfg, display, injector, make_pipeline, tcp=None, udid=None, config_path=
             return GLib.SOURCE_REMOVE            # the X watch below handles a dead server
         session = daemon.conn.session if daemon.conn is not None else None
         activity.set_region(session.geom if session is not None and session.pipeline else None)
-        if activity.drain() and session is not None:
-            session.on_activity()
+        activity.draw_cursor = cfg.video.show_pointer
+        act = activity.drain()
+        if session is not None:
+            if act.wake:
+                session.on_activity()
+            if act.pointer is not None:
+                session.on_pointer(*act.pointer)
+            if act.cursor_changed:
+                session.on_cursor_changed()
         return GLib.SOURCE_CONTINUE
 
     def on_x_event(fd, cond):

@@ -47,6 +47,8 @@ odx11 daemon (systemd --user)
   app → on `hello` the monitor appears and streams. Unplugging removes it at
   once; an app switch or a lock shorter than 10 s keeps it, so windows don't
   reshuffle.
+- **Cursor:** the iPad draws the cursor itself from small position messages (up
+  to 120 a second), so it follows your hand without waiting for video frames.
 - **Idle:** capture pauses after 1 s with nothing changing on the iPad's
   monitor (per-window X damage, pointer motion, touch) — about 1 % of one CPU
   core idle vs ~20 % while streaming.
@@ -194,8 +196,9 @@ loudly. The ones people change:
 - **X11 only.** No Wayland.
 - **USB only.** The Wi-Fi transport is not implemented (planned, M6).
 - **One iPad at a time.** A second one is used when the first is unplugged.
-- **The cursor is drawn into the video,** so it moves at video latency
-  (~50 ms), not input latency (separate cursor channel planned, M4).
+- **Streaming at 60 frames per second costs about half of one CPU core** while
+  the iPad's screen changes (colour conversion runs in software on this kind of
+  GPU); nothing while it is still. 30 fps in the settings halves that.
 - **No Apple Pencil pressure/tilt.** The Pencil works as a finger (M5).
 - **No audio, clipboard or mirror mode.**
 

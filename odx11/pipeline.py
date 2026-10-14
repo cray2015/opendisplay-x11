@@ -44,14 +44,16 @@ from . import annexb  # noqa: E402
 Gst.init(None)
 
 
-def describe(geom, video, display_name: str) -> str:
-    """gst-launch description for capturing `geom` of the X screen. `video` is [video] config."""
+def describe(geom, video, display_name: str, fps: int | None = None) -> str:
+    """gst-launch description for capturing `geom` of the X screen. `video` is [video] config;
+    `fps` overrides video.fps (the session caps it at the iPad's maximum)."""
     x, y, w, h = geom
+    fps = fps or video.fps
     return (
         f"ximagesrc display-name={display_name} startx={x} starty={y} "
         f"endx={x + w - 1} endy={y + h - 1} use-damage=false "
         f"show-pointer={'true' if video.show_pointer else 'false'} "
-        f"! video/x-raw,framerate={video.fps}/1 "
+        f"! video/x-raw,framerate={fps}/1 "
         "! queue name=q leaky=downstream max-size-buffers=1 max-size-bytes=0 max-size-time=0 "
         f"! videoconvert name=conv n-threads={video.convert_threads} ! video/x-raw,format=NV12 "
         # vaapih264enc, not vah264lpenc: the latter answers force-key-unit with a non-IDR I-frame.
@@ -68,7 +70,7 @@ class Pipeline:
     raising OSError stops the stream. cap_ms is the wall-clock capture time, or None.
     on_error(message) runs on the main loop (bus errors)."""
 
-    def __init__(self, geom, video, display_name, on_au, on_error):
+    def __init__(self, geom, video, display_name, on_au, on_error, fps=None):
         self.on_au = on_au
         self.on_error = on_error
         self.normaliser = annexb.Normaliser()
@@ -76,7 +78,7 @@ class Pipeline:
         self._captured = 0               # buffers into the leaky queue
         self._encoded = 0                # buffers out of it, towards the encoder
         self._last_health = (time.monotonic(), 0)
-        desc = describe(geom, video, display_name)
+        desc = describe(geom, video, display_name, fps)
         log.debug("pipeline: %s", desc)
         self.pipe = Gst.parse_launch(desc)
         self.sink = self.pipe.get_by_name("out")

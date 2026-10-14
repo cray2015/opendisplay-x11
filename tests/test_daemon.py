@@ -249,7 +249,7 @@ class SInjector:
 
 
 class SPipe:
-    def __init__(self, *a): pass
+    def __init__(self, *a, **kw): pass
     def start(self): pass
     def stop(self): pass
 
@@ -328,7 +328,7 @@ def gated(idle=1.0):
     clock = Clock()
     pipes = []
 
-    def make(*a):
+    def make(*a, **kw):
         pipes.append(GatePipe())
         return pipes[-1]
     s = Session(config.parse({"video": {"idle_pause_s": idle}}), lambda b: None, SDisplay(), SInjector(),
@@ -480,3 +480,79 @@ def test_watcher_reacts_to_dpkg_style_replacement(tmp_path, monkeypatch):
     run_loop(0.5)
     assert restarts == [1]
     w.cancel()
+
+
+# --- frame rate cap and cursor channel ------------------------------------------------
+
+class FpsPipe:
+    made = []
+
+    def __init__(self, geom, on_au, on_error, fps=None):
+        FpsPipe.made.append(fps)
+    def start(self): pass
+    def stop(self): pass
+    def pause(self): pass
+    def resume(self): pass
+
+
+class FakeCursorSource:
+    def __init__(self):
+        self.pos, self.serial = (1000, 500), 7          # inside SDisplay's 1568x1088 at (0, 0)
+
+    def pointer_position(self):
+        return self.pos
+
+    image = [0xFF000000] * 576
+
+    def cursor_image(self):
+        return 24, 24, 5, 1, self.image, self.serial
+
+
+def hello_with(rate=None):
+    msg = {"type": "hello", "id": "x", "panel": {"pixelsWide": 2360, "pixelsHigh": 1640, "scale": 2}}
+    if rate is not None:
+        msg["displayMaxFrameRate"] = rate
+    return json.dumps(msg).encode()
+
+
+def cursor_session(rate=None, fps=60):
+    clock, sent = Clock(), []
+    FpsPipe.made = []
+    s = Session(config.parse({"video": {"fps": fps}}), sent.append, SDisplay(), SInjector(), FpsPipe,
+                call_later=clock.call_later, monotonic=lambda: clock.now, cursor_source=FakeCursorSource())
+    s.on_payload(hello_with(rate))
+    return s, clock, [json.loads(f[4:]) for f in sent], sent
+
+
+def test_frame_rate_is_capped_at_the_ipads_maximum():
+    cursor_session(rate=30)
+    assert FpsPipe.made == [30]
+    cursor_session(rate=120)
+    assert FpsPipe.made == [60]                     # our setting is the lower one
+    cursor_session()                                 # absent = 60 (upstream)
+    assert FpsPipe.made == [60]
+
+
+def test_a_new_stream_sends_the_cursor_sprite_and_position():
+    s, clock, msgs, _ = cursor_session()
+    types = [m["type"] for m in msgs]
+    assert types[0] == "welcome" and "cursorImg" in types and "cursor" in types
+
+
+def test_pointer_moves_and_shape_changes_reach_the_ipad():
+    s, clock, _, raw = cursor_session()
+    raw.clear()
+    clock.advance(1)                                 # past the rate limit
+    s.on_pointer(1100, 600)
+    s.cursor_source.image = [0xFFFFFFFF] * 576                # a new shape (e.g. text I-beam)
+    s.on_cursor_changed()
+    types = [json.loads(f[4:])["type"] for f in raw]
+    assert types[:2] == ["cursor", "cursorImg"]
+
+
+def test_cursor_hidden_when_it_leaves_the_ipad():
+    s, clock, _, raw = cursor_session()
+    raw.clear()
+    clock.advance(1)
+    s.on_pointer(5000, 5000)
+    assert json.loads(raw[-1][4:]) == {"type": "cursor", "v": 0}

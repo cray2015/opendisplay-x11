@@ -20,8 +20,15 @@ Not seen: pixels the compositor draws itself rather than a window — Cinnamon
 panels, OSDs, notifications. By default those live on the primary monitor.
 """
 import logging
+from typing import NamedTuple
 
 log = logging.getLogger(__name__)
+
+
+class Activity(NamedTuple):
+    wake: bool                  # the virtual monitor's picture may have changed
+    pointer: tuple | None       # (x, y) in root coordinates when the pointer moved
+    cursor_changed: bool        # the cursor's shape changed (XFixes)
 
 GENERIC_EVENT = 35                       # X protocol event code carrying XInput2 events
 
@@ -76,7 +83,7 @@ class Tracker:
 class ActivityMonitor:
     def __init__(self):
         from Xlib import X, display, error
-        from Xlib.ext import damage, xinput
+        from Xlib.ext import damage, xfixes, xinput
         self._X, self._damage_mod, self._error = X, damage, error
         self.x = display.Display()
         # Windows come and go between our requests; their BadWindow/BadMatch/BadDamage are noise.
@@ -89,6 +96,11 @@ class ActivityMonitor:
         self.x.xinput_query_version()
         self.root.xinput_select_events([(xinput.AllMasterDevices, xinput.RawMotionMask)])
         self.root.change_attributes(event_mask=X.SubstructureNotifyMask)
+        # The cursor channel needs to know when the sprite changes (arrow → I-beam → hand …).
+        self.x.xfixes_query_version()
+        self._cursor_event = self.x.query_extension("XFIXES").first_event + xfixes.XFixesCursorNotify
+        self.x.xfixes_select_cursor_input(self.root, xfixes.XFixesDisplayCursorNotifyMask)
+        self.draw_cursor = True          # cursor baked into the video: pointer motion must wake capture
         for w in self.root.query_tree().children:
             self._track(w)
         self.x.sync()
@@ -124,10 +136,19 @@ class ActivityMonitor:
             self.x.damage_destroy(did)   # BadDamage if the window is already gone: ignored
         return self.tracker.unmapped(wid)
 
-    def drain(self) -> bool:
-        """Consume pending events; True if the virtual monitor may have changed."""
+    def pointer_position(self) -> tuple[int, int]:
+        p = self.root.query_pointer()
+        return p.root_x, p.root_y
+
+    def cursor_image(self):
+        """(width, height, xhot, yhot, ARGB pixels, serial) of the current cursor sprite."""
+        img = self.x.xfixes_get_cursor_image(self.root)
+        return img.width, img.height, img.xhot, img.yhot, img.cursor_image, img.cursor_serial
+
+    def drain(self) -> Activity:
+        """Consume pending events: what changed since the last call."""
         X = self._X
-        wake = motion = False
+        wake = motion = cursor_changed = False
         rearm = []
         while self.x.pending_events():
             e = self.x.next_event()
@@ -149,14 +170,18 @@ class ActivityMonitor:
                     wake |= self._untrack(e.window.id)
             elif e.type == GENERIC_EVENT:
                 motion = True            # XI2 raw motion
+            elif e.type == self._cursor_event:
+                cursor_changed = True
         for did in rearm:
             self.x.damage_subtract(did)
+        pointer = None
         if motion:
-            p = self.root.query_pointer()            # one round trip per batch, not per event
-            wake |= self.tracker.pointer(p.root_x, p.root_y)
-        if rearm:
+            pointer = self.pointer_position()        # one round trip per batch, not per event
+            near = self.tracker.pointer(*pointer)
+            wake |= near and self.draw_cursor        # with the cursor channel, motion alone
+        if rearm:                                    # never wakes capture
             self.x.flush()
-        return wake
+        return Activity(wake, pointer, cursor_changed)
 
     def close(self):
         try:

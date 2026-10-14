@@ -23,7 +23,8 @@ HEADER = ("# OpenDisplay for X11 settings — written by the settings window.\n"
 # Text size: larger text = fewer, bigger pixels = a larger divisor (§8.2).
 TEXT_SIZES = [1.0, 1.25, 1.5, 1.75, 2.0]                      # slider, smaller → larger text
 SHARPNESS_QP = [34, 30, 26, 22, 18]                            # slider, softer → sharper
-FRAME_RATES = [(15, _("15 frames per second")), (24, _("24 frames per second")), (30, _("30 frames per second"))]
+FRAME_RATES = [(24, _("24 frames per second")), (30, _("30 frames per second — lighter")),
+               (60, _("60 frames per second — smoothest"))]
 IDLE_PAUSES = [(0.0, _("Never — always stream")), (0.5, _("½ second")), (1.0, _("1 second")),
                (2.0, _("2 seconds")), (5.0, _("5 seconds"))]
 LONG_PRESSES = [(300, _("holding ⅓ second")), (500, _("holding ½ second")),

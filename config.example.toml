@@ -28,12 +28,16 @@ connect_timeout_s = 5.0               # how long to wait for the forced output t
 settle_timeout_s = 3.0                # how long to let Cinnamon restore its saved layout first
 
 [video]
-fps = 30
+fps = 60                              # frames per second while the screen changes; capped at the iPad's maximum
 qp = 26                               # CQP quantiser, 0..51: lower = sharper and bigger
 keyframe_period = 1000000             # frames between unprompted IDRs; large = effectively never
-show_pointer = true                   # draw the cursor into the video (until the cursor channel, M4)
+show_pointer = false                  # draw the cursor into the video (slower; [cursor] does it better)
 convert_threads = 2                   # software colour-conversion threads
 idle_pause_s = 1.0                    # stop capturing after this long with nothing changing; 0 = always capture
+
+[cursor]
+enabled = true                        # the iPad draws the cursor from small messages: moves at input speed
+max_rate_hz = 120                     # at most this many position updates per second
 
 [input]
 scroll_step_px = 40                   # video pixels of two-finger scroll per wheel click

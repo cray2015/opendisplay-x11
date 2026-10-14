@@ -29,8 +29,8 @@ def cmd_run(cfg, args):
     injector = odinput.Injector(cfg.input)
     xname = daemon.display_name()
 
-    def make_pipeline(geom, on_au, on_error):
-        return pipeline.Pipeline(geom, cfg.video, xname, on_au, on_error)
+    def make_pipeline(geom, on_au, on_error, fps=None):
+        return pipeline.Pipeline(geom, cfg.video, xname, on_au, on_error, fps)
 
     tcp = None
     if args.tcp:
