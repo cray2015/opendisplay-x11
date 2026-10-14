@@ -19,6 +19,7 @@ proven. Carried forward: whether debugfs `edid_override` is honoured (needed
 for M2's named monitor and persistent placement). Throwaway spike scripts live in `spike/`.
 
 ## 2. Goals
+- **No terminal, ever, for an end user** — a Windows-like experience: install by double-clicking a package and entering the password in the desktop's standard dialog; setup, status, settings, troubleshooting and uninstall all through the GUI or the package manager. Any step that needs a command is a bug in the design. (`install.sh` and the CLI remain for developers only.)
 - Plugging in the iPad and opening the OpenDisplay app extends the Cinnamon desktop onto it with no command run.
 - The iPad appears in Cinnamon's Display settings as a monitor, and its placement persists across reconnects and reboots (Cinnamon remembers it; a *named* monitor needs the boot-time EDID, skipped — §11).
 - Pulling the cable or quitting the app returns every window to the main monitor; a brief drop (app switch, lock) does not reshuffle windows.
@@ -42,7 +43,8 @@ for M2's named monitor and persistent placement). Throwaway spike scripts live i
 - **[v2]** KMS zero-copy capture — only if XShm capture misses the CPU budget in M3.
 - **[superseded 2026-10-14]** Cinnamon panel applet for status/toggle — only if event-driven (see §4, CPU constraint). *Rejected by the user: an applet ties the project to one desktop.*
 - **[unplanned]** A desktop-agnostic status/toggle app (any X11 desktop or window manager) — must stay event-driven and must not make the daemon depend on it; any daemon↔UI channel is a new local interface and needs the same scrutiny as the root helper.
-- **[unplanned]** Mirror mode, audio forwarding, clipboard sync, multiple iPads at once, .deb packaging.
+- **[unplanned]** Mirror mode, audio forwarding, clipboard sync, multiple iPads at once.
+- **[superseded 2026-10-14]** .deb packaging was listed here as unplanned. *Now the installation target: see §4 Packaging.*
 
 ## 4. Design rationale and constraints
 - **The receiver listens, the sender dials** — fixed by the protocol (§7.1). This is why plain `usbmuxd` is enough: the sender asks usbmuxd to `Connect` to device port 9000 and gets a raw byte pipe. No IP link exists or is needed over the cable.
@@ -62,6 +64,8 @@ for M2's named monitor and persistent placement). Throwaway spike scripts live i
 - **Idle gate as built (M3)** — `odx11/activity.py`. Root-window DAMAGE is useless under Cinnamon's compositor: every repaint reports the whole screen, so one busy window anywhere (this terminal, `btop`) keeps it firing ~15/s. Instead each top-level window gets its own DAMAGE object (`NonEmpty`, re-armed by subtract), SubstructureNotify keeps window geometry current, and a damage/map/unmap/move wakes capture only if the window overlaps the virtual monitor; XI2 raw motion wakes while the pointer is over it (or just left — the cursor is baked in and moves without repaints). The session pauses the pipeline (`PAUSED`: no capture, convert or encode) after `idle_pause_s` without a wake; `kf`, touch and a new pipeline wake it. Measured on the iPad: **1.0 % of one core idle vs 20 % ungated**; ~20 % while the iPad monitor changes. Not seen: pixels the compositor draws itself (panels, OSDs, notifications) — primary-monitor only by default. Python-xlib note: a reply wait can pull the first DamageNotify into Xlib's queue, after which the socket never turns readable and `NonEmpty` never re-fires — drain once after setup.
 - **No polling — event-driven only** — device events come from usbmuxd `Listen`, display changes from RandR events. The only timers: 2 s ping, 10 s grace, 3 s redial while a device is attached with no session. Previous Claude-Code-built Cinnamon applets were disabled for CPU spikes; this project must be quiet at idle.
 - **Root only for the connector toggle** — one allowlisted helper script via sudoers NOPASSWD (§8.5). The daemon runs as the desktop user under `systemd --user` with the session's `DISPLAY`/`XAUTHORITY`.
+- **Packaging: .deb first (decided 2026-10-14)** — installation is built around a Debian package for Mint/Ubuntu/Debian: dependencies declared (GStreamer/VA-API/PyGObject/python-xlib/usbmuxd come from the distro; pip cannot provide them), FHS paths (no repo-relative `PYTHONPATH`), double-click install with no terminal. RPM/Arch can follow on the same layout. Rejected: Flatpak/Snap (the sandbox cannot write the connector's sysfs status; Snap is off on Mint), AppImage and pip/pipx (no distro deps, no privileged part). `install.sh` stays as the developer path from a git checkout. Distribution channel (GitHub Releases vs PPA) is deferred.
+- **Privilege: udev group rule replacing the root helper — pending verification** — a udev rule makes only the chosen connector's `status` attribute group-writable (the backlight-brightness pattern), so the daemon writes it directly and **no root code runs at runtime**; the rule is the allowlist. Must first prove the kernel's `status` store accepts a non-root writer with group permission. If it does not, fall back to the helper with a group-based sudoers rule (`%odx11`), not a per-user one.
 - **[superseded 2026-10-14] The daemon owns placement** — position is applied by the daemon from per-device config on every attach, rather than relying on Cinnamon's `monitors.xml`, so layout is deterministic. M0 showed Cinnamon enables and places a hotplugged output on its own, before our xrandr runs; the daemon must apply its layout after that settles (§11).
 - **Cinnamon owns placement** (replaces the above) — Cinnamon saves the arrangement in `~/.config/cinnamon-monitors.xml`, keyed by connector (`HDMI-1`, vendor/product/serial `unknown` without an EDID), and restores it on hotplug — *provided our mode already exists on the output*. So the daemon adds the mode **before** forcing the connector, waits up to `settle_timeout_s` for Cinnamon to enable it, and only fixes what is left: mode/rotation in place if the orientation differs, or a first-time position from `[devices]` `side`/`align` when Cinnamon has no saved layout. Measured: attach ≈ 1 s when Cinnamon restores. Limitation: all iPads share one identity, so two iPads cannot have different placements (multiple iPads are a non-goal).
 - **Protocol drift** — upstream plans protocol v4 to replace the JSON/video demux heuristic with a typed frame header. Framing and demux live in one module so the swap is one file.
@@ -257,11 +261,55 @@ any ──user disables the monitor──▶ teardown ──▶ PAUSED   (no red
 As built (M2): redial every `redial_s` (3 s) while the app is closed, every `redial_grace_s` (1 s) during grace so an app switch resumes quickly; a dial that connects during grace keeps the grace timer running until `hello`. A resumed session re-attaches with no xrandr change. Rotation hellos are debounced by `rotation_debounce_ms`. usbmuxd is started by udev on plug-in and exits with the last device, deleting its socket: the daemon watches that path with a Gio file monitor (inotify) and treats the Listen socket closing as every device detaching. Live-verified with fake receivers: resume within grace with no display change, teardown exactly at grace expiry; SIGKILL leaves the connector unforced within 1.5 s and the service restarts and reconnects.
 
 ### 8.5 Privileged helper
+*To be replaced in M7 by the udev group rule (§8.7) — no root code at runtime. Describes the current (M1–M3) implementation.*
 `/usr/local/sbin/odx11-connector {on|detect|edid}` — reads the single allowed connector from `/etc/odx11/connector`, refuses anything else, writes only the sysfs status file and the debugfs EDID override. `edid` takes the blob on **stdin**, never a path: a root process reading a caller-named file would leak any file's bytes back out through xrandr's EDID property. The blob is checked for the EDID header and 128-byte block size. The daemon refuses to start if `[display] connector` differs from the allowlist.
 Sudoers: `<user> ALL=(root) NOPASSWD: /usr/local/sbin/odx11-connector`
 
 ### 8.6 Config
 `~/.config/odx11/config.toml`, overridable with `--config`. **Every tunable lives here**; code keeps only values the protocol or hardware fixes. Sections: `[transport]` (usbmuxd socket, device port), `[display]` (connector, main output, divisor, mode refresh, helper path, connect timeout), `[video]` (fps, CQP `qp`, keyframe period, pointer, convert threads), `[input]` (scroll step), `[session]` (ping interval ≤ 2 s, silence timeout, grace, redial, grace redial, rotation debounce), and `[devices.<hello.id>]` tables with `side` (left/right/above/below), `align` (start/center/end), optional `mode` override. Unknown keys are rejected. `config.example.toml` documents every key at its default, and a unit test keeps the two identical.
+
+### 8.7 Packaging and installation (design approved 2026-10-14)
+Goal (§2): install by double-clicking a `.deb`, password in the desktop's dialog, nothing else. One binary package, `opendisplay-x11`, `Architecture: all` (pure Python + data files), native source format, built with debhelper + `dh-python`/pybuild from `pyproject.toml`.
+
+**Privilege model ✔ (verified 2026-10-14).** The root helper, `/etc/odx11/connector` and the sudoers rule are **deleted**. A udev rule makes the HDMI connectors' `status` attribute group-writable; the daemon writes `on`/`detect` itself. Verified on this machine: with group write on `card1-HDMI-A-1/status`, a non-root `echo on` forced the connector and X created the output; `detect` removed it. Nothing runs as root at runtime.
+```
+# /usr/lib/udev/rules.d/70-opendisplay-x11.rules
+ACTION=="add|change", SUBSYSTEM=="drm", KERNEL=="card*-HDMI-A-*", \
+  RUN+="/bin/chgrp plugdev /sys%p/status", RUN+="/bin/chmod g+w /sys%p/status"
+```
+- **Scope: every HDMI-A connector, not one allowlisted port.** Why that is acceptable: any X client of the same user can already switch any monitor on or off with `xrandr`, so write access to a connector's force switch adds no real capability; and the port choice can then live in the *user's* config, picked in the GUI, with no root-owned file per machine. `DP-n` is never covered (forcing it fails link training; §8.1). The daemon still refuses any connector that is not `HDMI-A-n`.
+- **Group ✔ `plugdev` (decided 2026-10-14).** Established for user access to pluggable hardware (libgphoto2 cameras, OpenOCD probes, FIDO keys); the modern `TAG+="uaccess"` cannot apply because it sets ACLs on `/dev` nodes and our target is a `/sys` attribute. The group name is one packaging variable, so an RPM/Arch build (no `plugdev` there) can use a dedicated group. Debian/Ubuntu/Mint put desktop users in `plugdev` ("access to pluggable devices") by default, so the common case needs **no group change and no re-login**. Alternative: a dedicated `odx11` group created by `postinst` — cleaner naming, but every user must be added (password dialog in the GUI) and log out/in before it works. Either way the GUI detects a missing membership and offers the fix.
+
+**Files.**
+| Path | What |
+|---|---|
+| `/usr/lib/python3/dist-packages/odx11/` | the package (pybuild) |
+| `/usr/bin/odx11` | CLI entry point — developers/diagnostics only; also `daemon`, `autostart`, `release` subcommands used by the files below |
+| `/usr/lib/systemd/user/odx11.service` | `ExecStart=/usr/bin/odx11 daemon`, `ExecStopPost=/usr/bin/odx11 release` (writes `detect` — always safe, no root), `Restart=on-failure`; no `[Install]` |
+| `/etc/xdg/autostart/odx11.desktop` | `Exec=/usr/bin/odx11 autostart`: imports `DISPLAY`/`XAUTHORITY` into the user manager (so bare window managers work too), then starts the service if `[service] enabled` (default **true**) — desktop-agnostic XDG autostart |
+| `/usr/lib/udev/rules.d/70-opendisplay-x11.rules` | the privilege rule above |
+| `/usr/share/applications/…desktop` + icon | the GUI (M8) in the app menu, "iPad Display" |
+| `/usr/share/doc/opendisplay-x11/` | README, `config.example.toml` |
+No file under `/etc` except the autostart entry (a conffile); no per-user state is written by the package.
+
+**Dependencies.** `Depends: python3 (>= 3.11), python3-gi, python3-xlib, gir1.2-gstreamer-1.0, gir1.2-gst-plugins-base-1.0, gstreamer1.0-plugins-base` (videoconvert, appsink) `, gstreamer1.0-plugins-good` (ximagesrc) `, gstreamer1.0-plugins-bad` (h264parse) `, gstreamer1.0-vaapi, usbmuxd, libimobiledevice-utils, x11-xserver-utils` (xrandr) `, xcvt` (cvt). `Recommends: intel-media-va-driver | va-driver-all`. GUI (M8) adds `gir1.2-gtk-3.0, gir1.2-notify-0.7, python3-qrcode`, `Recommends: gir1.2-ayatanaappindicator3-0.1`. Build: `debhelper-compat (= 13), dh-python, pybuild-plugin-pyproject, python3-all, python3-setuptools, python3-pytest` — unit tests run during the build (they need no X, iPad or GPU).
+
+**Maintainer scripts.**
+- `postinst`: `udevadm control --reload` and `udevadm trigger --subsystem-match=drm --action=change`, so permissions apply **without a reboot**. (Group: nothing to do for `plugdev`; `addgroup --system odx11` if the dedicated group wins.)
+- `prerm` (remove/upgrade): send SIGTERM to running `odx11 daemon` processes so each unforces its connector before files disappear.
+- `postrm` (remove/purge): reload udev, and reset group/mode on the HDMI `status` files (`chgrp root`, `chmod g-w`) — removing a rule does not revert permissions already applied until reboot.
+- No user's home is touched; the per-user config survives uninstall and reinstall.
+
+**User journey.**
+1. Download the `.deb`, double-click → the distro's package installer → password dialog → done. Dependencies arrive with it.
+2. **Enabled by default ✔ (decided 2026-10-14):** the autostart entry starts the service at the next login; the GUI's "Start" button does it immediately. Off switch: the GUI (`[service] enabled = false`).
+3. First run of the GUI (M8): shows the chosen spare port (first disconnected `HDMI-A-n`, changeable), the OpenDisplay TestFlight link as a QR code to scan with the iPad, and "Plug in, unlock, tap Trust" with live pairing status. Missing group/encoder/port → a sentence and a fix button, never a command.
+4. Updates: installing a newer `.deb` (channel undecided — GitHub Releases or a PPA). Running daemons keep the old code until the next login or the GUI's "Restart".
+5. Uninstall: the distro's software manager. The connector is released by `prerm`.
+
+**Daemon changes this implies (M7 implementation).** `display.py` writes `/sys/class/drm/<card>-<connector>/status` directly (card found by connector name), with a clear error when it is not writable ("setup not finished: not in plugdev / udev rule missing"); `helper/`, `/etc/odx11`, sudoers and `helper_problem()` go; `odx11 autostart` and `odx11 release` subcommands; `[service] enabled` config key; `install.sh` becomes the developer path that builds and installs the `.deb`. Known edge: two users logged in at once on one machine would both dial the iPad — daemons should act only while their logind session is active (later).
+
+**Migrating this machine.** The current dev install (helper in `/usr/local/sbin`, `/etc/sudoers.d/odx11`, `~/.config/systemd/user/odx11.service` — which would *shadow* the packaged unit) is removed by `install.sh --uninstall` before the first `.deb` install.
 
 ## 9. Milestones
 - [x] M0 — Spike: transport, forced connector, VA-API encode and end-to-end test pattern proven by hand; no product code
@@ -271,6 +319,8 @@ Sudoers: `<user> ALL=(root) NOPASSWD: /usr/local/sbin/odx11-connector`
 - [ ] M4 (backlog) — Cursor channel via XFixes (`cursor` + `cursorImg`)
 - [ ] M5 (backlog) — Apple Pencil via uinput tablet device, `welcome.pv` raised to 3
 - [ ] M6 (backlog) — Wi-Fi transport via Avahi `_opensidecar._tcp`
+- [ ] M7 — Packaging: one `.deb`, udev privilege (no root at runtime), install and uninstall with no terminal (§8.7)
+- [ ] M8 — GUI: status, on/off, settings, first-run (port, pairing, QR to the app), notifications, diagnostics — desktop-agnostic GTK; design to be approved
 
 ## 10. Acceptance criteria
 1. [x] M0: OpenDisplay receiver installed on the iPad via TestFlight; iPad model and iPadOS version recorded in §11
@@ -297,6 +347,11 @@ Sudoers: `<user> ALL=(root) NOPASSWD: /usr/local/sbin/odx11-connector`
 22. [x] M3: Unit tests pass for framing, demux rule, Annex B normalisation, mode sizing, coordinate mapping and state transitions
 23. [ ] M3: Idle desktop for 10 minutes keeps daemon plus pipeline CPU under the §11 budget
 24. [ ] M3: A 2-hour working session completes with no stall longer than 2 s and no visible corruption
+25. [ ] M7: `dpkg-buildpackage` builds `opendisplay-x11_*.deb` with the unit tests passing and no lintian errors
+26. [ ] M7: Double-clicking the .deb in Mint's package installer installs it with only a password dialog; all dependencies arrive automatically
+27. [ ] M7: After install and one log-in, plugging in the iPad and opening the app extends the desktop with no command run
+28. [ ] M7: No process runs as root while streaming, and forcing the connector works without sudo
+29. [ ] M7: Removing the package leaves no forced connector, no running daemon and no files outside the user's home
 <!-- Checkbox rules — this file is the ONLY source the Trello sync reads.
      `- [ ]` for unordered work, `N. [ ]` where order is the point. Both parse
      the same; the list marker is stripped before hashing, so renumbering or
