@@ -7,7 +7,9 @@ Build-Depends: debhelper-compat (= 13),
                pybuild-plugin-pyproject,
                python3-all,
                python3-setuptools,
-               python3-pytest
+               python3-pytest,
+               desktop-file-utils,
+               appstream
 Standards-Version: 4.6.2
 Rules-Requires-Root: no
 Homepage: https://github.com/cray2015/opendisplay-x11
@@ -31,6 +33,9 @@ Depends: ${misc:Depends},
          libimobiledevice-utils,
          x11-xserver-utils,
          xcvt,
+         gir1.2-gtk-4.0 (>= 4.14),
+         gir1.2-adw-1 (>= 1.5),
+         python3-qrcode,
          udev,
          systemd
 Recommends: intel-media-va-driver | va-driver-all

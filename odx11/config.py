@@ -8,7 +8,9 @@ import os
 import tomllib
 from dataclasses import dataclass, field, fields
 
-DEFAULT_PATH = os.path.expanduser("~/.config/odx11/config.toml")
+# XDG Base Directory spec: $XDG_CONFIG_HOME, falling back to ~/.config.
+DEFAULT_PATH = os.path.join(os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"),
+                            "odx11", "config.toml")
 SIDES = ("left", "right", "above", "below")
 ALIGNS = ("start", "center", "end")
 

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.cray2015.OpenDisplayX11</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>LicenseRef-proprietary</project_license>
+  <name>OpenDisplay for X11</name>
+  <summary>Use your iPad as a second monitor over USB</summary>
+  <developer id="io.github.cray2015">
+    <name>vibhanshu</name>
+  </developer>
+  <description>
+    <p>
+      Plug in your iPad, open the OpenDisplay app, and your desktop extends onto it.
+      Tap, drag, scroll and right-click work on the iPad.
+    </p>
+    <p>
+      Requirement: your computer needs a free HDMI or DisplayPort socket with nothing
+      plugged in. Works on X11 desktops (not Wayland), and not with NVIDIA's own driver.
+    </p>
+    <p>
+      An unofficial sender for the OpenDisplay iPad app, not affiliated with the
+      OpenDisplay project.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.cray2015.OpenDisplayX11.desktop</launchable>
+  <url type="homepage">https://github.com/cray2015/opendisplay-x11</url>
+  <url type="bugtracker">https://github.com/cray2015/opendisplay-x11/issues</url>
+  <categories>
+    <category>Settings</category>
+    <category>HardwareSettings</category>
+  </categories>
+  <keywords>
+    <keyword>iPad</keyword>
+    <keyword>tablet</keyword>
+    <keyword>second monitor</keyword>
+    <keyword>extend display</keyword>
+  </keywords>
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+  </supports>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.2.0" date="2026-10-14">
+      <description>
+        <p>Settings window, desktop notifications, automatic port choice, and settings that apply live.</p>
+      </description>
+    </release>
+    <release version="0.1.2" date="2026-10-14">
+      <description>
+        <p>First package.</p>
+      </description>
+    </release>
+  </releases>
+</component>

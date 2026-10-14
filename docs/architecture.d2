@@ -17,6 +17,10 @@ host: "HP EliteDesk 800 G3 DM — Mint 22.3 Cinnamon (X11)" {
     input: "input.py\nXTest"
     activity: "activity.py\nper-window DAMAGE + XI2\n→ idle gate"
     activity -> session: "wake"
+    statef: "state.py\nXDG_RUNTIME_DIR/odx11/state.json"
+    notifyd: "notify.py\nfreedesktop notifications"
+    session -> statef: "facts on every transition"
+    session -> notifyd: "connected / needs you / problems"
     session -> pipeline: "pause / resume"
 
     usbmux -> session: "Attached / Detached"
@@ -56,3 +60,12 @@ host: "HP EliteDesk 800 G3 DM — Mint 22.3 Cinnamon (X11)" {
 }
 
 host.usbmuxd <-> ipad.app: "USB 2.0 data cable\n[len][AU] → / ← JSON control"
+
+gui: "OpenDisplay for X11 window\n(gui.py, GTK 4 + libadwaita)" {
+  shape: rectangle
+}
+gui -> host.daemon.statef: "reads (inotify)"
+gui -> host.config: "writes settings\n(applied live)"
+gui -> host.daemon: "systemctl --user\nstart / stop"
+host.config -> host.daemon: "watched: hot reload"
+

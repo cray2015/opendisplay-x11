@@ -1,0 +1,3 @@
+# The udev rule grants plugdev write access to any HDMI connector's force switch; it does not
+# match specific hardware, so there is no device modalias to declare in AppStream metadata.
+opendisplay-x11: appstream-metadata-missing-modalias-provide usr/lib/udev/rules.d/70-opendisplay-x11.rules

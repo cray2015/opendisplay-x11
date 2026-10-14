@@ -91,6 +91,12 @@ truth; the rendered SVG is not committed.
 | `odx11/annexb.py` | NAL parsing, 3→4-byte start-code normalisation, SPS/PPS cache and IDR prefixing, AUD stripping |
 | `odx11/pipeline.py` | GStreamer pipeline build/rebuild, appsink pull, force-key-unit, leaky-queue backpressure |
 | `odx11/display.py` | Only caller of xrandr and only writer of the connector's sysfs `status` (`on`/`detect`, `release_forced`); mode sizing (§8.2), rotation, placement, geometry query |
+| `odx11/gui.py` | The settings window (GTK 4 + libadwaita), its own process: status, on/off, settings applied live, setup checklist, help (§8.8) |
+| `odx11/state.py` | State file write/read and `describe()` — the one source of user-facing status wording |
+| `odx11/notify.py` | Desktop notifications over D-Bus (outgoing only); `decide()` picks which a transition earns |
+| `odx11/settings.py` | Window controls ↔ config values; canonical TOML writing (non-defaults only) |
+| `odx11/checks.py` | The setup checklist and pairing |
+| `odx11/i18n.py` | gettext: every user-visible string goes through `_()` / `ngettext()` |
 | `odx11/activity.py` | Idle-gate wake signals: per-window DAMAGE + XI2 raw motion, filtered to the virtual monitor (§4) |
 | `odx11/input.py` | `touch`/`scroll` → XTest motion, button 1, wheel buttons 4–7, within current output geometry |
 | `odx11/config.py` | TOML config load and validation; every tunable (§8.6) |
@@ -98,6 +104,8 @@ truth; the rendered SVG is not committed.
 | `packaging/opendisplay-x11.desktop` | XDG autostart entry → `odx11 autostart` |
 | `debian/` | Package definition: control, rules (tests run in the build), maintainer scripts |
 | `edid/make_edid.py` | Generates a landscape EDID blob for a given logical mode |
+| `packaging/io.github.cray2015.OpenDisplayX11.desktop`, `.svg`, `.metainfo.xml` | App menu entry, hicolor icon, AppStream metadata — validated by `desktop-file-validate` / `appstreamcli` in the build |
+| `packaging/odx11.1` | Man page for `/usr/bin/odx11` (Debian policy) |
 | `packaging/odx11.service` | User unit; `ExecStopPost=odx11 release` always unforces; `Restart=on-failure` except on exit 78 (configuration) |
 | `install.sh` | Developer path: machine checks, builds the `.deb`, installs it via the package manager |
 | `tools/fake_receiver.py` | Local receiver for tests without an iPad: sends `hello`, pings, counts AUs, validates framing, telemetry and `kf` → IDR |
@@ -316,6 +324,8 @@ No file under `/etc` except the autostart entry (a conffile); no per-user state 
 **Migrating this machine (done 2026-10-14).** The current dev install (helper in `/usr/local/sbin`, `/etc/sudoers.d/odx11`, `~/.config/systemd/user/odx11.service` — which would *shadow* the packaged unit) is removed by `install.sh --uninstall` before the first `.deb` install.
 
 ### 8.8 GUI (design approved 2026-10-14; built in M8)
+**Standards (as built).** App ID `io.github.cray2015.OpenDisplayX11` (reverse-DNS; desktop file, icon and AppStream ID share it; GApplication single instance). XDG Base Directory (config under `$XDG_CONFIG_HOME`, state under `$XDG_RUNTIME_DIR`), Desktop Entry spec, Icon Theme spec (hicolor scalable), AppStream (`appstreamcli validate` passes; one pedantic note on the upper-case ID, which GNOME's own apps share), GNOME HIG (header bar with primary menu, About dialog, standard symbolic status icons, sentence case, no Apply button, Ctrl+Q / Ctrl+W), accessible names on custom controls, gettext-wrapped strings with `ngettext` plurals, a man page, lintian clean. Project licence still undecided: AppStream says `LicenseRef-proprietary` until chosen.
+
 **Shape ✔ (decided 2026-10-14): a normal window, no tray icon,** opened from the app menu as **OpenDisplay for X11**; status changes reach the user as desktop notifications. Identical on every X11 desktop (§2); nothing runs in the panel.
 
 **Principles.**

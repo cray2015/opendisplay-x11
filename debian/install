@@ -2,3 +2,6 @@ packaging/70-opendisplay-x11.rules usr/lib/udev/rules.d/
 packaging/odx11.service usr/lib/systemd/user/
 packaging/opendisplay-x11.desktop etc/xdg/autostart/
 config.example.toml usr/share/doc/opendisplay-x11/
+packaging/io.github.cray2015.OpenDisplayX11.desktop usr/share/applications/
+packaging/io.github.cray2015.OpenDisplayX11.svg usr/share/icons/hicolor/scalable/apps/
+packaging/io.github.cray2015.OpenDisplayX11.metainfo.xml usr/share/metainfo/

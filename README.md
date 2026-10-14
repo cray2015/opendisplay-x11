@@ -142,6 +142,12 @@ Switch it off without uninstalling: `[service] enabled = false` in the config.
 
 Plug in the iPad, unlock it, open OpenDisplay. That's it.
 
+To see what it's doing or change anything, open **OpenDisplay for X11** from the
+application menu: its status (and what to do, if anything), an on/off switch,
+the settings (they apply as you change them), a setup checklist with a QR code
+for the iPad app, and a diagnostic report for bug reports. It also tells you
+through desktop notifications when the iPad connects, disconnects or needs you.
+
 | On the iPad | Does |
 |---|---|
 | Tap | Left click (on lift) |

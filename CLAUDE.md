@@ -58,6 +58,8 @@ verified by hand against the acceptance criteria in `PROJECT_SPEC.md` §10.
 - `odx11/annexb.py` owns every NAL-level rule; `pipeline.py` never edits bytes.
 - `odx11/display.py` is the only caller of xrandr and the only writer of the connector's sysfs `status`.
 - `odx11/daemon.py` owns every timer and the session state machine.
+- `odx11/gui.py` is the settings window (GTK 4 + libadwaita, own process); it only reads `state.json` and acts via systemd, the config file, `odx11 release`, `idevicepair`.
+- `odx11/state.py` `describe()` is the only place status wording lives (window and notifications share it).
 - Nothing runs as root. `packaging/70-opendisplay-x11.rules` (udev) is the project's entire privileged surface; `debian/` builds the `.deb`.
 
 ## Key Constraints
@@ -86,4 +88,7 @@ verified by hand against the acceptance criteria in `PROJECT_SPEC.md` §10.
 - **Never gate capture on root-window damage** — Cinnamon's compositor reports every repaint as the whole screen; use per-window damage filtered to the virtual monitor (`odx11/activity.py`). See `PROJECT_SPEC.md` §4.
 - **Treat `Detached` as intent: tear down immediately, no grace** — grace is only for EOF, silence and `sleeping`. See `PROJECT_SPEC.md` §8.4.
 - **Every tunable lives in the config file (`odx11/config.py` + `config.example.toml`), never as a module constant** — only values the protocol or hardware fixes stay in code; `tests/test_config.py` keeps the example equal to the defaults. See `PROJECT_SPEC.md` §8.6.
+- **Never add a command channel into the daemon (socket, D-Bus service, signal protocol)** — the window reads the state file and acts through systemd and the config file; the daemon applies config changes by watching the file. See `PROJECT_SPEC.md` §8.8.
+- **Wrap every user-visible string in `_()` (plurals: `ngettext`) and use `.format()` placeholders, never f-strings, inside them** — logs and the diagnostic report stay English. See `PROJECT_SPEC.md` §8.8.
+- **Keep the desktop entry, icon and AppStream ID equal to the app ID and validated** — the build runs `desktop-file-validate` and `appstreamcli validate`; lintian must stay clean. See `PROJECT_SPEC.md` §8.8.
 - **Ignore unknown control `type`s and fields, logging each unknown type once** — input arrives at hundreds of messages per second. See `PROJECT_SPEC.md` §7.4.

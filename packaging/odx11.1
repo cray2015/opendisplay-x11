@@ -1,0 +1,57 @@
+.TH ODX11 1 "October 2026" "opendisplay-x11 0.2.0" "User Commands"
+.SH NAME
+odx11 \- use an iPad as a second monitor over USB (OpenDisplay for X11)
+.SH SYNOPSIS
+.B odx11
+.RB [ \-\-config
+.IR file ]
+.RB [ \-v ]
+.I command
+.SH DESCRIPTION
+.B odx11
+is the program behind OpenDisplay for X11, an unofficial sender for the
+OpenDisplay iPad app. It extends an X11 desktop onto an iPad over the USB
+cable. Users normally never run it directly: the settings window is in the
+application menu, and the service starts automatically at login.
+.PP
+The computer needs a free HDMI or DisplayPort socket with nothing plugged in.
+.SH COMMANDS
+.TP
+.B settings
+Open the settings window.
+.TP
+.B run
+Run the service in the foreground (for debugging); stop the user service first.
+.TP
+.B daemon
+Run the service, logging for the systemd journal (used by odx11.service).
+.TP
+.B list
+List the iOS devices usbmuxd sees.
+.TP
+.B autostart
+Used at login: hand the session's display to systemd and start the service if enabled.
+.TP
+.B release
+Used when the service stops: unforce any video port odx11 left forced on.
+.SH OPTIONS
+.TP
+.BI \-\-config " file"
+Settings file (default:
+.IR $XDG_CONFIG_HOME/odx11/config.toml ).
+.TP
+.BR \-v ", " \-\-verbose
+Log more detail.
+.SH FILES
+.TP
+.I ~/.config/odx11/config.toml
+Settings; every key is documented in
+.IR /usr/share/doc/opendisplay-x11/config.example.toml .
+.TP
+.I $XDG_RUNTIME_DIR/odx11/state.json
+The service's current state, read by the settings window.
+.SH SEE ALSO
+.BR journalctl (1),
+.BR systemctl (1)
+.PP
+https://github.com/cray2015/opendisplay-x11

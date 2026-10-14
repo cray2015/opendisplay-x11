@@ -10,6 +10,7 @@ import json
 import os
 import tempfile
 import time
+from .i18n import _
 
 # Daemon-level states, as published.
 OFF = "off"                  # no state file: the service is not running
@@ -92,28 +93,30 @@ def _alive(pid: int) -> bool:
 def describe(facts: dict, now: float | None = None) -> tuple[str, str, str]:
     """(headline, what to do or "", severity) for a set of published facts."""
     state = facts.get("state", OFF)
-    device = facts.get("device") or "your iPad"
+    device = facts.get("device") or _("your iPad")
     if state == OFF:
-        return "Off", "OpenDisplay for X11 is not running.", NEUTRAL
+        return _("Off"), _("OpenDisplay for X11 is not running."), NEUTRAL
     if state == PROBLEM:
-        return "Setup needed", facts.get("problem") or "Something is not set up.", ERROR
+        return _("Setup needed"), facts.get("problem") or _("Something is not set up."), ERROR
     if state == IDLE:
-        return "Waiting for your iPad", "Plug it in with a USB cable.", WAITING
+        return _("Waiting for your iPad"), _("Plug it in with a USB cable."), WAITING
     if state == DIALING:
-        return "iPad connected", "Unlock it and open the OpenDisplay app.", ATTENTION
+        return _("iPad connected"), _("Unlock it and open the OpenDisplay app."), ATTENTION
     if state == STREAMING:
         mon = facts.get("monitor")
-        size = f" ({mon[0]} × {mon[1]})" if isinstance(mon, list) and len(mon) >= 2 else ""
-        idle = " · paused while nothing changes" if facts.get("idle") else ""
-        return f"Showing your desktop on {device}{size}", idle.lstrip(" ·"), OK
+        if isinstance(mon, list) and len(mon) >= 2:
+            head = _("Showing your desktop on {device} ({w} × {h})").format(device=device, w=mon[0], h=mon[1])
+        else:
+            head = _("Showing your desktop on {device}").format(device=device)
+        return head, _("paused while nothing changes") if facts.get("idle") else "", OK
     if state == GRACE:
         left = facts.get("grace_until")
         if isinstance(left, (int, float)):
             secs = max(0, round(left - (now if now is not None else time.time())))
-            head = f"Connection lost — keeping the screen for {secs} s"
+            head = _("Connection lost — keeping the screen for {secs} s").format(secs=secs)
         else:
-            head = "Connection lost — keeping the screen for a moment"
-        return head, "Reopen the OpenDisplay app to resume.", ATTENTION
+            head = _("Connection lost — keeping the screen for a moment")
+        return head, _("Reopen the OpenDisplay app to resume."), ATTENTION
     if state == PAUSED:
-        return "Turned off in display settings", "Unplug and replug the iPad to resume.", NEUTRAL
-    return "Unknown state", "", NEUTRAL
+        return _("Turned off in display settings"), _("Unplug and replug the iPad to resume."), NEUTRAL
+    return _("Unknown state"), "", NEUTRAL

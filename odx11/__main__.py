@@ -73,6 +73,12 @@ def cmd_autostart(cfg, args):
     subprocess.run(["systemctl", "--user", "--no-block", "start", "odx11.service"], check=False)
 
 
+def cmd_settings(cfg, args):
+    """The settings window (GTK 4 + libadwaita), its own process."""
+    from . import gui
+    sys.exit(gui.main(args.config, getattr(args, "config_error", None)))
+
+
 def cmd_release(cfg, args):
     """Run by systemd after the daemon stops, however it stopped (ExecStopPost)."""
     from . import display
@@ -94,6 +100,7 @@ def main(argv=None):
     sub.add_parser("list", help="list attached iOS devices")
     sub.add_parser("autostart", help="(login) export the display to systemd and start the service if enabled")
     sub.add_parser("release", help="(service stop) unforce any connector odx11 left forced")
+    sub.add_parser("settings", help="open the settings window")
     # Also accept -v after the subcommand: `odx11 run --verbose`.
     for p in sub.choices.values():
         p.add_argument("-v", "--verbose", action="store_true", default=argparse.SUPPRESS)
@@ -104,14 +111,15 @@ def main(argv=None):
     try:
         cfg = config.load(args.config)
     except (ValueError, TypeError, OSError) as e:
-        if args.cmd in ("autostart", "release"):          # must never fail a login or a stop
-            log.error("config %s: %s", args.config, e)
+        if args.cmd in ("autostart", "release", "settings"):  # never fail a login or a stop;
+            log.error("config %s: %s", args.config, e)        # the window shows the error
             cfg = None
+            args.config_error = str(e)
         else:
             log.error("config %s: %s", args.config, e)
             sys.exit(EX_CONFIG)
     {"run": cmd_run, "daemon": cmd_run, "list": cmd_list,
-     "autostart": cmd_autostart, "release": cmd_release}[args.cmd](cfg, args)
+     "autostart": cmd_autostart, "release": cmd_release, "settings": cmd_settings}[args.cmd](cfg, args)
 
 
 if __name__ == "__main__":

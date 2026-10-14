@@ -1,3 +1,13 @@
+opendisplay-x11 (0.2.0) unstable; urgency=medium
+
+  * Settings window "OpenDisplay for X11" (GTK 4 + libadwaita): status, on/off,
+    start at login, settings that apply live, setup checklist with pairing
+    and a QR code for the iPad app, diagnostic report, About.
+  * Desktop notifications; automatic video port; state published for the
+    window. Desktop entry, icon and AppStream metadata (validated in the build).
+
+ -- vibhanshu <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 22:30:00 +0530
+
 opendisplay-x11 (0.1.2) unstable; urgency=medium
 
   * Name the app "OpenDisplay for X11" (unofficial sender for the OpenDisplay

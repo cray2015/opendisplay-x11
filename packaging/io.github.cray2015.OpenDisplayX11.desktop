@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=OpenDisplay for X11
+GenericName=iPad Display
+Comment=Use your iPad as a second monitor over USB
+Exec=odx11 settings
+Icon=io.github.cray2015.OpenDisplayX11
+Terminal=false
+Categories=Settings;HardwareSettings;
+Keywords=iPad;tablet;display;monitor;screen;second;extend;OpenDisplay;
+StartupNotify=true
+X-GNOME-UsesNotifications=true

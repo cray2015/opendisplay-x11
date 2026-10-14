@@ -9,11 +9,12 @@ import logging
 import subprocess
 
 from . import state
+from .i18n import _
 
 log = logging.getLogger(__name__)
 
 APP_NAME = "OpenDisplay for X11"
-ICON = "opendisplay-x11"
+ICON = "io.github.cray2015.OpenDisplayX11"       # app ID: desktop file and icon share it
 NEEDS_ACTION_AFTER = 2       # refused dials before "open the app" — not on the very first try
 
 
@@ -25,18 +26,18 @@ def decide(prev: dict, cur: dict, cfg) -> list[tuple[str, str, str]]:
     out = []
     if c == state.STREAMING and p != state.STREAMING and cfg.connected:
         if p == state.GRACE:
-            out.append(("connected", "iPad reconnected", "Your desktop is back on the iPad."))
+            out.append(("connected", _("iPad reconnected"), _("Your desktop is back on the iPad.")))
         else:
-            out.append(("connected", "iPad connected — desktop extended", ""))
+            out.append(("connected", _("iPad connected — desktop extended"), ""))
     if (c == state.DIALING and cfg.needs_action
             and cur.get("refused", 0) >= NEEDS_ACTION_AFTER > prev.get("refused", 0)):
-        out.append(("needs_action", "Open OpenDisplay on your iPad",
-                    "It's plugged in, but the app isn't open or the iPad is locked."))
+        out.append(("needs_action", _("Open OpenDisplay on your iPad"),
+                    _("It's plugged in, but the app isn't open or the iPad is locked.")))
     lost = p in (state.STREAMING, state.GRACE) and c in (state.IDLE, state.DIALING, state.OFF)
     if lost and cfg.disconnected:
-        out.append(("disconnected", "iPad disconnected", "The extra screen was removed."))
+        out.append(("disconnected", _("iPad disconnected"), _("The extra screen was removed.")))
     if c == state.PROBLEM and cur.get("problem") != prev.get("problem") and cfg.problems:
-        out.append(("problem", "Setup needed", cur.get("problem") or ""))
+        out.append(("problem", _("Setup needed"), cur.get("problem") or ""))
     return out
 
 
@@ -64,8 +65,8 @@ class Notifier:
         from gi.repository import GLib
         urgency = GLib.Variant("y", 2 if kind == "problem" else 1)
         params = GLib.Variant("(susssasa{sv}i)", (
-            APP_NAME, 0, ICON, summary, body, ["default", "Open settings"],
-            {"urgency": urgency, "desktop-entry": GLib.Variant("s", "opendisplay-x11")}, -1))
+            APP_NAME, 0, ICON, summary, body, ["default", _("Open settings")],
+            {"urgency": urgency, "desktop-entry": GLib.Variant("s", ICON)}, -1))
         try:
             reply = self._bus.call_sync(
                 "org.freedesktop.Notifications", "/org/freedesktop/Notifications",

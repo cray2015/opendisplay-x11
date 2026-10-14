@@ -9,6 +9,7 @@ import os
 import select
 import subprocess
 import time
+from .i18n import _
 from typing import NamedTuple
 
 log = logging.getLogger(__name__)
@@ -279,24 +280,25 @@ def connector_problem(cfg, root: str = SYSFS_DRM) -> str | None:
     on — or None when it can."""
     connector = resolve_connector(cfg.connector, root)
     if connector is None:
-        return ("This computer has no free video port. Every HDMI/DisplayPort socket has a monitor "
-                "in it; free one up, or see why one is needed in the README.")
+        return _("This computer has no free video port. Every HDMI/DisplayPort socket has a monitor "
+                 "in it; free one up, or see why one is needed in the README.")
     path = status_path(connector, root)
     if path is None:
-        return (f"There is no {connector} video port on this computer. Choose a free one in the "
-                f"settings, or set it back to Automatic.")
+        return _("There is no {port} video port on this computer. Choose a free one in the "
+                 "settings, or set it back to Automatic.").format(port=connector)
     try:
         with open(path) as f:
             status = f.read().strip()
     except OSError as e:
         return f"Cannot read {path}: {e}"
     if not os.access(path, os.W_OK):
-        return (f"Setup is not finished: this account may not switch {connector}. It needs to be "
-                f"in the '{UDEV_GROUP}' group and the opendisplay-x11 package installed (its udev rule "
-                f"grants the permission); log out and back in after joining the group.")
+        return _("Setup is not finished: this account may not switch {port}. It needs to be "
+                 "in the '{group}' group and the opendisplay-x11 package installed (its udev rule "
+                 "grants the permission); log out and back in after joining the group.").format(
+                     port=connector, group=UDEV_GROUP)
     if status == "connected" and not _forced_by_us(path):
-        return (f"{connector} has a real monitor plugged in. Choose a free video port in the settings, "
-                f"or set it back to Automatic.")
+        return _("{port} has a real monitor plugged in. Choose a free video port in the settings, "
+                 "or set it back to Automatic.").format(port=connector)
     return None
 
 
