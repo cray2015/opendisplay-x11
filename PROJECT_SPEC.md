@@ -296,7 +296,7 @@ ACTION=="add|change", SUBSYSTEM=="drm", KERNEL=="card*-HDMI-A-*", \
 | `/usr/share/doc/opendisplay-x11/` | README, `config.example.toml` |
 No file under `/etc` except the autostart entry (a conffile); no per-user state is written by the package.
 
-**Dependencies.** `Depends: python3 (>= 3.11), python3-gi, python3-xlib, gir1.2-gstreamer-1.0, gir1.2-gst-plugins-base-1.0, gstreamer1.0-plugins-base` (videoconvert, appsink) `, gstreamer1.0-plugins-good` (ximagesrc) `, gstreamer1.0-plugins-bad` (h264parse) `, gstreamer1.0-vaapi, usbmuxd, libimobiledevice-utils, x11-xserver-utils` (xrandr) `, xcvt` (cvt). `Recommends: intel-media-va-driver | va-driver-all`. GUI (M8) adds `gir1.2-gtk-3.0, gir1.2-notify-0.7, python3-qrcode`, `Recommends: gir1.2-ayatanaappindicator3-0.1`. Build: `debhelper-compat (= 13), dh-python, pybuild-plugin-pyproject, python3-all, python3-setuptools, python3-pytest` — unit tests run during the build (they need no X, iPad or GPU).
+**Dependencies.** `Depends: python3 (>= 3.11), python3-gi, python3-xlib, gir1.2-gstreamer-1.0, gir1.2-gst-plugins-base-1.0, gstreamer1.0-plugins-base` (videoconvert, appsink) `, gstreamer1.0-plugins-good` (ximagesrc) `, gstreamer1.0-plugins-bad` (h264parse) `, gstreamer1.0-vaapi, usbmuxd, libimobiledevice-utils, x11-xserver-utils` (xrandr) `, xcvt` (cvt). `Recommends: intel-media-va-driver | va-driver-all`. GUI (M8) adds `gir1.2-gtk-4.0 (>= 4.14), gir1.2-adw-1 (>= 1.5), python3-qrcode` (notifications go over D-Bus with Gio — no libnotify). Build: `debhelper-compat (= 13), dh-python, pybuild-plugin-pyproject, python3-all, python3-setuptools, python3-pytest` — unit tests run during the build (they need no X, iPad or GPU).
 
 **Maintainer scripts.**
 - `postinst`: `udevadm control --reload` and `udevadm trigger --subsystem-match=drm --action=change`, so permissions apply **without a reboot**. (Group: nothing to do for `plugdev`; `addgroup --system odx11` if the dedicated group wins.)
@@ -315,6 +315,39 @@ No file under `/etc` except the autostart entry (a conffile); no per-user state 
 
 **Migrating this machine (done 2026-10-14).** The current dev install (helper in `/usr/local/sbin`, `/etc/sudoers.d/odx11`, `~/.config/systemd/user/odx11.service` — which would *shadow* the packaged unit) is removed by `install.sh --uninstall` before the first `.deb` install.
 
+### 8.8 GUI (design approved 2026-10-14; built in M8)
+**Shape ✔ (decided 2026-10-14): a normal window, no tray icon,** opened from the app menu as **OpenDisplay for X11**; status changes reach the user as desktop notifications. Identical on every X11 desktop (§2); nothing runs in the panel.
+
+**Principles.**
+- The daemon never depends on the GUI. Closing, crashing or never opening the window changes nothing.
+- **No command channel into the daemon** (§ Security). The GUI *reads* the daemon's state and acts only through things that already exist: `systemctl --user` (start/stop/restart), the config file, `odx11 release`, `idevicepair`.
+- Event-driven both ways: the daemon writes state only on transitions; the GUI watches it (inotify). Not running = zero cost.
+- Plain words only. Every state a user can see says what is happening and, if needed, what to do — never an error code.
+
+**Daemon → GUI: a state file.** On every transition the daemon atomically rewrites `$XDG_RUNTIME_DIR/odx11/state.json`: `state`, a plain-language `headline` and optional `action` (what the user should do), device name and model, panel and monitor size, idle/streaming, the last problem, version, and a timestamp. The GUI follows it with a Gio file monitor. Removed when the daemon exits; absent = "Off".
+
+| Daemon situation | Headline shown | Action shown |
+|---|---|---|
+| service stopped | Off | Turn on |
+| setup problem (`connector_problem`) | Setup needed | the sentence from `connector_problem`, with a fix button where one exists |
+| no iPad attached | Waiting for your iPad | Plug it in with a USB cable |
+| attached, dial refused | iPad connected | Unlock it and open the OpenDisplay app |
+| streaming | Showing your desktop on *iPad Air* (1568×1088) | — (adds "idle" while the gate has paused capture) |
+| grace | Connection lost — keeping the screen for *n* s | Reopen the app to resume |
+| paused (monitor disabled in display settings) | Turned off in display settings | Unplug and replug the iPad to resume |
+
+**Notifications (sent by the daemon).** Through the freedesktop notification service (works on any desktop running a notification daemon), an outgoing D-Bus call — no new interface. One notification per meaningful transition, never repeated while the state holds: *iPad connected — desktop extended*; *Open OpenDisplay on your iPad* (once per plug-in, after the first refused dials); *iPad disconnected*; *Setup needed: …*. `[notifications] enabled` (default on) and per-kind switches in the config.
+
+**The window.**
+1. **Status** (top): the headline, the action, the device, and an **On/Off** switch (`systemctl --user start/stop`) plus **Start at login** (`[service] enabled`).
+2. **Settings** — only what people change, in plain words: *Text size* (the divisor, showing the resulting resolution for the last iPad seen), *Sharpness* (qp), *Smoothness* (fps), *Pause when nothing changes after* (idle), *Right-click hold time*, *Keep the screen after a disconnect for* (grace), and *Video port* (a list of the HDMI ports marked free / in use / has a monitor). **Changes apply automatically** (decided 2026-10-14, no Apply button): the window writes the config (sliders ~1 s after release) and the daemon, which watches its config file, applies each change at the lightest level it needs — live (input, idle, grace, notifications), a pipeline restart with a fresh IDR (sharpness, smoothness), or a display rebuild (text size, video port; marked "iPad will blink"). *Open the settings file* for everything else.
+3. **Setup checklist** (expanded automatically when something is wrong, collapsed when all is green): X11 session · free video port · permission (plugdev + rule) · video encoder · iPad paired (**Pair** button runs `idevicepair pair`; the iPad asks to Trust) · OpenDisplay app on the iPad (**QR code** of the TestFlight link to scan with the iPad, plus the link).
+4. **Help** (bottom): *Copy diagnostic report* (versions, checklist, state, last 200 log lines → clipboard), *Remove the virtual monitor now* (`odx11 release`), and a link to the README.
+
+**Zero settings by default.** `[display] connector` defaults to **`auto`**: the daemon picks the first free HDMI-A port at each start (keeping the one it already forced). A fresh install on a machine with a free port needs no configuration at all; the GUI's port list is for the rare override.
+
+**Tech ✔ (decided 2026-10-14): GTK 4 + libadwaita via PyGObject** — GTK 3 was the first pick (the toolkit of Cinnamon/MATE/XFCE, bindings already present) but is in maintenance mode; GTK 4 is the actively developed series. libadwaita's settings rows, switches, toasts and status pages match the design closely, and **Mint patches libadwaita to follow the system theme** (`1.5.0-1mint1`: "use the current system theme for style info"), so it looks native there; on other desktops/distros it is GNOME-styled (Adwaita). Floor: **GTK 4.14 / libadwaita 1.5** (Mint 22, Ubuntu 24.04) — no widgets newer than that; Debian 12 (libadwaita 1.2) is out. The window is its own process; the daemon never imports GTK. `python3-qrcode` for the QR matrix drawn with cairo (no image library). New modules: `odx11/state.py` (state file write/read — pure, tested), `odx11/settings.py` (UI values ↔ config, writing TOML — pure, tested), `odx11/notify.py` (the D-Bus call), `odx11/gui.py` (the window). Entry point `odx11 settings`; packaged as `/usr/share/applications/opendisplay-x11.desktop` with an SVG icon. Writing the config from the GUI rewrites the file in a canonical form (comments in a hand-edited file are not preserved — the file says so in its header).
+
 ## 9. Milestones
 - [x] M0 — Spike: transport, forced connector, VA-API encode and end-to-end test pattern proven by hand; no product code
 - [x] M1 — MVP CLI: `odx11 run` extends the desktop to the iPad over USB with touch and scroll
@@ -325,6 +358,7 @@ No file under `/etc` except the autostart entry (a conffile); no per-user state 
 - [ ] M6 (backlog) — Wi-Fi transport via Avahi `_opensidecar._tcp`
 - [ ] M7 — Packaging: one `.deb`, udev privilege (no root at runtime), install and uninstall with no terminal (§8.7)
 - [ ] M8 — GUI: status, on/off, settings, first-run (port, pairing, QR to the app), notifications, diagnostics — desktop-agnostic GTK; design to be approved
+- [ ] M9 — Software Manager listing: AppStream metadata (name, icon, screenshots) and a package repository (PPA or signed apt repo), so OpenDisplay for X11 is found, installed, updated and removed in the distro's software manager — the last step to no terminal; decided after M8
 
 ## 10. Acceptance criteria
 1. [x] M0: OpenDisplay receiver installed on the iPad via TestFlight; iPad model and iPadOS version recorded in §11
@@ -356,6 +390,14 @@ No file under `/etc` except the autostart entry (a conffile); no per-user state 
 27. [ ] M7: After install and one log-in, plugging in the iPad and opening the app extends the desktop with no command run
 28. [x] M7: No process runs as root while streaming, and forcing the connector works without sudo
 29. [ ] M7: Removing the package leaves no forced connector, no running daemon and no files outside the user's home
+30. [ ] M8: The app menu has "OpenDisplay for X11"; its window shows the live state within 1 s and follows changes without reopening
+31. [ ] M8: Every daemon state is shown in plain words, with what to do when action is needed
+32. [ ] M8: On/Off and Start-at-login work from the window; settings apply (service restarted) and persist
+33. [ ] M8: On a fresh install with a free port, nothing must be configured: the port is chosen automatically
+34. [ ] M8: Pairing the iPad and getting the OpenDisplay app (QR code) are possible from the window
+35. [ ] M8: Notifications for connect, needs-action and problems arrive once per change and can be switched off
+36. [ ] M8: "Copy diagnostic report" and "Remove the virtual monitor now" work
+37. [ ] M8: The GUI adds no listening socket or daemon command channel; closing it changes nothing; idle CPU is unchanged
 <!-- Checkbox rules — this file is the ONLY source the Trello sync reads.
      `- [ ]` for unordered work, `N. [ ]` where order is the point. Both parse
      the same; the list marker is stripped before hashing, so renumbering or

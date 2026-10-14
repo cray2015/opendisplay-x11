@@ -19,6 +19,15 @@ class ServiceConfig:
 
 
 @dataclass
+class NotificationsConfig:
+    enabled: bool = True                    # desktop notifications from the service
+    connected: bool = True                  # "iPad connected — desktop extended"
+    needs_action: bool = True               # "Open OpenDisplay on your iPad"
+    disconnected: bool = True               # "iPad disconnected"
+    problems: bool = True                   # "Setup needed: …"
+
+
+@dataclass
 class TransportConfig:
     usbmuxd_socket: str = "/var/run/usbmuxd"
     device_port: int = 9000                 # the receiver's listening port
@@ -26,7 +35,7 @@ class TransportConfig:
 
 @dataclass
 class DisplayConfig:
-    connector: str = "HDMI-A-1"             # kernel name; xrandr drops the "-A"
+    connector: str = "auto"                 # "auto" = first free HDMI port; or a kernel name like HDMI-A-1
     main_output: str | None = None          # None = the primary output
     divisor: float = 1.5                    # logical mode = panel / divisor (§8.2)
     refresh_hz: int = 60                    # refresh of the generated cvt -r mode
@@ -73,6 +82,7 @@ class DeviceConfig:
 @dataclass
 class Config:
     service: ServiceConfig = field(default_factory=ServiceConfig)
+    notifications: NotificationsConfig = field(default_factory=NotificationsConfig)
     transport: TransportConfig = field(default_factory=TransportConfig)
     display: DisplayConfig = field(default_factory=DisplayConfig)
     video: VideoConfig = field(default_factory=VideoConfig)
@@ -100,8 +110,8 @@ def _validate(cfg: Config):
     need(cfg.display.refresh_hz > 0, "display.refresh_hz must be > 0")
     need(cfg.display.connect_timeout_s > 0 and cfg.display.settle_timeout_s >= 0,
          "display timeouts must be positive")
-    need(cfg.display.connector.startswith("HDMI-A-"),
-         "display.connector must be an HDMI-A-n alias (forcing DP-n fails link training)")
+    need(cfg.display.connector == "auto" or cfg.display.connector.startswith("HDMI-A-"),
+         "display.connector must be \"auto\" or an HDMI-A-n alias (forcing DP-n is untested)")
     need(cfg.video.fps > 0, "video.fps must be > 0")
     need(0 <= cfg.video.qp <= 51, "video.qp must be 0..51")
     need(cfg.video.idle_pause_s >= 0, "video.idle_pause_s must be >= 0")
@@ -136,6 +146,7 @@ def parse(raw: dict) -> Config:
         raise ValueError(f"unknown config sections/keys: {sorted(unknown)}")
     cfg = Config(
         service=_section(ServiceConfig, raw.get("service", {}), "service"),
+        notifications=_section(NotificationsConfig, raw.get("notifications", {}), "notifications"),
         transport=_section(TransportConfig, raw.get("transport", {}), "transport"),
         display=_section(DisplayConfig, raw.get("display", {}), "display"),
         video=_section(VideoConfig, raw.get("video", {}), "video"),

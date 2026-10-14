@@ -20,6 +20,7 @@ def cmd_run(cfg, args):
     problem = display.connector_problem(cfg.display)
     if problem:
         log.error("%s", problem)
+        publish_problem(cfg, problem)
         sys.exit(EX_CONFIG)
     vdisplay = display.VirtualDisplay(cfg.display)
     atexit.register(vdisplay.teardown)       # crash path; daemon.run's finally is the normal one
@@ -33,7 +34,21 @@ def cmd_run(cfg, args):
     if args.tcp:
         host, port = args.tcp.rsplit(":", 1)
         tcp = (host, int(port))
-    daemon.run(cfg, vdisplay, injector, make_pipeline, tcp=tcp, udid=args.udid)
+    daemon.run(cfg, vdisplay, injector, make_pipeline, tcp=tcp, udid=args.udid, config_path=args.config)
+
+
+def publish_problem(cfg, problem):
+    """The service cannot run: leave the reason for the settings window and say it once."""
+    from . import __version__, notify, state
+    facts = {"state": state.PROBLEM, "problem": problem, "version": __version__, "pid": os.getpid()}
+    previous = state.read()                       # before writing: was this already reported?
+    try:
+        state.StateFile().write(facts)
+    except OSError as e:
+        log.warning("could not write the state file: %s", e)
+    if cfg is not None and previous.get("problem") != problem:
+        for kind, summary, body in notify.decide({"state": state.OFF}, facts, cfg.notifications):
+            notify.Notifier().send(kind, summary, body)
 
 
 def cmd_list(cfg, args):

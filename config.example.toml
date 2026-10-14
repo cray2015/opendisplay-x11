@@ -6,12 +6,19 @@
 [service]
 enabled = true                        # start automatically at login; false = only when started by hand
 
+[notifications]
+enabled = true                        # desktop notifications from the service
+connected = true                      # "iPad connected — desktop extended"
+needs_action = true                   # "Open OpenDisplay on your iPad"
+disconnected = true                   # "iPad disconnected"
+problems = true                       # "Setup needed: …"
+
 [transport]
 usbmuxd_socket = "/var/run/usbmuxd"
 device_port = 9000                    # port the OpenDisplay receiver listens on
 
 [display]
-connector = "HDMI-A-1"                # kernel connector to force on; must be an HDMI-A-n alias
+connector = "auto"                    # "auto" = first free HDMI port; or e.g. "HDMI-A-2" (see /sys/class/drm)
 # main_output = "HDMI-3"              # xrandr output to place beside; default: the primary output
 divisor = 1.5                         # logical mode = iPad panel / divisor, floored to 16 (§8.2)
 refresh_hz = 60                       # refresh of the generated `cvt -r` mode

@@ -121,6 +121,12 @@ class Injector:
     def set_geometry(self, geom):
         self.geometry = geom
 
+    def reconfigure(self, cfg):
+        """New [input] settings, live. A gesture in progress keeps going."""
+        self.scroll.step = cfg.scroll_step_px
+        self.gesture.slop = cfg.tap_slop_px
+        self.gesture.long_press = cfg.long_press_ms / 1000
+
     def _run(self, acts):
         for kind, arg in acts:
             if kind == "move":

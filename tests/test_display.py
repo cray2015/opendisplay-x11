@@ -3,8 +3,8 @@ import os
 import pytest
 
 from odx11 import config
-from odx11.display import (Geometry, connector_problem, logical_mode, placement, release_forced,
-                           status_path, write_status, xrandr_name)
+from odx11.display import (Geometry, connector_problem, hdmi_ports, logical_mode, placement, release_forced,
+                           resolve_connector, status_path, write_status, xrandr_name)
 
 
 @pytest.mark.parametrize("panel,expected", [
@@ -117,3 +117,30 @@ def test_release_unforces_only_connectors_without_edid(tmp_path):
     assert release_forced(root) == ["HDMI-A-1"]
     assert (tmp_path / "card1-HDMI-A-1" / "status").read_text() == "detect"
     assert (tmp_path / "card1-HDMI-A-3" / "status").read_text().strip() == "connected"
+
+
+def test_ports_are_classified(tmp_path):
+    root = drm(tmp_path, **{"HDMI-A-1": ("connected", 0), "HDMI-A-2": ("disconnected", 0),
+                            "HDMI-A-3": ("connected", 256), "DP-1": ("disconnected", 0)})
+    assert hdmi_ports(root) == [("HDMI-A-1", "ours"), ("HDMI-A-2", "free"), ("HDMI-A-3", "monitor")]
+
+
+def test_auto_picks_the_first_free_port(tmp_path):
+    root = drm(tmp_path, **{"HDMI-A-1": ("connected", 256), "HDMI-A-2": ("disconnected", 0)})
+    assert resolve_connector("auto", root) == "HDMI-A-2"
+
+
+def test_auto_keeps_a_port_we_already_forced(tmp_path):
+    root = drm(tmp_path, **{"HDMI-A-1": ("disconnected", 0), "HDMI-A-2": ("connected", 0)})
+    assert resolve_connector("auto", root) == "HDMI-A-2"
+
+
+def test_fixed_connector_is_used_as_given(tmp_path):
+    root = drm(tmp_path, **{"HDMI-A-1": ("disconnected", 0)})
+    assert resolve_connector("HDMI-A-1", root) == "HDMI-A-1"
+
+
+def test_auto_with_no_free_port_is_explained(tmp_path):
+    root = drm(tmp_path, **{"HDMI-A-3": ("connected", 256)})
+    assert resolve_connector("auto", root) is None
+    assert "no free video port" in connector_problem(display_cfg("auto"), root)

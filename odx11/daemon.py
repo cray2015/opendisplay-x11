@@ -15,7 +15,9 @@ import socket
 import threading
 import time
 
-from . import protocol, usbmux
+from dataclasses import fields
+
+from . import __version__, config, notify, protocol, state, usbmux
 from .activity import ActivityMonitor
 
 log = logging.getLogger(__name__)
@@ -42,8 +44,10 @@ class Session:
     on_hello(): a valid hello arrived (the daemon ends its grace period)."""
 
     def __init__(self, cfg, send, display, injector, make_pipeline, clock=now_ms,
-                 on_end=None, on_hello=None, call_later=None, monotonic=time.monotonic):
+                 on_end=None, on_hello=None, call_later=None, monotonic=time.monotonic, on_change=None):
         self.cfg = cfg
+        self.on_change = on_change       # something the state file shows changed (may be any thread)
+        self.device_name = None
         self.on_end = on_end
         self.on_hello = on_hello
         self.call_later = call_later
@@ -90,6 +94,7 @@ class Session:
             return
         if self.panel is None:
             self.device_id = msg.get("id")
+            self.device_name = msg.get("device") if isinstance(msg.get("device"), str) else None
             log.info("hello from %s %s: panel %dx%d, pv %s", msg.get("device", "?"),
                      self.device_id, panel[0], panel[1], msg.get("pv", 1))
             if self.on_hello:
@@ -129,6 +134,29 @@ class Session:
         self.pipeline.start()                    # a fresh encoder opens with an IDR
         self.paused = False
         self.on_activity()
+        self._changed()
+
+    def _changed(self):
+        if self.on_change:
+            self.on_change()
+
+    def rebuild_display(self, new_port: bool):
+        """Text size or port changed: rebuild the monitor in place and restart the stream —
+        the connection to the iPad stays up. A new port means unforcing the old one first."""
+        if self.panel is None or self.ended:
+            return
+        log.info("display settings changed — rebuilding the virtual monitor")
+        self._stop_pipeline()
+        if new_port:
+            self.display.teardown()
+        self._apply_panel(self.panel)
+
+    def restart_pipeline(self):
+        """New video settings: same monitor, fresh encoder (starts with an IDR)."""
+        if self.pipeline is not None and self.geom is not None and not self.ended:
+            log.info("video settings changed — restarting the stream")
+            self._stop_pipeline()
+            self._start_pipeline(self.geom)
 
     # --- idle gate (AC 23) -------------------------------------------------------
     def on_activity(self):
@@ -142,6 +170,7 @@ class Session:
             self.paused = False
             self.pipeline.resume()
             log.debug("activity: capture resumed")
+            self._changed()
         if self._cancel_idle is None and self.call_later and self.cfg.video.idle_pause_s > 0:
             self._cancel_idle = self.call_later(self.cfg.video.idle_pause_s, self._idle_check)
 
@@ -156,6 +185,7 @@ class Session:
         self.paused = True
         self.pipeline.pause()                    # the receiver keeps showing the last frame
         log.debug("idle %.1f s: capture paused", quiet)
+        self._changed()
 
     def on_display_change(self):
         """RandR says something changed (main thread). Follow the virtual output if it moved,
@@ -225,6 +255,7 @@ class Session:
             log.info("session ending: %s", reason)
             if self.on_end:
                 self.on_end()
+            self._changed()
 
     def _stop_pipeline(self):
         if self.pipeline:
@@ -259,10 +290,29 @@ class Daemon:
         self.call_later = call_later
         self.devices = {}                # device_id -> serial, every USB device usbmuxd reports
         self.active = None
-        self.state = self.IDLE
+        self.on_change = None            # the published state may have changed
+        self.refused = 0                 # dials refused since this iPad was attached
+        self.grace_until = None          # wall-clock end of the grace period
+        self._state = self.IDLE
         self.conn = None
         self._cancel_redial = None
         self._cancel_grace = None
+
+    @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, value):
+        if value != self._state:
+            self._state = value
+            if value != self.GRACE_WAIT:
+                self.grace_until = None
+            self._changed()
+
+    def _changed(self):
+        if self.on_change:
+            self.on_change()
 
     # --- usbmuxd events --------------------------------------------------------
     def on_attached(self, device_id, serial=None):
@@ -270,6 +320,7 @@ class Daemon:
         if self.active is None:
             log.info("iPad attached: %s", serial or device_id)
             self.active = device_id
+            self.refused = 0
             self.state = self.DIALING
             self._dial()
 
@@ -308,6 +359,8 @@ class Daemon:
                 self.on_detached(self.active)
                 return
             log.debug("dial refused (app not open?)")
+            self.refused += 1
+            self._changed()
             self._schedule_redial()
             return
         except OSError as e:
@@ -320,6 +373,7 @@ class Daemon:
             self.state = self.CONNECTED
 
     def _hello(self):
+        self.refused = 0
         if self.state == self.GRACE_WAIT:
             log.info("receiver back within grace — resuming")
             self._cancel(grace=True)
@@ -335,6 +389,7 @@ class Daemon:
             self._teardown()
             self.state = self.DIALING
         elif self.state != self.GRACE_WAIT:
+            self.grace_until = time.time() + self.cfg.session.grace_s
             self.state = self.GRACE_WAIT
             log.info("keeping the display for %g s while the receiver comes back", self.cfg.session.grace_s)
             self._cancel_grace = self.call_later(self.cfg.session.grace_s, self._grace_expired)
@@ -370,6 +425,20 @@ class Daemon:
         self._teardown()
         self.state = state
 
+    def rebuild_display(self, new_port: bool):
+        """Display settings changed (text size, port). Streaming: rebuild in place, staying
+        connected. Otherwise (grace, waiting): drop any kept monitor so the next hello builds
+        it fresh with the new settings."""
+        session = self.conn.session if self.conn is not None else None
+        if session is not None and session.panel is not None and not session.ended:
+            session.rebuild_display(new_port)
+        elif self.display.forced:
+            log.info("display settings changed — the monitor is rebuilt on the next connection")
+            self._cancel(grace=True)
+            self._teardown()
+            if self.state == self.GRACE_WAIT:
+                self.state = self.DIALING
+
     def shutdown(self):
         self._reset(self.IDLE)
 
@@ -397,7 +466,7 @@ def glib_call_later(seconds, fn):
 class Connection:
     """One receiver socket on the GLib loop: reader, ping/silence tick, a Session."""
 
-    def __init__(self, cfg, sock, display, injector, make_pipeline, on_end, on_hello):
+    def __init__(self, cfg, sock, display, injector, make_pipeline, on_end, on_hello, on_change=None):
         from gi.repository import GLib
         self._GLib = GLib
         self.cfg = cfg
@@ -411,7 +480,9 @@ class Connection:
         sock.settimeout(cfg.session.silence_timeout_s)
         self.session = Session(cfg, self._send, display, injector, make_pipeline,
                                on_end=lambda: GLib.idle_add(self._finish_from_session),
-                               on_hello=on_hello, call_later=glib_call_later)
+                               on_hello=on_hello, call_later=glib_call_later,
+                               on_change=(lambda: GLib.idle_add(lambda: on_change() and False))
+                               if on_change else None)
         self.deframer = protocol.Deframer()
         self.last_rx = time.monotonic()
         self.display = display
@@ -562,12 +633,97 @@ class MuxWatcher:
             self.sock.close()
 
 
-def run(cfg, display, injector, make_pipeline, tcp=None, udid=None):
+def facts(daemon, display) -> dict:
+    """What the state file publishes (§8.8): facts only — `state.describe` words them."""
+    session = daemon.conn.session if daemon.conn is not None else None
+    streaming = session is not None and session.pipeline is not None and not session.ended
+    st = {Daemon.IDLE: state.IDLE, Daemon.DIALING: state.DIALING, Daemon.GRACE_WAIT: state.GRACE,
+          Daemon.PAUSED: state.PAUSED}.get(daemon.state)
+    if daemon.state == Daemon.CONNECTED:
+        st = state.STREAMING if streaming else state.DIALING
+    out = {"state": st, "pid": os.getpid(), "version": __version__, "refused": daemon.refused,
+           "connector": getattr(display, "connector", None)}
+    if daemon.state == Daemon.GRACE_WAIT and daemon.grace_until:
+        out["grace_until"] = round(daemon.grace_until, 1)
+    if streaming:
+        out["device"] = session.device_name
+        out["idle"] = bool(session.paused)
+        if session.panel:
+            out["panel"] = list(session.panel)
+        if session.geom:
+            g = session.geom
+            out["monitor"] = [g.w, g.h, g.x, g.y]
+    return out
+
+
+class Publisher:
+    """Writes the state file and sends the notifications a change earns — main thread only."""
+
+    def __init__(self, cfg, state_file, notifier):
+        self.cfg = cfg
+        self.file = state_file
+        self.notifier = notifier
+        self.last = {"state": state.IDLE}
+
+    def publish(self, current: dict):
+        try:
+            self.file.write(current)
+        except OSError as e:
+            log.warning("could not write the state file: %s", e)
+        if self.notifier is not None:
+            for kind, summary, body in notify.decide(self.last, current, self.cfg.notifications):
+                self.notifier.send(kind, summary, body)
+        self.last = current
+
+
+def apply_config(cfg, new, daemon, injector) -> str:
+    """Copy `new` into the live `cfg` in place (everything holds references into it) and apply
+    each change at the lightest level it needs. Returns what was done, for the log."""
+    changed = {f.name for f in fields(cfg) if getattr(cfg, f.name) != getattr(new, f.name)}
+    new_port = cfg.display.connector != new.display.connector
+    for name in changed:
+        old_section, new_section = getattr(cfg, name), getattr(new, name)
+        if isinstance(old_section, dict):
+            old_section.clear()
+            old_section.update(new_section)
+        else:
+            old_section.__dict__.update(new_section.__dict__)
+    if not changed:
+        return "nothing changed"
+    if "input" in changed:
+        injector.reconfigure(cfg.input)
+    session = daemon.conn.session if daemon.conn is not None else None
+    if changed & {"display", "devices"}:
+        daemon.rebuild_display(new_port)
+        how = "virtual monitor rebuilt"
+    elif "video" in changed and session is not None:
+        session.restart_pipeline()
+        how = "stream restarted"
+    else:
+        how = "applied live"
+    return f"{', '.join(sorted(changed))}: {how}"
+
+
+def run(cfg, display, injector, make_pipeline, tcp=None, udid=None, config_path=None):
     """The daemon's main loop: until SIGINT/SIGTERM. `tcp` = (host, port) dials a receiver
     directly as an always-attached device (tools/fake_receiver.py) instead of usbmuxd."""
-    from gi.repository import GLib
+    from gi.repository import Gio, GLib
 
     loop = GLib.MainLoop()
+    state_file = state.StateFile()
+    publisher = Publisher(cfg, state_file, notify.Notifier())
+    pending_publish = [False]
+
+    def schedule_publish():
+        # Coalesce a burst of changes (attach → hello → stream) into one write.
+        if not pending_publish[0]:
+            pending_publish[0] = True
+
+            def go():
+                pending_publish[0] = False
+                publisher.publish(facts(daemon, display))
+                return GLib.SOURCE_REMOVE
+            GLib.idle_add(go)
 
     def dial(device_id):
         if tcp:
@@ -578,10 +734,39 @@ def run(cfg, display, injector, make_pipeline, tcp=None, udid=None):
         return usbmux.connect(cfg.transport.usbmuxd_socket, device_id, cfg.transport.device_port)
 
     def open_connection(sock, on_end, on_hello):
-        return Connection(cfg, sock, display, injector, make_pipeline, on_end, on_hello)
+        return Connection(cfg, sock, display, injector, make_pipeline, on_end, on_hello,
+                          on_change=schedule_publish)
 
     daemon = Daemon(cfg, dial, display, open_connection, glib_call_later)
-    activity = ActivityMonitor() if cfg.video.idle_pause_s > 0 else None
+    daemon.on_change = schedule_publish
+    activity = ActivityMonitor()               # cheap; idle_pause_s is read live, so always on
+
+    # Settings applied live: the window (or a hand edit) writes the config file; we watch it.
+    reload_pending = [None]
+
+    def reload_config():
+        reload_pending[0] = None
+        try:
+            new = config.load(config_path)
+        except (ValueError, TypeError, OSError) as e:
+            log.error("settings file has an error, keeping the previous settings: %s", e)
+            return
+        log.info("settings changed — %s", apply_config(cfg, new, daemon, injector))
+        schedule_publish()
+
+    def on_config_event(monitor, f, other, event):
+        if event in (Gio.FileMonitorEvent.CHANGES_DONE_HINT, Gio.FileMonitorEvent.CREATED,
+                     Gio.FileMonitorEvent.DELETED, Gio.FileMonitorEvent.RENAMED,
+                     Gio.FileMonitorEvent.MOVED_IN):
+            if reload_pending[0]:
+                reload_pending[0]()
+            reload_pending[0] = glib_call_later(0.3, reload_config)   # editors write in bursts
+
+    config_monitor = None
+    if config_path:
+        config_monitor = Gio.File.new_for_path(config_path).monitor_file(
+            Gio.FileMonitorFlags.WATCH_MOVES, None)
+        config_monitor.connect("changed", on_config_event)
 
     def on_activity(fd, cond):
         if cond & (GLib.IO_HUP | GLib.IO_ERR):
@@ -629,12 +814,16 @@ def run(cfg, display, injector, make_pipeline, tcp=None, udid=None):
             original = daemon.on_attached
             daemon.on_attached = lambda d, s=None: original(d, s) if s == udid else None
         watcher = MuxWatcher(cfg.transport.usbmuxd_socket, daemon)
+    schedule_publish()
     try:
         loop.run()
     finally:
         if watcher:
             watcher.close()
         daemon.shutdown()
+        state_file.clear()                       # no file = Off
+        if config_monitor:
+            config_monitor.cancel()
         if activity:
             activity.close()
         ctx = GLib.MainContext.default()

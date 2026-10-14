@@ -78,7 +78,8 @@ class VirtualDisplay:
         from Xlib.ext import randr
         self._randr = randr
         self.cfg = cfg
-        self.output = xrandr_name(cfg.connector)
+        self.connector = None           # kernel name, resolved at attach ("auto" → a free port)
+        self.output = None              # its xrandr name
         self.mode_name = None
         self.forced = False
         self.attached = False
@@ -124,7 +125,7 @@ class VirtualDisplay:
     def geometry(self) -> Geometry | None:
         """Current geometry of the virtual output in root coordinates (post-rotation),
         or None if it is not enabled (e.g. turned off in Cinnamon's Display settings)."""
-        return self._crtc_geometry(self.output)
+        return self._crtc_geometry(self.output) if self.output else None
 
     def fileno(self) -> int:
         """The X connection, for the event loop to watch for RandR changes."""
@@ -157,8 +158,8 @@ class VirtualDisplay:
     # --- privileged + xrandr ---------------------------------------------------
     def _force(self, state):
         """Write the connector's force switch: no root, the udev rule makes it group-writable."""
-        log.debug("connector %s <- %s", self.cfg.connector, state)
-        write_status(self.cfg.connector, state)
+        log.debug("connector %s <- %s", self.connector, state)
+        write_status(self.connector, state)
 
     def _xrandr(self, *args, check=True):
         log.debug("xrandr %s", " ".join(args))
@@ -182,6 +183,12 @@ class VirtualDisplay:
         orientation differs, or the position if Cinnamon has no saved layout at all."""
         mw, mh, rotation = logical_mode(panel_w, panel_h, self.cfg.divisor, device_cfg.mode)
         ow, oh = (mw, mh) if rotation == "normal" else (mh, mw)
+        if not self.forced:
+            self.connector = resolve_connector(self.cfg.connector)
+            if self.connector is None:
+                raise RuntimeError("no free video port")
+            self.output = xrandr_name(self.connector)
+        previous_mode = self.mode_name
         name = self._ensure_mode(mw, mh)
         if not self.forced:
             self.forced = True          # set first: a failure mid-write must still unforce
@@ -206,6 +213,10 @@ class VirtualDisplay:
         g = self.geometry()
         if g is None or (g.w, g.h) != (ow, oh):
             raise RuntimeError(f"{self.output} did not take {ow}x{oh} (got {g})")
+        if previous_mode and previous_mode != name:
+            # Text size changed in place: the old mode is no longer in use — drop it.
+            self._xrandr("--delmode", self.output, previous_mode, check=False)
+            self._xrandr("--rmmode", previous_mode, check=False)
         self.attached = True
         log.info("virtual monitor %s %dx%d+%d+%d (%s, %s)", self.output, g.w, g.h, g.x, g.y, rotation, how)
         return g
@@ -224,7 +235,7 @@ class VirtualDisplay:
                 if not self._wait_until(lambda: not self._connected(), self.cfg.connect_timeout_s):
                     log.warning("%s still connected after detect", self.output)
             except Exception as e:      # keep going: the mode should still be removed
-                log.error("teardown: unforcing %s failed: %s", self.cfg.connector, e)
+                log.error("teardown: unforcing %s failed: %s", self.connector, e)
         self.forced = False
         self.attached = False
         if self.mode_name:
@@ -266,22 +277,64 @@ def write_status(connector: str, state: str, root: str = SYSFS_DRM):
 def connector_problem(cfg, root: str = SYSFS_DRM) -> str | None:
     """Why the daemon cannot force `cfg.connector` ([display] section), in words a user can act
     on — or None when it can."""
-    path = status_path(cfg.connector, root)
+    connector = resolve_connector(cfg.connector, root)
+    if connector is None:
+        return ("This computer has no free video port. Every HDMI/DisplayPort socket has a monitor "
+                "in it; free one up, or see why one is needed in the README.")
+    path = status_path(connector, root)
     if path is None:
-        return (f"There is no {cfg.connector} video port on this computer. Choose a spare HDMI port "
-                f"in the settings ([display] connector).")
+        return (f"There is no {connector} video port on this computer. Choose a free one in the "
+                f"settings, or set it back to Automatic.")
     try:
         with open(path) as f:
             status = f.read().strip()
     except OSError as e:
         return f"Cannot read {path}: {e}"
     if not os.access(path, os.W_OK):
-        return (f"Setup is not finished: this account may not switch {cfg.connector}. It needs to be "
+        return (f"Setup is not finished: this account may not switch {connector}. It needs to be "
                 f"in the '{UDEV_GROUP}' group and the opendisplay-x11 package installed (its udev rule "
                 f"grants the permission); log out and back in after joining the group.")
     if status == "connected" and not _forced_by_us(path):
-        return (f"{cfg.connector} has a real monitor plugged in. Choose a spare HDMI port in the "
-                f"settings ([display] connector).")
+        return (f"{connector} has a real monitor plugged in. Choose a free video port in the settings, "
+                f"or set it back to Automatic.")
+    return None
+
+
+def hdmi_ports(root: str = SYSFS_DRM) -> list[tuple[str, str]]:
+    """[(kernel name, "free" | "ours" | "monitor")] for every HDMI-A connector, in order.
+    "ours" = connected with no EDID: forced by us (now, or left behind by a crash)."""
+    ports = []
+    try:
+        entries = sorted(os.listdir(root))
+    except OSError:
+        return ports
+    for entry in entries:
+        card, _, name = entry.partition("-")
+        if not (card.startswith("card") and card[4:].isdigit() and name.startswith("HDMI-A-")):
+            continue
+        path = os.path.join(root, entry, "status")
+        try:
+            with open(path) as f:
+                status = f.read().strip()
+        except OSError:
+            continue
+        if status == "connected":
+            ports.append((name, "ours" if _forced_by_us(path) else "monitor"))
+        else:
+            ports.append((name, "free"))
+    return ports
+
+
+def resolve_connector(setting: str, root: str = SYSFS_DRM) -> str | None:
+    """The kernel connector to use. A fixed name is used as given; "auto" prefers a port we
+    already forced (so a restart keeps the same monitor), then the first free one."""
+    if setting != "auto":
+        return setting
+    ports = hdmi_ports(root)
+    for wanted in ("ours", "free"):
+        for name, state in ports:
+            if state == wanted:
+                return name
     return None
 
 
