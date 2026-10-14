@@ -34,7 +34,10 @@ def cmd_run(cfg, args):
     if args.tcp:
         host, port = args.tcp.rsplit(":", 1)
         tcp = (host, int(port))
-    daemon.run(cfg, vdisplay, injector, make_pipeline, tcp=tcp, udid=args.udid, config_path=args.config)
+    if daemon.run(cfg, vdisplay, injector, make_pipeline, tcp=tcp, udid=args.udid, config_path=args.config):
+        from . import upgrade
+        vdisplay.teardown()                       # now, not at exit: the new version takes the port
+        sys.exit(upgrade.EX_RESTART)
 
 
 def publish_problem(cfg, problem):

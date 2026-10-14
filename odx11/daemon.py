@@ -12,12 +12,13 @@ import logging
 import os
 import signal
 import socket
+import subprocess
 import threading
 import time
 
 from dataclasses import fields
 
-from . import __version__, config, notify, protocol, state, usbmux
+from . import __version__, config, notify, protocol, state, upgrade, usbmux
 from .activity import ActivityMonitor
 
 log = logging.getLogger(__name__)
@@ -704,9 +705,10 @@ def apply_config(cfg, new, daemon, injector) -> str:
     return f"{', '.join(sorted(changed))}: {how}"
 
 
-def run(cfg, display, injector, make_pipeline, tcp=None, udid=None, config_path=None):
-    """The daemon's main loop: until SIGINT/SIGTERM. `tcp` = (host, port) dials a receiver
-    directly as an always-attached device (tools/fake_receiver.py) instead of usbmuxd."""
+def run(cfg, display, injector, make_pipeline, tcp=None, udid=None, config_path=None) -> bool:
+    """The daemon's main loop: until SIGINT/SIGTERM, or a package upgrade (returns True: the
+    caller exits with upgrade.EX_RESTART so systemd starts the new version). `tcp` = (host,
+    port) dials a receiver directly as an always-attached device (tools/fake_receiver.py)."""
     from gi.repository import Gio, GLib
 
     loop = GLib.MainLoop()
@@ -814,6 +816,16 @@ def run(cfg, display, injector, make_pipeline, tcp=None, udid=None, config_path=
             original = daemon.on_attached
             daemon.on_attached = lambda d, s=None: original(d, s) if s == udid else None
         watcher = MuxWatcher(cfg.transport.usbmuxd_socket, daemon)
+    restart = [False]
+
+    def on_upgraded():
+        # Load a possibly changed unit file before systemd restarts us with it.
+        subprocess.run(["systemctl", "--user", "daemon-reload"], capture_output=True)
+        restart[0] = True
+        loop.quit()
+
+    upgrades = upgrade.Watcher(glib_call_later, on_upgraded) if upgrade.installed_copy() else None
+
     schedule_publish()
     try:
         loop.run()
@@ -824,12 +836,15 @@ def run(cfg, display, injector, make_pipeline, tcp=None, udid=None, config_path=
         state_file.clear()                       # no file = Off
         if config_monitor:
             config_monitor.cancel()
+        if upgrades:
+            upgrades.cancel()
         if activity:
             activity.close()
         ctx = GLib.MainContext.default()
         for w in watches:
             if ctx.find_source_by_id(w):
                 GLib.source_remove(w)
+    return restart[0]
 
 
 def display_name() -> str:

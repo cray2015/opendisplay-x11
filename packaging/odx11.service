@@ -12,6 +12,10 @@ ExecStart=/usr/bin/odx11 daemon
 # invisible monitor that swallows windows. No root needed (udev rule).
 ExecStopPost=/usr/bin/odx11 release
 Restart=on-failure
-RestartSec=5
+RestartSec=2
+# 75 = restarting onto a new version after a package upgrade (odx11/upgrade.py): a planned
+# exit, so not logged as a failure, but always restarted.
+SuccessExitStatus=75
+RestartForceExitStatus=75
 # 78 = configuration problem (no spare port, not permitted): retrying cannot fix it.
 RestartPreventExitStatus=78

@@ -136,7 +136,11 @@ What the package installs (nothing runs as root):
 | User service | `/usr/lib/systemd/user/odx11.service` | The daemon; unforces the port on every exit, even a crash |
 | Autostart entry | `/etc/xdg/autostart/opendisplay-x11.desktop` | Starts the service when your desktop session starts (XDG autostart — GNOME, KDE, XFCE, MATE, Cinnamon, LXQt) |
 
-Switch it off without uninstalling: `[service] enabled = false` in the config.
+Updates install like any other package. The running service notices the new
+version and restarts itself onto it — the iPad blinks for a few seconds, and
+nothing else is needed (no log-out).
+
+Switch it off without uninstalling: the switch in the window, or Start at login.
 
 ## Use
 

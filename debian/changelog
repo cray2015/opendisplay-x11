@@ -1,3 +1,10 @@
+opendisplay-x11 (0.2.2) unstable; urgency=medium
+
+  * The service restarts itself onto the new version after a package upgrade
+    (any update manager), with a brief cut-off of the iPad session.
+
+ -- vibhanshu <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 23:40:00 +0530
+
 opendisplay-x11 (0.2.1) unstable; urgency=medium
 
   * Notifications only when the user must act (connected/disconnected off by

@@ -1,4 +1,5 @@
 #!/usr/bin/make -f
+include /usr/share/dpkg/pkg-info.mk
 export PYBUILD_NAME=odx11
 
 %:
@@ -11,3 +12,9 @@ ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
 	desktop-file-validate packaging/io.github.cray2015.OpenDisplayX11.desktop
 	appstreamcli validate --no-net packaging/io.github.cray2015.OpenDisplayX11.metainfo.xml
 endif
+
+# The running daemon watches this file and restarts onto the new version after an upgrade.
+override_dh_install:
+	dh_install
+	mkdir -p debian/opendisplay-x11/usr/share/opendisplay-x11
+	echo "$(DEB_VERSION)" > debian/opendisplay-x11/usr/share/opendisplay-x11/VERSION

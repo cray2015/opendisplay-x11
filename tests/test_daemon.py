@@ -386,3 +386,21 @@ def test_stop_cancels_idle_timer():
     s, clock, pipes = gated()
     s.stop()
     assert clock.pending() == []
+
+
+# --- restart onto a new version after a package upgrade -----------------------------
+
+from odx11 import upgrade  # noqa: E402
+
+
+def test_upgrade_restarts_only_on_a_real_completed_change():
+    assert upgrade.decide("0.2.1", "0.2.2", "install ok installed") == "restart"
+    assert upgrade.decide("0.2.1", "0.2.1", "install ok installed") == "ignore"     # same version
+    assert upgrade.decide("0.2.1", "0.2.2", "install ok unpacked") == "wait"         # dpkg not done
+    assert upgrade.decide("0.2.1", "0.2.2", "install ok half-configured") == "wait"
+    assert upgrade.decide("0.2.1", None, "deinstall ok config-files") == "ignore"   # being removed
+    assert upgrade.decide(None, "0.2.2", "install ok installed") == "ignore"         # dev run
+
+
+def test_source_checkout_never_self_restarts():
+    assert not upgrade.installed_copy() or upgrade.__file__.startswith("/usr/")
