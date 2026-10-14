@@ -338,7 +338,11 @@ class Window(Adw.ApplicationWindow):
                 msg = _("Could not turn on: {error}") if on else _("Could not turn off: {error}")
                 self.toasts.add_toast(Adw.Toast.new(msg.format(error=r.stderr.strip())))
             self._on_state_changed()
-        _in_background(lambda: _service("start" if on else "stop"), done)
+        def work():
+            if on:   # a package upgrade may have replaced the unit file: re-read it first
+                subprocess.run(["systemctl", "--user", "daemon-reload"], capture_output=True)
+            return _service("start" if on else "stop")
+        _in_background(work, done)
 
     def _on_remove(self, *_):
         def work():
