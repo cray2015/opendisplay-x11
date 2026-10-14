@@ -371,6 +371,7 @@ No file under `/etc` except the autostart entry (a conffile); no per-user state 
 - [ ] M7 — Packaging: one `.deb`, udev privilege (no root at runtime), install and uninstall with no terminal (§8.7)
 - [ ] M8 — GUI: status, on/off, settings, first-run (port, pairing, QR to the app), notifications, diagnostics — desktop-agnostic GTK; design to be approved
 - [ ] M9 — Software Manager listing: AppStream metadata (name, icon, screenshots) and a package repository (PPA or signed apt repo), so OpenDisplay for X11 is found, installed, updated and removed in the distro's software manager — the last step to no terminal; decided after M8
+- [ ] M10 — GitHub Actions: every pull request verified against the project's requirements and mergeable only with the owner's approval; tagged releases publish the .deb with its changelog (requested 2026-10-15)
 
 ## 10. Acceptance criteria
 1. [x] M0: OpenDisplay receiver installed on the iPad via TestFlight; iPad model and iPadOS version recorded in §11
@@ -410,6 +411,9 @@ No file under `/etc` except the autostart entry (a conffile); no per-user state 
 35. [ ] M8: Notifications for connect, needs-action and problems arrive once per change and can be switched off
 36. [ ] M8: "Copy diagnostic report" and "Remove the virtual monitor now" work
 37. [ ] M8: The GUI adds no listening socket or daemon command channel; closing it changes nothing; idle CPU is unchanged
+38. [ ] M10: A CI workflow runs on every pull request and push to main: unit tests, the .deb build (tests inside), lintian clean, desktop-file-validate, appstreamcli validate, SPDX headers on every source file, versions in step, DCO sign-off on every commit
+39. [ ] M10: main only changes through pull requests that pass CI and are approved by the owner (CODEOWNERS + branch protection) — needs the repo public or GitHub Pro (checked 2026-10-15: unavailable while private on the free plan)
+40. [ ] M10: Pushing a tag vX.Y.Z builds the .deb on Ubuntu 24.04 and publishes a GitHub Release with the .deb and that version's debian/changelog entry as notes; it refuses a tag that does not match debian/changelog
 <!-- Checkbox rules — this file is the ONLY source the Trello sync reads.
      `- [ ]` for unordered work, `N. [ ]` where order is the point. Both parse
      the same; the list marker is stripped before hashing, so renumbering or
