@@ -39,7 +39,8 @@ for M2's named monitor and persistent placement). Throwaway spike scripts live i
 - **[v2]** Separate cursor channel (`cursor` + `cursorImg` via XFixes) — v1 bakes the cursor into the video (M4).
 - **[v2]** Wi-Fi transport via Avahi `_opensidecar._tcp` — USB first (M6).
 - **[v2]** KMS zero-copy capture — only if XShm capture misses the CPU budget in M3.
-- **[unplanned]** Cinnamon panel applet for status/toggle — only if event-driven (see §4, CPU constraint).
+- **[superseded 2026-10-14]** Cinnamon panel applet for status/toggle — only if event-driven (see §4, CPU constraint). *Rejected by the user: an applet ties the project to one desktop.*
+- **[unplanned]** A desktop-agnostic status/toggle app (any X11 desktop or window manager) — must stay event-driven and must not make the daemon depend on it; any daemon↔UI channel is a new local interface and needs the same scrutiny as the root helper.
 - **[unplanned]** Mirror mode, audio forwarding, clipboard sync, multiple iPads at once, .deb packaging.
 
 ## 4. Design rationale and constraints
@@ -57,6 +58,7 @@ for M2's named monitor and persistent placement). Throwaway spike scripts live i
 - **Python 3 + GStreamer (PyGObject) for v1** — `appsink` with `alignment=au` yields one access unit per buffer, and an upstream force-key-unit event (sent with `appsink.send_event`) answers `kf`. Rejected: ffmpeg subprocess (cannot force an IDR on demand from outside the process); Go (cgo bindings for GStreamer or libav add build friction before the design is proven).
 - **Encoder is `vaapih264enc tune=low-power`, CQP — measured in M0** — with Mint's free `intel-media-va-driver` (iHD) the HD 530 exposes only `VAEntrypointEncSliceLP`, so `vah264enc` and `vapostproc` do not exist and low-power rate control is CQP only (CBR needs HuC). `vah264lpenc` answers force-key-unit with a non-IDR I-frame (and ignores repeats), which breaks `kf`; `vaapih264enc` emits a real IDR with SPS+PPS the next frame. The i965 driver's encoder aborts at context init. CQP is acceptable: USB 2.0 has headroom for scene-change bursts. Colour conversion is software `videoconvert` (no VPP entrypoint). Fallback: `x264enc` ultrafast/zerolatency (~31 % of one core vs ~19 %). Risk: gstreamer-vaapi is deprecated upstream; re-check when Mint moves past GStreamer 1.24.
 - **Idle cost needs a damage gate, not `use-damage`** — `ximagesrc` emits at the full frame rate regardless, and `use-damage=true` measured *more* expensive (35 % vs 19 % of one core) because it copies per damaged rectangle. Near-zero idle requires the daemon to watch XDamage on the virtual output and stop pushing frames when nothing changes, resuming on damage; while paused, `kf` and reconnects replay the last frame as an IDR (upstream §5.3).
+- **Idle gate as built (M3)** — `odx11/activity.py`. Root-window DAMAGE is useless under Cinnamon's compositor: every repaint reports the whole screen, so one busy window anywhere (this terminal, `btop`) keeps it firing ~15/s. Instead each top-level window gets its own DAMAGE object (`NonEmpty`, re-armed by subtract), SubstructureNotify keeps window geometry current, and a damage/map/unmap/move wakes capture only if the window overlaps the virtual monitor; XI2 raw motion wakes while the pointer is over it (or just left — the cursor is baked in and moves without repaints). The session pauses the pipeline (`PAUSED`: no capture, convert or encode) after `idle_pause_s` without a wake; `kf`, touch and a new pipeline wake it. Measured on the iPad: **1.0 % of one core idle vs 20 % ungated**; ~20 % while the iPad monitor changes. Not seen: pixels the compositor draws itself (panels, OSDs, notifications) — primary-monitor only by default. Python-xlib note: a reply wait can pull the first DamageNotify into Xlib's queue, after which the socket never turns readable and `NonEmpty` never re-fires — drain once after setup.
 - **No polling — event-driven only** — device events come from usbmuxd `Listen`, display changes from RandR events. The only timers: 2 s ping, 10 s grace, 3 s redial while a device is attached with no session. Previous Claude-Code-built Cinnamon applets were disabled for CPU spikes; this project must be quiet at idle.
 - **Root only for the connector toggle** — one allowlisted helper script via sudoers NOPASSWD (§8.5). The daemon runs as the desktop user under `systemd --user` with the session's `DISPLAY`/`XAUTHORITY`.
 - **[superseded 2026-10-14] The daemon owns placement** — position is applied by the daemon from per-device config on every attach, rather than relying on Cinnamon's `monitors.xml`, so layout is deterministic. M0 showed Cinnamon enables and places a hotplugged output on its own, before our xrandr runs; the daemon must apply its layout after that settles (§11).
@@ -81,6 +83,7 @@ truth; the rendered SVG is not committed.
 | `odx11/annexb.py` | NAL parsing, 3→4-byte start-code normalisation, SPS/PPS cache and IDR prefixing, AUD stripping |
 | `odx11/pipeline.py` | GStreamer pipeline build/rebuild, appsink pull, force-key-unit, leaky-queue backpressure |
 | `odx11/display.py` | Only caller of the root helper and of xrandr; mode sizing (§8.2), rotation, placement, geometry query |
+| `odx11/activity.py` | Idle-gate wake signals: per-window DAMAGE + XI2 raw motion, filtered to the virtual monitor (§4) |
 | `odx11/input.py` | `touch`/`scroll` → XTest motion, button 1, wheel buttons 4–7, within current output geometry |
 | `odx11/config.py` | TOML config load: connector, divisor, fps, bitrate, per-device placement keyed by `hello.id` |
 | `helper/odx11-connector` | Root script: `on` / `detect` / `edid < blob` for the single allowlisted connector |
@@ -88,7 +91,8 @@ truth; the rendered SVG is not committed.
 | `edid/make_edid.py` | Generates a landscape EDID blob for a given logical mode |
 | `systemd/odx11.service` | User unit; `ExecStopPost` always unforces the connector; `Restart=on-failure` |
 | `systemd/install.sh` | Installs the unit + a Cinnamon autostart entry that starts it (Cinnamon never activates `graphical-session.target`) |
-| `tools/fake_receiver.py` | Local receiver for tests without an iPad: sends `hello`, pings, counts AUs, validates framing |
+| `tools/fake_receiver.py` | Local receiver for tests without an iPad: sends `hello`, pings, counts AUs, validates framing, telemetry and `kf` → IDR |
+| `tools/idle_cpu.sh` | AC 23: the service's CPU over an idle period |
 | `tests/` | Unit tests for protocol, annexb, mode sizing, coordinate mapping, state machine transitions |
 | `docs/architecture.d2` | Architecture diagram source |
 
@@ -158,8 +162,8 @@ TCP_NODELAY on the usbmux socket. Reassemble across reads; never assume one read
 | ← | unknown | Ignore; log once per type, not per message |
 | → | `welcome` | `{pv: 2, min: 1}` until M5 |
 | → | `pong` | As above |
-| → | `ping` | Every 2 s; optional health fields `capFps`, `encDrops`, `netDrops` |
-| → | video | One AU per frame, optional telemetry prefix `{"cap":<ms>,"snd":<ms>}` |
+| → | `ping` | Every 2 s with health fields `capFps` (AUs/s since the last ping), `encDrops` (raw frames dropped by the leaky queue), `netDrops` (always 0: encoded frames are never dropped) |
+| → | video | One AU per frame behind the telemetry prefix `{"cap":<ms>,"snd":<ms>}` (`cap` from the buffer's capture timestamp) — gives the receiver real `e2e`/`enc` stats |
 | → | `cursor`, `cursorImg` | Not sent in v1 (M4) |
 | → | `streamConfig` | Not sent in v1; receivers assume legacy H.264 without it |
 
@@ -289,7 +293,7 @@ Sudoers: `<user> ALL=(root) NOPASSWD: /usr/local/sbin/odx11-connector`
 19. [x] M2: Rotating the iPad rebuilds the virtual monitor in the new orientation within 1 s
 20. [ ] M2: The iPad monitor returns to its configured placement after a reconnect and after a reboot
 21. [x] M2: Killing the daemon with SIGKILL still leaves no forced connector behind (ExecStopPost)
-22. [ ] M3: Unit tests pass for framing, demux rule, Annex B normalisation, mode sizing, coordinate mapping and state transitions
+22. [x] M3: Unit tests pass for framing, demux rule, Annex B normalisation, mode sizing, coordinate mapping and state transitions
 23. [ ] M3: Idle desktop for 10 minutes keeps daemon plus pipeline CPU under the §11 budget
 24. [ ] M3: A 2-hour working session completes with no stall longer than 2 s and no visible corruption
 <!-- Checkbox rules — this file is the ONLY source the Trello sync reads.
@@ -309,7 +313,7 @@ Sudoers: `<user> ALL=(root) NOPASSWD: /usr/local/sbin/odx11-connector`
 - **Does Cinnamon's settings daemon react to the hotplug and fight our xrandr call?** — if it auto-applies its own layout, either apply ours after it settles or let it place the monitor and only correct. Settled in M0/M1 by watching `xrandr --listmonitors` after `on`. **Answered (M0): it reacts** — the output came up active at `1024x768+1920+0` before our xrandr call; our subsequent call was not reverted within 15 s. Longer-run interference (and whether `monitors.xml` re-applies) still to watch in M1. **Answered (M2):** it re-applies the user's saved layout (`cinnamon-monitors.xml`) on every hotplug when the mode exists, and re-enables an output switched off while still forced. Resolved by letting Cinnamon own placement and unforcing before mode removal (§4, §8.1).
 - **Does usbmuxd `Connect` require pairing?** — the Linux fork says paired and unlocked; confirm in AC 2–3. **Answered (M0):** pairing validated with stock packages and `Connect` succeeded; `Result` 3 when the app is not foreground.
 - **Divisor default** — 1.5 is a guess; tune by eye on the actual iPad.
-- **CPU budget** — no number until AC 8 measures the baseline; set the M3 target from it. **Baseline (M0, main-screen region as stand-in):** capture + `videoconvert` + VA-API encode at 1360×1024/30 fps ≈ 19 % of one core; x264 ultrafast ≈ 31 %. **On the virtual output (AC 8):** 1568×1088/30 fps ≈ 23 % of one core (~6 % of the CPU) with the screen static; 600 frames of an empty desktop encode to 47 KB. Driver: `intel-media-va-driver` 24.1.0 (iHD, free build); `i965-va-driver` 2.4.1 is installed but its encoder aborts.
+- **CPU budget** — no number until AC 8 measures the baseline; set the M3 target from it. **Set (M3): idle ≤ 2 % of one core** for daemon + pipeline (measured 1.0 % over 30 s with the gate; `tools/idle_cpu.sh` runs the 10-minute AC 23 check). Active streaming ≈ 20–23 % is not budgeted. **Baseline (M0, main-screen region as stand-in):** capture + `videoconvert` + VA-API encode at 1360×1024/30 fps ≈ 19 % of one core; x264 ultrafast ≈ 31 %. **On the virtual output (AC 8):** 1568×1088/30 fps ≈ 23 % of one core (~6 % of the CPU) with the screen static; 600 frames of an empty desktop encode to 47 KB. Driver: `intel-media-va-driver` 24.1.0 (iHD, free build); `i965-va-driver` 2.4.1 is installed but its encoder aborts.
 - **Bitrate and fps defaults** — start 30 fps / 12 Mb/s; revisit after AC 10. **Superseded (M0):** CQP only on this driver (§4); tune `init-qp`/quality instead of bitrate. Receiver reported 29 fps, 0 stalls, 2 ms RTT on the test pattern.
 - **Is `use-damage=true` enough to keep idle cost near zero?** — ximagesrc still emits frames at the set rate; if idle encode cost is visible, pause the pipeline after N seconds without damage (receiver liveness is covered by pings). **Answered (M0): no** — `use-damage=true` costs more (35 % vs 19 %); design moved to an XDamage gate (§4).
 - **Can CBR be unlocked?** — Low-power encode needs HuC firmware for bitrate control. Options: `i915.enable_guc=2` (loads HuC; kernel cmdline + reboot) or `intel-media-va-driver-non-free` (adds the full `EncSlice` entrypoint). Not needed while CQP works. **M0:** `huc_info` reports `HuC disabled`, so CBR on this box requires `i915.enable_guc=2`.

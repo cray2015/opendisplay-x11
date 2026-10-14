@@ -37,6 +37,7 @@ class VideoConfig:
     keyframe_period: int = 1_000_000        # large = no periodic IDRs; 0 means auto (every 30)
     show_pointer: bool = True               # bake the cursor into the video until M4
     convert_threads: int = 2                # videoconvert worker threads
+    idle_pause_s: float = 1.0               # pause capture after this long with no screen change; 0 = never
 
 
 @dataclass
@@ -98,6 +99,7 @@ def _validate(cfg: Config):
          "display.connector must be an HDMI-A-n alias (forcing DP-n fails link training)")
     need(cfg.video.fps > 0, "video.fps must be > 0")
     need(0 <= cfg.video.qp <= 51, "video.qp must be 0..51")
+    need(cfg.video.idle_pause_s >= 0, "video.idle_pause_s must be >= 0")
     need(cfg.video.keyframe_period > 0, "video.keyframe_period must be > 0 (0 means every 30 frames)")
     need(cfg.input.scroll_step_px > 0, "input.scroll_step_px must be > 0")
     need(cfg.input.tap_slop_px >= 0, "input.tap_slop_px must be >= 0")

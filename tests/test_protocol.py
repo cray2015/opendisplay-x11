@@ -88,3 +88,19 @@ def test_malformed_panel_falls_back_whole(panel):
 
 def test_no_usable_size():
     assert protocol.panel_pixels({"type": "hello"}) is None
+
+
+def test_video_telemetry_prefix_still_demuxes_as_video():
+    framed = protocol.encode_video(b"\x00\x00\x00\x01\x65\x88", cap_ms=1000, snd_ms=1012)
+    payload = framed[4:]
+    assert payload.startswith(b'{"cap":1000,"snd":1012}\x00\x00\x00\x01')
+    assert not protocol.is_control(payload)
+
+
+def test_video_without_timestamps_has_no_prefix():
+    assert protocol.encode_video(b"\x00\x00\x00\x01\x41")[4:] == b"\x00\x00\x00\x01\x41"
+
+
+def test_ping_carries_health_fields():
+    msg = json.loads(protocol.ping(capFps=29.5, encDrops=3, netDrops=0)[4:])
+    assert msg == {"type": "ping", "capFps": 29.5, "encDrops": 3, "netDrops": 0}

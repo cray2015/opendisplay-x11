@@ -15,6 +15,9 @@ host: "HP EliteDesk 800 G3 DM — Mint 22.3 Cinnamon (X11)" {
     pipeline: "pipeline.py\nximagesrc → videoconvert →\nvaapih264enc (low-power, CQP)"
     annexb: "annexb.py\nAU normaliser"
     input: "input.py\nXTest"
+    activity: "activity.py\nper-window DAMAGE + XI2\n→ idle gate"
+    activity -> session: "wake"
+    session -> pipeline: "pause / resume"
 
     usbmux -> session: "Attached / Detached"
     session -> display: "hello → attach / teardown"
@@ -45,6 +48,7 @@ host: "HP EliteDesk 800 G3 DM — Mint 22.3 Cinnamon (X11)" {
   daemon.session -> daemon.pipeline: "idle gate"
   daemon.pipeline -> gpu: "NV12 frames"
   daemon.input -> xorg: "XTest events"
+  xorg -> daemon.activity: "DamageNotify, raw motion,\nwindow map/move"
   daemon.usbmux <-> usbmuxd: "/var/run/usbmuxd"
   daemon.protocol <-> usbmuxd: "byte pipe to :9000"
 }

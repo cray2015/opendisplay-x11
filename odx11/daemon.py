@@ -16,6 +16,7 @@ import threading
 import time
 
 from . import protocol, usbmux
+from .activity import ActivityMonitor
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +42,7 @@ class Session:
     on_hello(): a valid hello arrived (the daemon ends its grace period)."""
 
     def __init__(self, cfg, send, display, injector, make_pipeline, clock=now_ms,
-                 on_end=None, on_hello=None, call_later=None):
+                 on_end=None, on_hello=None, call_later=None, monotonic=time.monotonic):
         self.cfg = cfg
         self.on_end = on_end
         self.on_hello = on_hello
@@ -61,6 +62,10 @@ class Session:
         self.ended = None                # reason string once the session is over
         self.end_kind = None
         self._unknown = set()
+        self.monotonic = monotonic
+        self.paused = False              # idle gate: pipeline paused while nothing changes
+        self._last_activity = 0.0
+        self._cancel_idle = None
 
     # --- inbound ---------------------------------------------------------------
     def on_payload(self, payload: bytes):
@@ -122,6 +127,35 @@ class Session:
         gen = self._gen
         self.pipeline = self.make_pipeline(geom, self._send_au, lambda m: self._pipeline_error(m, gen))
         self.pipeline.start()                    # a fresh encoder opens with an IDR
+        self.paused = False
+        self.on_activity()
+
+    # --- idle gate (AC 23) -------------------------------------------------------
+    def on_activity(self):
+        """Something may have changed on screen: make sure frames flow, and push the
+        pause back. Cheap enough for every mouse event: one timer per idle period,
+        re-checked when it fires, instead of a reschedule per event."""
+        if self.pipeline is None or self.ended:
+            return
+        self._last_activity = self.monotonic()
+        if self.paused:
+            self.paused = False
+            self.pipeline.resume()
+            log.debug("activity: capture resumed")
+        if self._cancel_idle is None and self.call_later and self.cfg.video.idle_pause_s > 0:
+            self._cancel_idle = self.call_later(self.cfg.video.idle_pause_s, self._idle_check)
+
+    def _idle_check(self):
+        self._cancel_idle = None
+        if self.pipeline is None or self.ended or self.paused:
+            return
+        quiet = self.monotonic() - self._last_activity
+        if quiet < self.cfg.video.idle_pause_s:
+            self._cancel_idle = self.call_later(self.cfg.video.idle_pause_s - quiet, self._idle_check)
+            return
+        self.paused = True
+        self.pipeline.pause()                    # the receiver keeps showing the last frame
+        log.debug("idle %.1f s: capture paused", quiet)
 
     def on_display_change(self):
         """RandR says something changed (main thread). Follow the virtual output if it moved,
@@ -140,6 +174,7 @@ class Session:
         self.send(protocol.pong(msg.get("t"), self.clock()))
 
     def _on_touch(self, msg):
+        self.on_activity()
         self.injector.handle(msg)
 
     _on_scroll = _on_touch
@@ -147,6 +182,7 @@ class Session:
     def _on_kf(self, msg):
         log.debug("kf: forcing IDR")
         if self.pipeline:
+            self.on_activity()                   # paused: capture a fresh frame to carry the IDR
             self.pipeline.force_idr()
 
     def _on_stats(self, msg):
@@ -159,11 +195,11 @@ class Session:
         self.end("receiver closing", TEARDOWN)
 
     # --- outbound --------------------------------------------------------------
-    def _send_au(self, au: bytes, is_idr: bool):
+    def _send_au(self, au: bytes, is_idr: bool, cap_ms=None):
         # Runs on the streaming thread: no X calls here. A failed send ends the session;
         # re-raising tells the pipeline to stop.
         try:
-            self.send(protocol.encode_video(au))
+            self.send(protocol.encode_video(au, cap_ms, self.clock() if cap_ms is not None else None))
         except OSError as e:
             self.end(f"send failed: {e}", GRACE)
             raise
@@ -179,7 +215,8 @@ class Session:
             self.end(f"pipeline error: {message}", GRACE)
 
     def ping(self):
-        self.send(protocol.ping())
+        health = getattr(self.pipeline, "health", None)
+        self.send(protocol.ping(**(health() if health else {})))
 
     # --- lifecycle -------------------------------------------------------------
     def end(self, reason, kind=GRACE):
@@ -198,6 +235,9 @@ class Session:
         if self._cancel_debounce:
             self._cancel_debounce()
             self._cancel_debounce = None
+        if self._cancel_idle:
+            self._cancel_idle()
+            self._cancel_idle = None
         self._stop_pipeline()
         self.injector.release_all()
 
@@ -541,6 +581,16 @@ def run(cfg, display, injector, make_pipeline, tcp=None, udid=None):
         return Connection(cfg, sock, display, injector, make_pipeline, on_end, on_hello)
 
     daemon = Daemon(cfg, dial, display, open_connection, glib_call_later)
+    activity = ActivityMonitor() if cfg.video.idle_pause_s > 0 else None
+
+    def on_activity(fd, cond):
+        if cond & (GLib.IO_HUP | GLib.IO_ERR):
+            return GLib.SOURCE_REMOVE            # the X watch below handles a dead server
+        session = daemon.conn.session if daemon.conn is not None else None
+        activity.set_region(session.geom if session is not None and session.pipeline else None)
+        if activity.drain() and session is not None:
+            session.on_activity()
+        return GLib.SOURCE_CONTINUE
 
     def on_x_event(fd, cond):
         if cond & (GLib.IO_HUP | GLib.IO_ERR):
@@ -568,6 +618,9 @@ def run(cfg, display, injector, make_pipeline, tcp=None, udid=None):
         GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGINT, on_signal),
         GLib.unix_signal_add(GLib.PRIORITY_HIGH, signal.SIGTERM, on_signal),
     ]
+    if activity:
+        watches.append(GLib.io_add_watch(activity.fileno(), GLib.PRIORITY_DEFAULT,
+                                         GLib.IO_IN | GLib.IO_HUP | GLib.IO_ERR, on_activity))
     watcher = None
     if tcp:
         GLib.idle_add(lambda: daemon.on_attached("tcp", f"{tcp[0]}:{tcp[1]}") and False)
@@ -582,6 +635,8 @@ def run(cfg, display, injector, make_pipeline, tcp=None, udid=None):
         if watcher:
             watcher.close()
         daemon.shutdown()
+        if activity:
+            activity.close()
         ctx = GLib.MainContext.default()
         for w in watches:
             if ctx.find_source_by_id(w):

@@ -35,11 +35,16 @@ def encode_control(msg: dict) -> bytes:
     return frame(payload)
 
 
-def encode_video(access_unit: bytes) -> bytes:
-    """A framed video access unit. Annex B start codes guarantee it demuxes as video."""
-    if is_control(access_unit):
+def encode_video(access_unit: bytes, cap_ms: int | None = None, snd_ms: int | None = None) -> bytes:
+    """A framed video access unit, optionally behind the telemetry prefix
+    `{"cap":<ms>,"snd":<ms>}` (upstream §5.1) the receiver uses for end-to-end latency.
+    Annex B start codes put NUL bytes in every frame, so it still demuxes as video."""
+    payload = access_unit
+    if cap_ms is not None and snd_ms is not None:
+        payload = json.dumps({"cap": int(cap_ms), "snd": int(snd_ms)}, separators=(",", ":")).encode() + access_unit
+    if is_control(payload):
         raise ProtocolError("video frame would demux as control")
-    return frame(access_unit)
+    return frame(payload)
 
 
 def welcome() -> bytes:

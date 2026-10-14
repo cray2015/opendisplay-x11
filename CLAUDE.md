@@ -77,7 +77,8 @@ verified by hand against the acceptance criteria in `PROJECT_SPEC.md` §10.
 - **On teardown, `detect` before `--delmode`/`--rmmode`** — while still forced, Cinnamon re-enables the output and the mode cannot be removed. See `PROJECT_SPEC.md` §8.1.
 - **Unforce the connector on every exit path (atexit + `ExecStopPost`)** — a connector left forced on is an invisible monitor that swallows windows. See `PROJECT_SPEC.md` §8.4.
 - **The root helper writes only the allowlisted connector's sysfs status and debugfs EDID** — it is the project's entire privileged surface. See `PROJECT_SPEC.md` §8.5.
-- **Never poll; use usbmuxd `Listen`, RandR and XDamage events, with timers only for ping, grace and redial** — earlier Cinnamon applets were disabled for idle CPU spikes. See `PROJECT_SPEC.md` §4.
+- **Never poll; use usbmuxd `Listen`, RandR, per-window XDamage and XI2 events, with timers only for ping, grace, redial, rotation debounce and the idle pause** — earlier Cinnamon applets were disabled for idle CPU spikes. See `PROJECT_SPEC.md` §4.
+- **Never gate capture on root-window damage** — Cinnamon's compositor reports every repaint as the whole screen; use per-window damage filtered to the virtual monitor (`odx11/activity.py`). See `PROJECT_SPEC.md` §4.
 - **Treat `Detached` as intent: tear down immediately, no grace** — grace is only for EOF, silence and `sleeping`. See `PROJECT_SPEC.md` §8.4.
 - **Every tunable lives in the config file (`odx11/config.py` + `config.example.toml`), never as a module constant** — only values the protocol or hardware fixes stay in code; `tests/test_config.py` keeps the example equal to the defaults. See `PROJECT_SPEC.md` §8.6.
 - **Ignore unknown control `type`s and fields, logging each unknown type once** — input arrives at hundreds of messages per second. See `PROJECT_SPEC.md` §7.4.

@@ -221,3 +221,20 @@ def test_failed_video_send_ends_session_and_stops_stream():
     with pytest.raises(OSError):
         pipes[0].on_au(b"\x00\x00\x00\x01\x41", False)
     assert s.ended.startswith("send failed")
+
+
+def test_video_with_capture_time_gets_telemetry_prefix():
+    s, sent, pipes = make()
+    feed(s, HELLO)
+    sent.clear()
+    pipes[0].on_au(b"\x00\x00\x00\x01\x41", False, 700)
+    assert sent[0][4:].startswith(b'{"cap":700,"snd":777}')
+
+
+def test_ping_includes_pipeline_health():
+    s, sent, pipes = make()
+    feed(s, HELLO)
+    pipes[0].health = lambda: {"capFps": 30.0, "encDrops": 0, "netDrops": 0}
+    sent.clear()
+    s.ping()
+    assert json.loads(sent[0][4:]) == {"type": "ping", "capFps": 30.0, "encDrops": 0, "netDrops": 0}

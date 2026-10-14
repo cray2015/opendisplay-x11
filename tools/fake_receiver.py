@@ -65,6 +65,7 @@ def main():
         "panel": {"pixelsWide": w, "pixelsHigh": h, "scale": 2}})
 
     errors, counts = [], {"video": 0, "idr": 0, "bytes": 0}
+    latency, health = [], {}
     ctl_types = {}
     kf_sent_at_frame = None
     t0 = last_ping = time.monotonic()
@@ -97,14 +98,25 @@ def main():
                 break
             p, buf = buf[4:4 + n], buf[4 + n:]
             if n < 32768 and p[:1] == b"{" and b"\x00" not in p:
-                t = json.loads(p).get("type")
+                msg = json.loads(p)
+                t = msg.get("type")
                 ctl_types[t] = ctl_types.get(t, 0) + 1
+                if t == "ping":
+                    health = {k: v for k, v in msg.items() if k != "type"}
                 if t == "welcome" and counts["video"]:
                     errors.append("welcome arrived after video started")
                 continue
             counts["video"] += 1
             counts["bytes"] += n
             k = counts["video"]
+            if p[:1] == b"{":                 # telemetry prefix: JSON up to the first start code
+                cut = p.find(S4)
+                try:
+                    tel = json.loads(p[:cut])
+                    latency.append(tel["snd"] - tel["cap"])
+                except (ValueError, KeyError, TypeError):
+                    errors.append(f"frame {k}: malformed telemetry prefix {p[:cut][:60]!r}")
+                p = p[cut:]
             types = nal_types(p)
             if not p.startswith(S4):
                 errors.append(f"frame {k}: does not start with a 4-byte start code")
@@ -133,6 +145,10 @@ def main():
         errors.append("kf was not answered with an IDR within 3 frames")
     print(f"{counts['video']} AUs ({counts['video'] / secs:.1f} fps), {counts['idr']} IDRs, "
           f"{counts['bytes'] * 8 / secs / 1e6:.2f} Mb/s, control: {ctl_types}")
+    if latency:
+        latency.sort()
+        print(f"capture→send latency ms: median {latency[len(latency) // 2]}, max {latency[-1]}; "
+              f"last sender health: {health}")
     for e in errors[:20]:
         print("FAIL:", e)
     print("PASS" if not errors else f"{len(errors)} violation(s)")

@@ -307,3 +307,82 @@ def test_mux_reader_handles_split_and_packed_messages():
 def test_mux_reader_rejects_garbage_length():
     with pytest.raises(ValueError):
         usbmux.MessageReader().feed(usbmux.HEADER.pack(3, 1, 8, 0))
+
+
+# --- Session: idle gate (AC 23) ----------------------------------------------------
+
+class GatePipe:
+    def __init__(self, *a):
+        self.log = []
+    def start(self): self.log.append("start")
+    def stop(self): self.log.append("stop")
+    def pause(self): self.log.append("pause")
+    def resume(self): self.log.append("resume")
+    def force_idr(self): self.log.append("idr")
+
+
+def gated(idle=1.0):
+    clock = Clock()
+    pipes = []
+
+    def make(*a):
+        pipes.append(GatePipe())
+        return pipes[-1]
+    s = Session(config.parse({"video": {"idle_pause_s": idle}}), lambda b: None, SDisplay(), SInjector(),
+                make, call_later=clock.call_later, monotonic=lambda: clock.now)
+    s.on_payload(hello(2360, 1640))
+    return s, clock, pipes
+
+
+def test_static_screen_pauses_after_idle_period():
+    s, clock, pipes = gated()
+    clock.advance(0.9)
+    assert pipes[0].log == ["start"]
+    clock.advance(0.2)
+    assert pipes[0].log == ["start", "pause"] and s.paused
+
+
+def test_activity_resumes_and_postpones_the_pause():
+    s, clock, pipes = gated()
+    clock.advance(1.5)                                 # paused
+    s.on_activity()
+    assert pipes[0].log[-1] == "resume" and not s.paused
+    clock.advance(0.6)
+    s.on_activity()                                    # still busy
+    clock.advance(0.6)
+    assert not s.paused                                # 0.6 s since last activity
+    clock.advance(0.5)
+    assert s.paused
+
+
+def test_a_burst_of_activity_keeps_one_timer():
+    s, clock, pipes = gated()
+    for _ in range(500):                               # a mouse wiggle
+        s.on_activity()
+    assert len(clock.pending()) == 1
+
+
+def test_kf_while_paused_resumes_then_forces_idr():
+    s, clock, pipes = gated()
+    clock.advance(2)
+    s.on_payload(json.dumps({"type": "kf"}).encode())
+    assert pipes[0].log[-2:] == ["resume", "idr"]
+
+
+def test_touch_wakes_capture():
+    s, clock, pipes = gated()
+    clock.advance(2)
+    s.on_payload(json.dumps({"type": "touch", "phase": "began", "x": 0.5, "y": 0.5}).encode())
+    assert pipes[0].log[-1] == "resume"
+
+
+def test_idle_pause_zero_never_pauses():
+    s, clock, pipes = gated(idle=0)
+    clock.advance(60)
+    assert pipes[0].log == ["start"] and clock.pending() == []
+
+
+def test_stop_cancels_idle_timer():
+    s, clock, pipes = gated()
+    s.stop()
+    assert clock.pending() == []

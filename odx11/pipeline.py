@@ -6,15 +6,39 @@ Encoded frames are never dropped. `pipeline.py` never edits bytes; every
 access unit goes through `annexb.Normaliser`.
 """
 import logging
+import subprocess
+import time
 
-import gi
+log = logging.getLogger(__name__)
+
+
+def _refresh_registry():
+    """Rescan GStreamer plugins in a child whose stderr we keep, before Gst.init.
+
+    Forcing the connector touches /dev/dri/card1, which the VA plugins list as a
+    registry dependency, so the next GStreamer start rescans — and the vaapi plugin
+    prints a harmless `CRITICAL ... _dma_fmt_to_dma_drm_fmts` while being scanned.
+    Doing the rescan here sends that to the debug log; Gst.init then finds a fresh
+    registry. Real plugin problems still surface as a missing element at parse time."""
+    try:
+        r = subprocess.run(["gst-inspect-1.0", "vaapih264enc"], capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        log.debug("registry refresh skipped: %s", e)
+        return
+    for line in r.stderr.splitlines():
+        if line.strip():
+            log.debug("gst-plugin-scanner: %s", line.strip())
+
+
+_refresh_registry()
+
+import gi  # noqa: E402
 gi.require_version("Gst", "1.0")
 gi.require_version("GstVideo", "1.0")
 from gi.repository import Gst, GstVideo  # noqa: E402
 
 from . import annexb  # noqa: E402
 
-log = logging.getLogger(__name__)
 Gst.init(None)
 
 
@@ -26,8 +50,8 @@ def describe(geom, video, display_name: str) -> str:
         f"endx={x + w - 1} endy={y + h - 1} use-damage=false "
         f"show-pointer={'true' if video.show_pointer else 'false'} "
         f"! video/x-raw,framerate={video.fps}/1 "
-        "! queue leaky=downstream max-size-buffers=1 max-size-bytes=0 max-size-time=0 "
-        f"! videoconvert n-threads={video.convert_threads} ! video/x-raw,format=NV12 "
+        "! queue name=q leaky=downstream max-size-buffers=1 max-size-bytes=0 max-size-time=0 "
+        f"! videoconvert name=conv n-threads={video.convert_threads} ! video/x-raw,format=NV12 "
         # vaapih264enc, not vah264lpenc: the latter answers force-key-unit with a non-IDR I-frame.
         f"! vaapih264enc tune=low-power rate-control=cqp init-qp={video.qp} max-bframes=0 "
         f"keyframe-period={video.keyframe_period} "
@@ -38,19 +62,25 @@ def describe(geom, video, display_name: str) -> str:
 
 
 class Pipeline:
-    """on_au(bytes, is_idr) runs on the GStreamer streaming thread and may block; raising
-    OSError stops the stream. on_error(message) runs on the main loop (bus errors)."""
+    """on_au(bytes, is_idr, cap_ms) runs on the GStreamer streaming thread and may block;
+    raising OSError stops the stream. cap_ms is the wall-clock capture time, or None.
+    on_error(message) runs on the main loop (bus errors)."""
 
     def __init__(self, geom, video, display_name, on_au, on_error):
         self.on_au = on_au
         self.on_error = on_error
         self.normaliser = annexb.Normaliser()
         self.frames = 0
+        self._captured = 0               # buffers into the leaky queue
+        self._encoded = 0                # buffers out of it, towards the encoder
+        self._last_health = (time.monotonic(), 0)
         desc = describe(geom, video, display_name)
         log.debug("pipeline: %s", desc)
         self.pipe = Gst.parse_launch(desc)
         self.sink = self.pipe.get_by_name("out")
         self.sink.connect("new-sample", self._on_sample)
+        self._count(self.pipe.get_by_name("q").get_static_pad("sink"), "_captured")
+        self._count(self.pipe.get_by_name("conv").get_static_pad("sink"), "_encoded")
         bus = self.pipe.get_bus()
         bus.add_signal_watch()
         bus.connect("message::error", self._on_bus_error)
@@ -59,9 +89,41 @@ class Pipeline:
         if self.pipe.set_state(Gst.State.PLAYING) == Gst.StateChangeReturn.FAILURE:
             raise RuntimeError("pipeline failed to start")
 
+    def pause(self):
+        """Idle: stop capturing and encoding. A live source produces nothing while paused;
+        the receiver keeps showing the last frame and pings keep the link alive."""
+        self.pipe.set_state(Gst.State.PAUSED)
+
+    def resume(self):
+        self.pipe.set_state(Gst.State.PLAYING)
+
     def stop(self):
         self.pipe.set_state(Gst.State.NULL)
         self.pipe.get_bus().remove_signal_watch()
+
+    def _count(self, pad, attr):
+        def probe(pad, info):
+            setattr(self, attr, getattr(self, attr) + 1)
+            return Gst.PadProbeReturn.OK
+        pad.add_probe(Gst.PadProbeType.BUFFER, probe)
+
+    def health(self) -> dict:
+        """Sender-side counters for the receiver's overlay (upstream §6.2 `ping`)."""
+        now = time.monotonic()
+        t0, f0 = self._last_health
+        self._last_health = (now, self.frames)
+        fps = (self.frames - f0) / (now - t0) if now > t0 else 0.0
+        # The leaky queue is the only place frames are dropped; one may be in flight.
+        return {"capFps": round(fps, 1), "encDrops": max(0, self._captured - self._encoded - 1),
+                "netDrops": 0}
+
+    def _capture_ms(self, buf):
+        """Wall-clock ms when ximagesrc grabbed this frame (its PTS is capture running time)."""
+        clock = self.pipe.get_clock()
+        if clock is None or buf.pts == Gst.CLOCK_TIME_NONE:
+            return None
+        running_now = clock.get_time() - self.pipe.get_base_time()
+        return round(time.time() * 1000 - (running_now - buf.pts) / 1e6)
 
     def force_idr(self):
         """Next encoded frame is an IDR (answers `kf`)."""
@@ -83,7 +145,7 @@ class Pipeline:
         if not au:
             return Gst.FlowReturn.OK
         try:
-            self.on_au(au, is_idr)
+            self.on_au(au, is_idr, self._capture_ms(buf))
         except OSError:               # socket gone or wedged; the session has already ended
             return Gst.FlowReturn.EOS
         self.frames += 1
