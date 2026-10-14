@@ -1,0 +1,17 @@
+# odx11 user service (PROJECT_SPEC.md §8.4). Installed by systemd/install.sh, which
+# fills in @REPO@. Started by a Cinnamon autostart entry once the desktop session is
+# up — Cinnamon does not activate graphical-session.target, and the session's
+# DISPLAY/XAUTHORITY only exist in the user manager after login.
+[Unit]
+Description=odx11: iPad as a second monitor over USB
+Documentation=file://@REPO@/README.md
+
+[Service]
+Type=simple
+Environment=PYTHONPATH=@REPO@
+ExecStart=/usr/bin/python3 -m odx11 daemon
+# Every exit path unforces the connector, SIGKILL included: a connector left forced
+# on is an invisible monitor that swallows windows.
+ExecStopPost=/usr/bin/sudo -n /usr/local/sbin/odx11-connector detect
+Restart=on-failure
+RestartSec=5

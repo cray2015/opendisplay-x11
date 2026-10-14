@@ -1,0 +1,52 @@
+direction: right
+
+ipad: iPad {
+  app: "OpenDisplay receiver\nlistens TCP :9000"
+}
+
+host: "HP EliteDesk 800 G3 DM — Mint 22.3 Cinnamon (X11)" {
+  usbmuxd: "usbmuxd\n(stock Mint package)"
+
+  daemon: "odx11 daemon (systemd --user)" {
+    usbmux: "usbmux.py\nListen + Connect"
+    session: "daemon.py\nstate machine + timers"
+    protocol: "protocol.py\nframing + demux"
+    display: "display.py\nmode sizing + xrandr"
+    pipeline: "pipeline.py\nximagesrc → videoconvert →\nvaapih264enc (low-power, CQP)"
+    annexb: "annexb.py\nAU normaliser"
+    input: "input.py\nXTest"
+
+    usbmux -> session: "Attached / Detached"
+    session -> display: "hello → attach / teardown"
+    display -> pipeline: "output geometry"
+    display -> input: "output geometry"
+    pipeline -> annexb: "access units"
+    annexb -> protocol: "normalised AU"
+    protocol -> session: "control messages"
+    session -> pipeline: "kf → force IDR"
+    session -> input: "touch / scroll"
+  }
+
+  config: "~/.config/odx11/config.toml\n(every tunable)"
+  config -> daemon: "load + validate"
+
+  helper: "odx11-connector\n(root, sudoers)"
+  i915: "i915 HDMI-A-1\nforced on + EDID"
+  xorg: "Xorg + Cinnamon\nvirtual monitor"
+  gpu: "HD 530\nVA-API iHD (EncSliceLP)"
+
+  daemon.display -> helper: "on / detect / edid"
+  helper -> i915: "sysfs status on / detect\n(EDID: boot-time only, unused)"
+  i915 -> xorg: "connector appears"
+  daemon.display -> xorg: "xrandr mode (+ rotate;\nplace only if no saved layout)"
+  xorg -> xorg: "Cinnamon restores saved layout\n(cinnamon-monitors.xml)"
+  xorg -> daemon.pipeline: "XShm capture"
+  xorg -> daemon.session: "XDamage → pause / resume"
+  daemon.session -> daemon.pipeline: "idle gate"
+  daemon.pipeline -> gpu: "NV12 frames"
+  daemon.input -> xorg: "XTest events"
+  daemon.usbmux <-> usbmuxd: "/var/run/usbmuxd"
+  daemon.protocol <-> usbmuxd: "byte pipe to :9000"
+}
+
+host.usbmuxd <-> ipad.app: "USB 2.0 data cable\n[len][AU] → / ← JSON control"

@@ -1,0 +1,331 @@
+# opendisplay-x11 — project spec
+
+## 1. Overview
+A Linux X11 sender for the OpenDisplay protocol that turns an iPad into a wired,
+extended second monitor for the HP EliteDesk 800 G3 DM (i5-6500T, Intel HD 530)
+running Linux Mint 22.3 Cinnamon on X11. The unmodified OpenDisplay iPad app
+listens on TCP 9000; this daemon dials it through stock `usbmuxd` over the USB
+cable, creates a virtual monitor by forcing a spare display connector on,
+captures it, encodes H.264 on the iGPU via VA-API, and injects touch back into
+X. Target experience is spacedesk-over-USB: plug in, open the app, the desktop
+extends. Current phase: **M2 — seamless daemon** (M0 spike and M1 MVP complete).
+M1 result (2026-10-14): `odx11 run` extends the desktop to the iPad over USB;
+tap, drag, long-press right-click and two-finger scroll work; the session
+follows the virtual monitor when it is moved in Cinnamon; Ctrl-C tears down.
+M0 result (2026-10-14): feasible. Transport, handshake, VA-API encode, a
+forced connector at the §8.2 mode, live capture of the virtual monitor shown
+on the iPad, and windows returning to the main monitor on unforce are all
+proven. Carried forward: whether debugfs `edid_override` is honoured (needed
+for M2's named monitor and persistent placement). Throwaway spike scripts live in `spike/`.
+
+## 2. Goals
+- Plugging in the iPad and opening the OpenDisplay app extends the Cinnamon desktop onto it with no command run.
+- The iPad appears in Cinnamon's Display settings as a monitor, and its placement persists across reconnects and reboots (Cinnamon remembers it; a *named* monitor needs the boot-time EDID, skipped — §11).
+- Pulling the cable or quitting the app returns every window to the main monitor; a brief drop (app switch, lock) does not reshuffle windows.
+- Tap clicks, drag drags, and two-finger scroll scrolls, all landing on the iPad monitor's area.
+- An idle desktop costs near-zero CPU; active use stays inside a measured budget on the i5-6500T.
+- Works over any USB 2.0 data cable with stock Mint packages — no custom usbmuxd build, no USB networking, no Ethernet adapter, no browser.
+
+## 3. Non-Goals
+<!-- Tag names when the item could come back, not what release excluded it:
+     [never]       — permanently out of scope, architectural or by principle
+     [v2] / [v3]   — deferred to that release
+     [unplanned]   — not ruled out, not scheduled
+     [superseded]  — reversed; annotate in place, never delete -->
+- **[never]** Modifying or rebuilding the iPad receiver app — building it needs Xcode on a Mac; the receiver is consumed as shipped (TestFlight / App Store).
+- **[never]** Wayland session support — Cinnamon on X11 is the target; Wayland senders already exist upstream (tixwho/opendisplay-linux for KDE and Hyprland).
+- **[never]** Game-streaming latency — tuned for desktop work; Sunshine/Moonlight is the tool for games and is explicitly out of the brief.
+- **[v2]** Apple Pencil pressure/tilt — needs `pencil`/`proximity` handling, a uinput tablet device, and `welcome.pv` raised to 3 (M5).
+- **[v2]** Separate cursor channel (`cursor` + `cursorImg` via XFixes) — v1 bakes the cursor into the video (M4).
+- **[v2]** Wi-Fi transport via Avahi `_opensidecar._tcp` — USB first (M6).
+- **[v2]** KMS zero-copy capture — only if XShm capture misses the CPU budget in M3.
+- **[unplanned]** Cinnamon panel applet for status/toggle — only if event-driven (see §4, CPU constraint).
+- **[unplanned]** Mirror mode, audio forwarding, clipboard sync, multiple iPads at once, .deb packaging.
+
+## 4. Design rationale and constraints
+- **The receiver listens, the sender dials** — fixed by the protocol (§7.1). This is why plain `usbmuxd` is enough: the sender asks usbmuxd to `Connect` to device port 9000 and gets a raw byte pipe. No IP link exists or is needed over the cable.
+- **Rejected: browser clients (Weylus, Deskreen)** — they need an IP link over the cable (custom NCM-enabled usbmuxd build or a USB-Ethernet adapter on the iPad), decode in Safari, and connect manually. Not spacedesk-like.
+- **Rejected: forking tixwho/opendisplay-linux (C++/Qt)** — an X11 backend replaces its capture (PipeWire portal), display control (KScreen/Hyprland), input and Kirigami GUI. What would survive (usbmux connect, framing) is the small part. Keep it as a protocol reference only.
+- **Virtual monitor = forced HDMI alias of an empty DP++ port** — i915 exposes each DP++ port as both `DP-n` and `HDMI-n`. TMDS needs no handshake, so a forced HDMI connector modesets with no sink attached; forcing the `DP-n` alias is expected to fail link training. This exact sysfs trick is known to work for an iPad on Mint X11 (hkfuertes/virtual-screen).
+- **Rejected virtual-display alternatives** — EVDI (out-of-tree module, reported black-screen regressions after updates); Intel `VIRTUAL` outputs (need xf86-video-intel, Mint runs the modesetting driver); hardware DP dummy plug (monitor is always "connected", so Cinnamon enables an invisible screen when no iPad is present — fallback only).
+- **[superseded 2026-10-14] Custom EDID on the forced connector** — gives Cinnamon a stable, named monitor identity and the exact modes we want. Preferred delivery is runtime via debugfs `edid_override` (per-device size, no reboot); boot-time `drm.edid_firmware=` is the fallback (§11). *M2 finding: Secure Boot puts the kernel in lockdown (`integrity`), which refuses debugfs writes even from root, so the runtime override cannot work on this machine. Decision: run without an EDID — the monitor shows as `unknown` in Display settings, everything else works, and the mode stays free to vary per iPad and on rotation. `odx11/edid.py` + `edid/make_edid.py` remain for the boot-time fallback if a named monitor is ever wanted.*
+- **Lower logical resolution than the iPad panel** — X11 has one global scale and Cinnamon's per-monitor fractional scaling on X11 renders via `xrandr --scale`, which costs GPU. Driving the panel at native Retina size at 1x makes text unreadably small. The virtual mode is panel ÷ divisor (default 1.5) and the iPad upscales (§8.2).
+- **Rotation via `xrandr --rotate`, not new modes** — the EDID/mode stays landscape; portrait is `--rotate left`. Keeps one mode per device.
+- **Strict Annex B in our own code** — the receiver requires 4-byte start codes, SPS+PPS before every IDR, and one access unit per wire frame (§7.5). 3-byte start codes are legal H.264 byte-stream, so encoder output is normalised in `annexb.py`, never trusted.
+- **Drop raw frames, never encoded ones** — backpressure is a leaky queue before the encoder. Dropping an encoded P-frame breaks the reference chain and shows corruption until the next IDR; if an encoded frame must be skipped, the sender forces an IDR next.
+- **`welcome.pv = 2` until Pencil lands** — a receiver told the sender is pv 3 sends `pencil` messages instead of degrading the stylus to `touch`. Advertising 3 before M5 makes the Pencil go dead.
+- **Python 3 + GStreamer (PyGObject) for v1** — `appsink` with `alignment=au` yields one access unit per buffer, and an upstream force-key-unit event (sent with `appsink.send_event`) answers `kf`. Rejected: ffmpeg subprocess (cannot force an IDR on demand from outside the process); Go (cgo bindings for GStreamer or libav add build friction before the design is proven).
+- **Encoder is `vaapih264enc tune=low-power`, CQP — measured in M0** — with Mint's free `intel-media-va-driver` (iHD) the HD 530 exposes only `VAEntrypointEncSliceLP`, so `vah264enc` and `vapostproc` do not exist and low-power rate control is CQP only (CBR needs HuC). `vah264lpenc` answers force-key-unit with a non-IDR I-frame (and ignores repeats), which breaks `kf`; `vaapih264enc` emits a real IDR with SPS+PPS the next frame. The i965 driver's encoder aborts at context init. CQP is acceptable: USB 2.0 has headroom for scene-change bursts. Colour conversion is software `videoconvert` (no VPP entrypoint). Fallback: `x264enc` ultrafast/zerolatency (~31 % of one core vs ~19 %). Risk: gstreamer-vaapi is deprecated upstream; re-check when Mint moves past GStreamer 1.24.
+- **Idle cost needs a damage gate, not `use-damage`** — `ximagesrc` emits at the full frame rate regardless, and `use-damage=true` measured *more* expensive (35 % vs 19 % of one core) because it copies per damaged rectangle. Near-zero idle requires the daemon to watch XDamage on the virtual output and stop pushing frames when nothing changes, resuming on damage; while paused, `kf` and reconnects replay the last frame as an IDR (upstream §5.3).
+- **No polling — event-driven only** — device events come from usbmuxd `Listen`, display changes from RandR events. The only timers: 2 s ping, 10 s grace, 3 s redial while a device is attached with no session. Previous Claude-Code-built Cinnamon applets were disabled for CPU spikes; this project must be quiet at idle.
+- **Root only for the connector toggle** — one allowlisted helper script via sudoers NOPASSWD (§8.5). The daemon runs as the desktop user under `systemd --user` with the session's `DISPLAY`/`XAUTHORITY`.
+- **[superseded 2026-10-14] The daemon owns placement** — position is applied by the daemon from per-device config on every attach, rather than relying on Cinnamon's `monitors.xml`, so layout is deterministic. M0 showed Cinnamon enables and places a hotplugged output on its own, before our xrandr runs; the daemon must apply its layout after that settles (§11).
+- **Cinnamon owns placement** (replaces the above) — Cinnamon saves the arrangement in `~/.config/cinnamon-monitors.xml`, keyed by connector (`HDMI-1`, vendor/product/serial `unknown` without an EDID), and restores it on hotplug — *provided our mode already exists on the output*. So the daemon adds the mode **before** forcing the connector, waits up to `settle_timeout_s` for Cinnamon to enable it, and only fixes what is left: mode/rotation in place if the orientation differs, or a first-time position from `[devices]` `side`/`align` when Cinnamon has no saved layout. Measured: attach ≈ 1 s when Cinnamon restores. Limitation: all iPads share one identity, so two iPads cannot have different placements (multiple iPads are a non-goal).
+- **Protocol drift** — upstream plans protocol v4 to replace the JSON/video demux heuristic with a typed frame header. Framing and demux live in one module so the swap is one file.
+- **External dependency: receiver distribution** — the iPad app ships via TestFlight; App Store release is on upstream's roadmap, not done. If the beta closes before an App Store release, the project is blocked.
+
+## 5. Architecture
+usbmuxd `Attached` → `daemon.py` dials device port 9000 via `usbmux.py` → receiver sends `hello` → `display.py` forces the HDMI alias on (via the root helper), sets mode, rotation and placement with xrandr → `pipeline.py` captures that output's region with `ximagesrc` and encodes VA-API H.264 → `annexb.py` normalises each access unit → `protocol.py` frames it onto the usbmux socket → iPad decodes and displays. Back-channel: `touch`/`scroll` → `input.py` → XTest at the output's geometry; `kf` → force IDR; `ping` → `pong`.
+Diagram source: `docs/architecture.d2`. Render on demand with
+`d2 docs/architecture.d2 docs/architecture.svg` — the `.d2` is the source of
+truth; the rendered SVG is not committed.
+
+## 6. Components
+| Path | Role |
+|---|---|
+| `odx11/__main__.py` | CLI entry: `run` (foreground session), `daemon` (service mode), `list` (attached devices) |
+| `odx11/daemon.py` | `Session` (one connection), `Daemon` (§8.4 state machine: attach/detach, dial, grace, redial, teardown), GLib wiring incl. the usbmuxd socket watcher; owns all timers |
+| `odx11/edid.py` | EDID 1.4 builder — kept for the boot-time fallback; unused at runtime (§4) |
+| `odx11/usbmux.py` | Minimal usbmuxd client over `/var/run/usbmuxd`: `Listen` (incremental reader), `Connect(device, 9000)`, `ListDevices` |
+| `odx11/protocol.py` | Length-prefix framing, demux rule, control-message encode/decode — the only module that knows the wire format |
+| `odx11/annexb.py` | NAL parsing, 3→4-byte start-code normalisation, SPS/PPS cache and IDR prefixing, AUD stripping |
+| `odx11/pipeline.py` | GStreamer pipeline build/rebuild, appsink pull, force-key-unit, leaky-queue backpressure |
+| `odx11/display.py` | Only caller of the root helper and of xrandr; mode sizing (§8.2), rotation, placement, geometry query |
+| `odx11/input.py` | `touch`/`scroll` → XTest motion, button 1, wheel buttons 4–7, within current output geometry |
+| `odx11/config.py` | TOML config load: connector, divisor, fps, bitrate, per-device placement keyed by `hello.id` |
+| `helper/odx11-connector` | Root script: `on` / `detect` / `edid < blob` for the single allowlisted connector |
+| `helper/install.sh` | Installs the helper, its allowlist and the sudoers rule; `--uninstall` reverses it |
+| `edid/make_edid.py` | Generates a landscape EDID blob for a given logical mode |
+| `systemd/odx11.service` | User unit; `ExecStopPost` always unforces the connector; `Restart=on-failure` |
+| `systemd/install.sh` | Installs the unit + a Cinnamon autostart entry that starts it (Cinnamon never activates `graphical-session.target`) |
+| `tools/fake_receiver.py` | Local receiver for tests without an iPad: sends `hello`, pings, counts AUs, validates framing |
+| `tests/` | Unit tests for protocol, annexb, mode sizing, coordinate mapping, state machine transitions |
+| `docs/architecture.d2` | Architecture diagram source |
+
+## 7. Protocol (OpenDisplay, sender side)
+Normative source: upstream `PROTOCOL.md` (peetzweg/opendisplay), written against `pv` 3. This section records what this sender implements. Cross-checked against upstream's revision of 2026-10-01 (`hello.panel` additive) in M0.
+
+### 7.1 Transport binding (USB via usbmuxd)
+Unix socket `/var/run/usbmuxd`. Each message: 16-byte little-endian header + XML plist payload.
+```
+[uint32 LE length incl. header][uint32 LE version = 1][uint32 LE message = 8 (plist)][uint32 LE tag]
+[XML plist payload]
+```
+| MessageType | Fields sent | Reply |
+|---|---|---|
+| `Listen` | `ClientVersionString`, `ProgName` | `Result` 0, then a stream of `Attached` / `Detached` on the same socket |
+| `Connect` | `DeviceID`, `PortNumber` = **htons(9000) = 10275** | `Result` 0 → socket becomes a raw byte pipe to the device port |
+| `ListDevices` | — | `DeviceList` (used by `odx11 list`) |
+
+| `Result` | Meaning | Daemon action |
+|---|---|---|
+| 0 | OK | proceed |
+| 2 | bad device | treat as detached |
+| 3 | connection refused | app not open/foreground; redial in 3 s |
+
+- `Attached.Properties.ConnectionType` must be `"USB"`; ignore network-paired entries.
+- `Attached.Properties.SerialNumber` is the UDID; `hello.id` (per-install UUID) is the config key.
+- `Listen` holds its own socket; every `Connect` uses a fresh socket.
+- Device must be trusted (`idevicepair pair`) and unlocked — confirmed in M0. With the app installed but not foreground, `Connect` returns `Result` 3.
+
+### 7.2 Framing and demux
+```
+every message, both directions:  [uint32 BE payload length][payload]
+receiver → sender:  always JSON, 1 ≤ length < 2^20
+sender → receiver:  JSON control  iff  length < 32768  AND  payload[0] == '{'  AND  no 0x00 byte
+                    otherwise video (Annex B always contains 0x00)
+```
+TCP_NODELAY on the usbmux socket. Reassemble across reads; never assume one read = one frame.
+
+### 7.3 Session sequence
+```
+→ usbmuxd Connect(device, 9000)
+← hello {panel, pixelsWide, pixelsHigh, scale, device, id, pv, ...}  first message, always
+→ welcome {pv: 2, min: 1}                                         reply to EVERY hello
+   display.attach(hello) → geometry → pipeline.start(geometry)
+→ video: IDR (SPS PPS IDR-slice)                                  first frame always IDR
+→ video: P ... P
+↔ ping every 2 s, both directions
+← ping {t}            → pong {t: <echoed>, mt: <now ms>}
+← touch / scroll      → input.py
+← kf                  → next frame IDR
+← hello (rotation)    → debounce 300 ms → rebuild display + pipeline → welcome → IDR
+← sleeping | closing | EOF | > 5 s silence → §8.4
+```
+
+### 7.4 Message handling
+| Direction | `type` | Handling |
+|---|---|---|
+| ← | `hello` | Size/rebuild display from `panel` (§8.2); reply `welcome`; repeats debounced 300 ms. Ignore `cursorPort` (UDP cannot ride usbmuxd) and the `hevc` entry of `videoCaps` (HD 530 has no HEVC encoder) |
+| ← | `ping` | Reply `pong`, echo `t` unchanged, add `mt` (sender ms since epoch) |
+| ← | `touch` | §7.6 |
+| ← | `scroll` | §7.6 |
+| ← | `kf` | Force IDR on next frame |
+| ← | `stats` | Log one line prefixed `PHONE-STATS` |
+| ← | `sleeping` | Session ends; display kept for grace; redial (§8.4) |
+| ← | `closing` | Session ends; immediate teardown; redial at 3 s while attached |
+| ← | `pencil`, `proximity` | Not sent to us while `welcome.pv = 2` (receiver degrades stylus to `touch`) |
+| ← | unknown | Ignore; log once per type, not per message |
+| → | `welcome` | `{pv: 2, min: 1}` until M5 |
+| → | `pong` | As above |
+| → | `ping` | Every 2 s; optional health fields `capFps`, `encDrops`, `netDrops` |
+| → | video | One AU per frame, optional telemetry prefix `{"cap":<ms>,"snd":<ms>}` |
+| → | `cursor`, `cursorImg` | Not sent in v1 (M4) |
+| → | `streamConfig` | Not sent in v1; receivers assume legacy H.264 without it |
+
+### 7.5 Video stream contract
+- H.264, Annex B, **4-byte start codes only** (`00 00 00 01`).
+- **One access unit per wire frame**; all slices of a picture together.
+- **Every IDR is preceded by the current SPS and PPS** in the same wire frame.
+- No B-frames; no timestamps on the wire; receiver displays in arrival order.
+- First frame after every (re)connect is an IDR; `kf` makes the next frame an IDR.
+- Resolution change = new SPS/PPS + IDR; receiver takes size from the SPS, not `hello`.
+- AUD NALs (type 9) stripped; SEI allowed.
+- Defaults: 30 fps, CQP (the only rate control this encoder offers, §4). Even dimensions, multiples of 16.
+
+### 7.6 Input mapping
+`G = (gx, gy, gw, gh)` = virtual output geometry in X root coordinates, re-queried after every xrandr change (post-rotation).
+| Message | Mapping |
+|---|---|
+| `touch` began | motion to `(gx + x·(gw−1), gy + y·(gh−1))`; **no press yet** — remember start point and time |
+| `touch` moved, within `tap_slop_px` of start | motion only |
+| `touch` moved, beyond `tap_slop_px` | motion to start, button 1 press, motion to here — a drag |
+| `touch` ended, never left the slop | click at the start point: button 3 if held ≥ `long_press_ms`, else button 1 |
+| `touch` ended, dragging | motion, button 1 release |
+| `touch` cancelled, never left the slop | nothing — a two-finger scroll is starting; clicking would hit whatever was under finger one |
+| `touch` cancelled, dragging | motion, button 1 release |
+| `scroll` dy > 0 | button 4 (fingers down → content down → scroll up) per 40 px accumulated |
+| `scroll` dy < 0 | button 5 per 40 px |
+| `scroll` dx > 0 / dx < 0 | button 6 / button 7 per 40 px |
+Why the deferred press: the receiver reports a two-finger scroll as a one-finger `began` followed by `cancelled` (upstream's Mac sender documents this). An X11 press cannot be retracted, so pressing on `began` turned every scroll into a click; macOS gets around it with a zero click-count release, X has no equivalent. Right-click fires on lift rather than mid-hold so input needs no timer of its own (timers stay in `daemon.py`). Upstream has no right-click at all; long-press is this sender's addition.
+`touch.x/y` are normalised 0..1 against the video; `scroll.dx/dy` are **video pixels** with natural-scrolling sign. Scroll applies at the current pointer (last touch position). Step size is configurable.
+
+## 8. Display, capture and lifecycle
+### 8.1 Virtual monitor (forced connector)
+| Fact | Value |
+|---|---|
+| GPU / driver | Intel HD 530, i915, Xorg modesetting driver |
+| DRM card | `card1` (debugfs `dri/1`) |
+| Rear video ports | 3 DDIs, each exposed as `DP-n` + `HDMI-A-n` |
+| Main monitor connector | `HDMI-A-3` / xrandr `HDMI-3` — DP++ port driven through a passive DP→HDMI adapter |
+| Virtual connector | `HDMI-A-1` / xrandr `HDMI-1` (verified M0); `HDMI-A-2` is the spare alternative |
+| Force toggle | `/sys/class/drm/card1-HDMI-A-1/status` ← `on` / `detect` |
+| EDID (runtime) | debugfs `/sys/kernel/debug/dri/1/HDMI-A-1/edid_override` — node exists, but writes fail with EPERM under Secure Boot lockdown (`integrity`). Not used. |
+| EDID (boot-time, not set up) | `drm.edid_firmware=HDMI-A-1:edid/odx11.bin` on the kernel command line; blob from `edid/make_edid.py` |
+| Without EDID | Forced connector offers 1024×768, 800×600, 848×480, 640×480 |
+| Cinnamon on hotplug | Enables the new output itself (seen at `1024x768+1920+0`, right of main) before our xrandr runs; our later xrandr call is not reverted within 15 s |
+
+Attach: `cvt -r` + `--newmode`/`--addmode` on the still-disconnected output → helper `on` → wait (RandR events) for connected, then up to `settle_timeout_s` for Cinnamon to enable it from its saved layout → if the size differs, `--mode`/`--rotate` in place; if Cinnamon left it off, `--mode --rotate --pos` from `[devices]` defaults → re-query geometry → hand to pipeline and input.
+Detach: stop pipeline → helper `detect` → wait for disconnected → `--off` → `--delmode`/`--rmmode`. **Unforce before removing the mode**: while the connector is still forced, Cinnamon re-enables an output we switch off (from its saved layout), the mode is then in use and `--rmmode` fails — M1 leaked a mode exactly this way.
+
+### 8.2 Mode sizing
+Panel size comes from `hello.panel.pixelsWide/High` (upstream §6.7); fall back to the deprecated `hello.pixelsWide/High` only when `panel` is absent or malformed. Both are in the current orientation, so swap to landscape before sizing.
+```
+logical_w = floor16(panel_landscape_w / divisor)      divisor default 1.5
+logical_h = floor16(panel_landscape_h / divisor)
+rotation  = normal if hello is landscape else left
+```
+| iPad panel (landscape) | Logical mode (÷1.5) |
+|---|---|
+| 2048 × 1536 | 1360 × 1024 |
+| 2160 × 1620 | 1440 × 1072 |
+| 2360 × 1640 | 1568 × 1088 ← the target iPad (Air 5th gen) |
+Stream encodes at the logical size; the iPad scales up. Divisor and an absolute override live in config.
+
+### 8.3 Capture and encode pipeline
+```
+ximagesrc display-name=:0 startx=gx starty=gy endx=gx+gw-1 endy=gy+gh-1
+          use-damage=false show-pointer=true
+  ! video/x-raw,framerate=30/1
+  ! queue leaky=downstream max-size-buffers=1
+  ! videoconvert n-threads=2 ! video/x-raw,format=NV12
+  ! vaapih264enc tune=low-power rate-control=cqp max-bframes=0 keyframe-period=1000000
+  ! h264parse config-interval=-1
+  ! video/x-h264,stream-format=byte-stream,alignment=au
+  ! appsink name=out sync=false emit-signals=true
+```
+Verified in M0 on Mint's GStreamer 1.24 with the iHD driver (gstreamer1.0-vaapi): 1360×1024 at 30 fps costs ~19 % of one core end to end; output has 4-byte start codes only and SPS+PPS before every IDR; `h264parse` inserts AUDs, which `annexb.py` strips. `keyframe-period=0` does **not** disable periodic IDRs (it means auto, one per 30 frames); a large value does (1 000 000 gave one IDR in 2500 frames). IDRs otherwise come from `kf`, reconnect and resize. `show-pointer=true` bakes the cursor in until M4. Idle gating per §4.
+
+### 8.4 Session lifecycle
+```
+IDLE ──Attached(USB)──▶ DIALING
+DIALING ──Result 3──▶ wait 3 s ──▶ DIALING            (app not open)
+DIALING ──Result 0──▶ AWAIT_HELLO ──hello──▶ STREAMING
+STREAMING ──EOF / >5 s silence / sleeping──▶ GRACE    (display kept, redial every 3 s)
+GRACE ──hello, same id──▶ STREAMING                   (no xrandr change)
+GRACE ──10 s elapsed──▶ teardown ──▶ DIALING
+STREAMING ──closing──▶ teardown ──▶ DIALING
+any ──Detached──▶ teardown ──▶ IDLE                    (cable pull = intent, no grace)
+SIGTERM / crash ──▶ teardown (atexit + ExecStopPost)
+any ──user disables the monitor──▶ teardown ──▶ PAUSED   (no redial until replug)
+```
+As built (M2): redial every `redial_s` (3 s) while the app is closed, every `redial_grace_s` (1 s) during grace so an app switch resumes quickly; a dial that connects during grace keeps the grace timer running until `hello`. A resumed session re-attaches with no xrandr change. Rotation hellos are debounced by `rotation_debounce_ms`. usbmuxd is started by udev on plug-in and exits with the last device, deleting its socket: the daemon watches that path with a Gio file monitor (inotify) and treats the Listen socket closing as every device detaching. Live-verified with fake receivers: resume within grace with no display change, teardown exactly at grace expiry; SIGKILL leaves the connector unforced within 1.5 s and the service restarts and reconnects.
+
+### 8.5 Privileged helper
+`/usr/local/sbin/odx11-connector {on|detect|edid}` — reads the single allowed connector from `/etc/odx11/connector`, refuses anything else, writes only the sysfs status file and the debugfs EDID override. `edid` takes the blob on **stdin**, never a path: a root process reading a caller-named file would leak any file's bytes back out through xrandr's EDID property. The blob is checked for the EDID header and 128-byte block size. The daemon refuses to start if `[display] connector` differs from the allowlist.
+Sudoers: `<user> ALL=(root) NOPASSWD: /usr/local/sbin/odx11-connector`
+
+### 8.6 Config
+`~/.config/odx11/config.toml`, overridable with `--config`. **Every tunable lives here**; code keeps only values the protocol or hardware fixes. Sections: `[transport]` (usbmuxd socket, device port), `[display]` (connector, main output, divisor, mode refresh, helper path, connect timeout), `[video]` (fps, CQP `qp`, keyframe period, pointer, convert threads), `[input]` (scroll step), `[session]` (ping interval ≤ 2 s, silence timeout, grace, redial, grace redial, rotation debounce), and `[devices.<hello.id>]` tables with `side` (left/right/above/below), `align` (start/center/end), optional `mode` override. Unknown keys are rejected. `config.example.toml` documents every key at its default, and a unit test keeps the two identical.
+
+## 9. Milestones
+- [x] M0 — Spike: transport, forced connector, VA-API encode and end-to-end test pattern proven by hand; no product code
+- [x] M1 — MVP CLI: `odx11 run` extends the desktop to the iPad over USB with touch and scroll
+- [ ] M2 — Seamless daemon: systemd user service, usbmuxd attach/detach, grace, rotation, per-device placement
+- [ ] M3 — Hardening: backpressure with IDR recovery, liveness, CPU budget measured and met, 2-hour soak
+- [ ] M4 (backlog) — Cursor channel via XFixes (`cursor` + `cursorImg`)
+- [ ] M5 (backlog) — Apple Pencil via uinput tablet device, `welcome.pv` raised to 3
+- [ ] M6 (backlog) — Wi-Fi transport via Avahi `_opensidecar._tcp`
+
+## 10. Acceptance criteria
+1. [x] M0: OpenDisplay receiver installed on the iPad via TestFlight; iPad model and iPadOS version recorded in §11
+2. [x] M0: `idevice_id -l` lists the iPad and `idevicepair validate` succeeds using stock Mint packages
+3. [x] M0: With the app open, `iproxy 9000 9000` + `nc localhost 9000 | xxd` shows a length-prefixed `hello`; panel size recorded in §11
+4. [x] M0: Main and spare connector names identified from `/sys/class/drm` and `xrandr` and recorded in §8.1
+5. [x] M0: Writing `on` to the spare HDMI alias makes `xrandr` report it connected, and a §8.2 mode enables beside the main monitor with a clean `dmesg`
+6. [x] M0: Writing `detect` removes the virtual monitor and Cinnamon moves its windows back to the main monitor
+7. [x] M0: `vainfo` lists an H.264 encode entrypoint on the HD 530; driver package recorded in §11
+8. [x] M0: GStreamer captures the virtual monitor's region and VA-API encodes it at 30 fps; CPU use recorded in §11
+9. [x] M0: A throwaway script streams a test pattern through `iproxy` and the iPad displays it
+10. [x] M1: `odx11 run` connects via usbmuxd without `iproxy`, completes `hello`/`welcome`, and the iPad shows the extended desktop
+11. [x] M1: A window dragged onto the virtual monitor appears on the iPad and stays interactive
+12. [x] M1: Tap clicks, drag drags, and two-finger scroll scrolls at the touched position on the virtual monitor
+13. [x] M1: A `kf` request makes the next sent frame an IDR prefixed with SPS and PPS (unit test and live)
+14. [x] M1: Ctrl-C tears down the virtual monitor and windows return to the main monitor
+15. [x] M1: A long press right-clicks on lift, and a two-finger scroll never clicks what is under the first finger
+16. [ ] M2: With the user service enabled, plugging in the iPad and opening the app extends the desktop with no command run
+17. [x] M2: Pulling the cable tears the display down immediately; an app switch shorter than the grace period resumes without moving windows
+18. [x] M2: Quitting the app tears down immediately; locking and unlocking the iPad within the grace period resumes the session
+19. [x] M2: Rotating the iPad rebuilds the virtual monitor in the new orientation within 1 s
+20. [ ] M2: The iPad monitor returns to its configured placement after a reconnect and after a reboot
+21. [x] M2: Killing the daemon with SIGKILL still leaves no forced connector behind (ExecStopPost)
+22. [ ] M3: Unit tests pass for framing, demux rule, Annex B normalisation, mode sizing, coordinate mapping and state transitions
+23. [ ] M3: Idle desktop for 10 minutes keeps daemon plus pipeline CPU under the §11 budget
+24. [ ] M3: A 2-hour working session completes with no stall longer than 2 s and no visible corruption
+<!-- Checkbox rules — this file is the ONLY source the Trello sync reads.
+     `- [ ]` for unordered work, `N. [ ]` where order is the point. Both parse
+     the same; the list marker is stripped before hashing, so renumbering or
+     inserting a step never strands a card.
+     One physical line per task — only the first line reaches the card.
+     Never reword a pending task in place: card identity is a hash of the task
+     text, so an edit strands the old card and creates a new one. To retire a
+     task, check it off; to change its meaning, check the old one and add a
+     new line. -->
+
+## 11. Open questions
+- **Which iPad model and iPadOS version?** — sets panel size, §8.2 mode and whether the receiver installs at all (needs iPadOS 15+ upstream, 16+ per the Linux fork). Settled by AC 1 and 3. **Answered (M0):** iPad Air 5th gen (`iPad13,16`, M1), iPadOS 27.0.1, OpenDisplay build 178 (`com.peetzweg.opensidecar.ios`). `hello.panel` 2360×1640 @ scale 2, `pv` 3, `displayMaxFrameRate` 60, `videoCaps` h264 + hevc (≤ 2360), `cursorPort` 9001.
+- **Does forcing the HDMI alias work on this board?** — strong evidence from a Mint X11 setup doing the same; settled by AC 5. If not: DP dummy plug, with `xrandr --off` replacing `detect`. **Answered (M0): yes** — `on` on `HDMI-A-1` → xrandr connected, 1024×768 enabled right of `HDMI-3`, no drm/i915 lines in `dmesg`; `detect` removed it. The §8.2 mode 1568×1088 (`cvt -r` + `--newmode`/`--addmode`) then enabled right of `HDMI-3`, again with a clean `dmesg`.
+- **EDID delivery: runtime debugfs `edid_override` or boot-time `drm.edid_firmware`?** — prefer runtime for per-device sizing without reboot; settled in M0 by checking the debugfs node exists and is honoured on a forced connector. **Partly answered (M0):** `edid_override` exists under `dri/1/HDMI-A-1`; honoured-on-force still to test. **Answered (M2): neither, for now** — runtime is blocked by Secure Boot lockdown; boot-time was declined (GRUB edit + reboot, one fixed mode for all iPads). The monitor is unnamed (`unknown`) and that is accepted.
+- **Does Cinnamon's settings daemon react to the hotplug and fight our xrandr call?** — if it auto-applies its own layout, either apply ours after it settles or let it place the monitor and only correct. Settled in M0/M1 by watching `xrandr --listmonitors` after `on`. **Answered (M0): it reacts** — the output came up active at `1024x768+1920+0` before our xrandr call; our subsequent call was not reverted within 15 s. Longer-run interference (and whether `monitors.xml` re-applies) still to watch in M1. **Answered (M2):** it re-applies the user's saved layout (`cinnamon-monitors.xml`) on every hotplug when the mode exists, and re-enables an output switched off while still forced. Resolved by letting Cinnamon own placement and unforcing before mode removal (§4, §8.1).
+- **Does usbmuxd `Connect` require pairing?** — the Linux fork says paired and unlocked; confirm in AC 2–3. **Answered (M0):** pairing validated with stock packages and `Connect` succeeded; `Result` 3 when the app is not foreground.
+- **Divisor default** — 1.5 is a guess; tune by eye on the actual iPad.
+- **CPU budget** — no number until AC 8 measures the baseline; set the M3 target from it. **Baseline (M0, main-screen region as stand-in):** capture + `videoconvert` + VA-API encode at 1360×1024/30 fps ≈ 19 % of one core; x264 ultrafast ≈ 31 %. **On the virtual output (AC 8):** 1568×1088/30 fps ≈ 23 % of one core (~6 % of the CPU) with the screen static; 600 frames of an empty desktop encode to 47 KB. Driver: `intel-media-va-driver` 24.1.0 (iHD, free build); `i965-va-driver` 2.4.1 is installed but its encoder aborts.
+- **Bitrate and fps defaults** — start 30 fps / 12 Mb/s; revisit after AC 10. **Superseded (M0):** CQP only on this driver (§4); tune `init-qp`/quality instead of bitrate. Receiver reported 29 fps, 0 stalls, 2 ms RTT on the test pattern.
+- **Is `use-damage=true` enough to keep idle cost near zero?** — ximagesrc still emits frames at the set rate; if idle encode cost is visible, pause the pipeline after N seconds without damage (receiver liveness is covered by pings). **Answered (M0): no** — `use-damage=true` costs more (35 % vs 19 %); design moved to an XDamage gate (§4).
+- **Can CBR be unlocked?** — Low-power encode needs HuC firmware for bitrate control. Options: `i915.enable_guc=2` (loads HuC; kernel cmdline + reboot) or `intel-media-va-driver-non-free` (adds the full `EncSlice` entrypoint). Not needed while CQP works. **M0:** `huc_info` reports `HuC disabled`, so CBR on this box requires `i915.enable_guc=2`.
+- **Receiver availability** — TestFlight-only today; if the public beta closes before an App Store release, the project blocks. Watch upstream releases.
+
+## 12. Files
+- `PROJECT_SPEC.md` — this file
+- `CLAUDE.md` — build commands and invariants
+- `README.md` — setup and usage (created in M1)
+- `docs/architecture.d2` — architecture diagram source
+- `pyproject.toml` — package metadata, pytest config (created in M1)
+- `config.example.toml` — every config key at its default
+- `odx11/` — daemon package (§6)
+- `helper/odx11-connector` — root connector helper
+- `edid/make_edid.py` — EDID generator
+- `systemd/odx11.service` — user unit
+- `tools/fake_receiver.py` — test receiver
+- `tests/` — unit tests
+- `spike/` — M0 throwaway scripts (`m0_connector.sh`, `hello_probe.py`); not product code
