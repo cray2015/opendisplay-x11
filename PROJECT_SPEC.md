@@ -400,10 +400,10 @@ No file under `/etc` except the autostart entry (a conffile); no per-user state 
 27. [ ] M7: After install and one log-in, plugging in the iPad and opening the app extends the desktop with no command run
 28. [x] M7: No process runs as root while streaming, and forcing the connector works without sudo
 29. [ ] M7: Removing the package leaves no forced connector, no running daemon and no files outside the user's home
-30. [ ] M8: The app menu has "OpenDisplay for X11"; its window shows the live state within 1 s and follows changes without reopening
-31. [ ] M8: Every daemon state is shown in plain words, with what to do when action is needed
-32. [ ] M8: On/Off and Start-at-login work from the window; settings apply (service restarted) and persist
-33. [ ] M8: On a fresh install with a free port, nothing must be configured: the port is chosen automatically
+30. [x] M8: The app menu has "OpenDisplay for X11"; its window shows the live state within 1 s and follows changes without reopening
+31. [x] M8: Every daemon state is shown in plain words, with what to do when action is needed
+32. [x] M8: On/Off and Start-at-login work from the window; settings apply (service restarted) and persist
+33. [x] M8: On a fresh install with a free port, nothing must be configured: the port is chosen automatically
 34. [ ] M8: Pairing the iPad and getting the OpenDisplay app (QR code) are possible from the window
 35. [ ] M8: Notifications for connect, needs-action and problems arrive once per change and can be switched off
 36. [ ] M8: "Copy diagnostic report" and "Remove the virtual monitor now" work
