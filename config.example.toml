@@ -8,9 +8,9 @@ enabled = true                        # start automatically at login; false = on
 
 [notifications]
 enabled = true                        # desktop notifications from the service
-connected = true                      # "iPad connected — desktop extended"
+connected = false                     # "iPad connected — desktop extended" (you can see it happen)
 needs_action = true                   # "Open OpenDisplay on your iPad"
-disconnected = true                   # "iPad disconnected"
+disconnected = false                  # "iPad disconnected" (you can see it happen)
 problems = true                       # "Setup needed: …"
 
 [transport]

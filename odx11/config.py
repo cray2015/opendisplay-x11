@@ -23,9 +23,9 @@ class ServiceConfig:
 @dataclass
 class NotificationsConfig:
     enabled: bool = True                    # desktop notifications from the service
-    connected: bool = True                  # "iPad connected — desktop extended"
+    connected: bool = False                 # "iPad connected — desktop extended" (visible on the iPad anyway)
     needs_action: bool = True               # "Open OpenDisplay on your iPad"
-    disconnected: bool = True               # "iPad disconnected"
+    disconnected: bool = False              # "iPad disconnected" (visible on the iPad anyway)
     problems: bool = True                   # "Setup needed: …"
 
 

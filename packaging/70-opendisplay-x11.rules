@@ -1,4 +1,4 @@
-# opendisplay-x11 (PROJECT_SPEC.md §8.7): let desktop users (group plugdev) force an HDMI
+# opendisplay-x11 (PROJECT_SPEC.md §8.7): let members of plugdev (on Debian-family systems: the account made at OS install) force an HDMI
 # connector on/off without root, by making its sysfs `status` attribute group-writable —
 # the same pattern distributions use for backlight brightness. DP connectors are never
 # covered: forcing them fails link training. Any X client can already switch monitors with

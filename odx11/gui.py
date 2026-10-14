@@ -144,7 +144,7 @@ class Window(Adw.ApplicationWindow):
         self._port_values = ["auto"]
         group.add(self.port_row)
         self.notify_row = Adw.SwitchRow(title=_("Desktop notifications"),
-                                        subtitle=_("When the iPad connects, disconnects or needs you"))
+                                        subtitle=_("Only when you need to do something"))
         self.notify_row.connect("notify::active", self._on_setting)
         group.add(self.notify_row)
         open_row = Adw.ActionRow(title=_("Open the settings file"), subtitle=_("Every setting, for advanced use"),

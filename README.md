@@ -132,7 +132,7 @@ What the package installs (nothing runs as root):
 | What | Where | Why |
 |---|---|---|
 | The program | `/usr/lib/python3/dist-packages/odx11/`, `/usr/bin/odx11` | |
-| udev rule | `/usr/lib/udev/rules.d/70-opendisplay-x11.rules` | Lets members of `plugdev` (desktop users, by default) force a spare HDMI port on/off — the only privilege odx11 needs |
+| udev rule | `/usr/lib/udev/rules.d/70-opendisplay-x11.rules` | Lets members of `plugdev` force a spare HDMI port on/off — the only privilege odx11 needs. The account created when the system was installed is in `plugdev` on Mint, Ubuntu and Debian; accounts added later are not (the setup checklist explains the fix). |
 | User service | `/usr/lib/systemd/user/odx11.service` | The daemon; unforces the port on every exit, even a crash |
 | Autostart entry | `/etc/xdg/autostart/opendisplay-x11.desktop` | Starts the service when your desktop session starts (XDG autostart — GNOME, KDE, XFCE, MATE, Cinnamon, LXQt) |
 
@@ -146,7 +146,8 @@ To see what it's doing or change anything, open **OpenDisplay for X11** from the
 application menu: its status (and what to do, if anything), an on/off switch,
 the settings (they apply as you change them), a setup checklist with a QR code
 for the iPad app, and a diagnostic report for bug reports. It also tells you
-through desktop notifications when the iPad connects, disconnects or needs you.
+through a desktop notification when you need to do something (for example, open
+the app on the iPad) — and otherwise stays silent.
 
 | On the iPad | Does |
 |---|---|
@@ -228,7 +229,7 @@ loudly. The ones people change:
 - The daemon **listens on nothing** — no port, no D-Bus. It only dials out to
   the iPad through usbmuxd and reads touches from that one connection.
 - **Nothing runs as root.** The only privilege is a udev rule that lets the
-  `plugdev` group (desktop users) force HDMI ports on/off — the same thing any
+  `plugdev` group (the account made when the system was installed) force HDMI ports on/off — the same thing any
   of your programs can already do to monitors with `xrandr`. DP ports are
   never covered.
 - **The OpenDisplay app has no authentication** (protocol v3). Anyone on the

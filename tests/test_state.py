@@ -71,7 +71,7 @@ def test_problem_shows_the_reason():
 
 # --- notifications --------------------------------------------------------------------
 
-N = config.parse({}).notifications
+N = config.parse({"notifications": {"connected": True, "disconnected": True}}).notifications   # every kind on
 
 
 def kinds(prev, cur, cfg=N):
@@ -200,3 +200,11 @@ def test_port_change_is_flagged_as_new_port():
 def test_text_size_alone_keeps_the_port():
     _, _, _, daemon, _, _ = live({"display": {"divisor": 1.25}})
     assert daemon.new_port is False
+
+
+def test_defaults_only_notify_when_the_user_must_act():
+    quiet = config.parse({}).notifications
+    assert kinds({"state": "dialing"}, {"state": "streaming"}, quiet) == []
+    assert kinds({"state": "streaming"}, {"state": "idle"}, quiet) == []
+    assert kinds({"state": "dialing", "refused": 1}, {"state": "dialing", "refused": 2}, quiet) == ["needs_action"]
+    assert kinds({"state": "off"}, {"state": "problem", "problem": "x"}, quiet) == ["problem"]
