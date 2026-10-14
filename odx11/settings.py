@@ -23,14 +23,21 @@ HEADER = ("# OpenDisplay for X11 settings — written by the settings window.\n"
 # Text size: larger text = fewer, bigger pixels = a larger divisor (§8.2).
 TEXT_SIZES = [1.0, 1.25, 1.5, 1.75, 2.0]                      # slider, smaller → larger text
 SHARPNESS_QP = [34, 30, 26, 22, 18]                            # slider, softer → sharper
-FRAME_RATES = [(24, _("24 frames per second")), (30, _("30 frames per second — lighter")),
-               (60, _("60 frames per second — smoothest"))]
+FRAME_RATES = [(24, _("24 frames per second")), (30, _("30 frames per second")),
+               (60, _("60 frames per second"))]
 IDLE_PAUSES = [(0.0, _("Never — always stream")), (0.5, _("½ second")), (1.0, _("1 second")),
                (2.0, _("2 seconds")), (5.0, _("5 seconds"))]
 LONG_PRESSES = [(300, _("holding ⅓ second")), (500, _("holding ½ second")),
                 (750, _("holding ¾ second")), (1000, _("holding 1 second"))]
 GRACES = [(5.0, _("5 seconds")), (10.0, _("10 seconds")), (20.0, _("20 seconds")),
           (30.0, _("30 seconds")), (60.0, _("1 minute"))]
+# Performance presets as the window shows them (values: config.PRESETS).
+PRESET_CHOICES = [
+    ("power_saver", _("Power saver"), _("Uses the least CPU and power: 30 frames per second, softer picture")),
+    ("balanced", _("Balanced"), _("Smooth at 60 frames per second — recommended")),
+    ("best_quality", _("Best quality"), _("Sharpest picture at 60 frames per second; more data over USB")),
+    ("custom", _("Custom"), _("Choose sharpness, frame rate and pausing yourself")),
+]
 DEFAULT_PANEL = (2360, 1640)                                   # until an iPad has been seen
 
 

@@ -1,3 +1,13 @@
+opendisplay-x11 (0.3.1) unstable; urgency=medium
+
+  * Performance presets in the settings window: Power saver, Balanced
+    (default), Best quality, Custom. A preset sets frame rate, sharpness and
+    idle pausing and greys them out; Custom unlocks them.
+  * Each iPad's decode limits are honoured automatically (maximum size,
+    frame rate and pixel rate from its hello).
+
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 10:00:00 +0530
+
 opendisplay-x11 (0.3.0) unstable; urgency=medium
 
   * Faster: 60 frames per second by default (capped at the iPad's maximum).

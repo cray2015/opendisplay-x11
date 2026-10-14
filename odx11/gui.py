@@ -140,6 +140,8 @@ class Window(Adw.ApplicationWindow):
         self.text_row, self.text_scale = self._scale_row(
             _("Text size"), "", _("smaller"), _("larger"), len(settings.TEXT_SIZES))
         group.add(self.text_row)
+        self.perf_row = self._combo_row(_("Performance"), [l for _k, l, _d in settings.PRESET_CHOICES])
+        group.add(self.perf_row)
         self.sharp_row, self.sharp_scale = self._scale_row(
             _("Sharpness"), None, _("softer"), _("sharper"), len(settings.SHARPNESS_QP))
         group.add(self.sharp_row)
@@ -276,9 +278,9 @@ class Window(Adw.ApplicationWindow):
         self._updating = True
         self.login_row.set_active(c.service.enabled)
         self.text_scale.set_value(settings.nearest(settings.TEXT_SIZES, c.display.divisor))
-        self.sharp_scale.set_value(settings.nearest(settings.SHARPNESS_QP, c.video.qp))
-        self.fps_row.set_selected(settings.nearest(settings.FRAME_RATES, c.video.fps))
-        self.idle_row.set_selected(settings.nearest(settings.IDLE_PAUSES, c.video.idle_pause_s))
+        keys = [k for k, _l, _d in settings.PRESET_CHOICES]
+        self.perf_row.set_selected(keys.index(c.video.preset) if c.video.preset in keys else 1)
+        self._show_preset()
         self.press_row.set_selected(settings.nearest(settings.LONG_PRESSES, c.input.long_press_ms))
         self.grace_row.set_selected(settings.nearest(settings.GRACES, c.session.grace_s))
         self.notify_row.set_active(c.notifications.enabled)
@@ -304,16 +306,35 @@ class Window(Adw.ApplicationWindow):
             return
         self._load_config()
 
+    def _show_preset(self):
+        """A preset shows its values greyed out; Custom shows and unlocks the user's own."""
+        v = self.cfg.video
+        custom = v.preset == config.CUSTOM
+        was, self._updating = self._updating, True
+        self.sharp_scale.set_value(settings.nearest(settings.SHARPNESS_QP, v.effective("qp")))
+        self.fps_row.set_selected(settings.nearest(settings.FRAME_RATES, v.effective("fps")))
+        self.idle_row.set_selected(settings.nearest(settings.IDLE_PAUSES, v.effective("idle_pause_s")))
+        self._updating = was
+        for row in (self.sharp_row, self.fps_row, self.idle_row):
+            row.set_sensitive(custom)
+        desc = {k: d for k, _l, d in settings.PRESET_CHOICES}
+        self.perf_row.set_subtitle(desc.get(v.preset, ""))
+
     def _on_setting(self, *_):
         if self._updating:
             return
         self._update_resolution()
         c = self.cfg
+        preset = settings.PRESET_CHOICES[self.perf_row.get_selected()][0]
+        if preset != c.video.preset:
+            c.video.preset = preset
+            self._show_preset()                  # fills the rows from the preset (or Custom values)
         c.service.enabled = self.login_row.get_active()
         c.display.divisor = settings.TEXT_SIZES[int(self.text_scale.get_value())]
-        c.video.qp = settings.SHARPNESS_QP[int(self.sharp_scale.get_value())]
-        c.video.fps = settings.FRAME_RATES[self.fps_row.get_selected()][0]
-        c.video.idle_pause_s = settings.IDLE_PAUSES[self.idle_row.get_selected()][0]
+        if c.video.preset == config.CUSTOM:      # the rows hold the user's own values
+            c.video.qp = settings.SHARPNESS_QP[int(self.sharp_scale.get_value())]
+            c.video.fps = settings.FRAME_RATES[self.fps_row.get_selected()][0]
+            c.video.idle_pause_s = settings.IDLE_PAUSES[self.idle_row.get_selected()][0]
         c.input.long_press_ms = settings.LONG_PRESSES[self.press_row.get_selected()][0]
         c.session.grace_s = settings.GRACES[self.grace_row.get_selected()][0]
         c.notifications.enabled = self.notify_row.get_active()

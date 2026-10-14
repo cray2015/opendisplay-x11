@@ -183,9 +183,10 @@ loudly. The ones people change:
 
 | Setting | Default | Effect |
 |---|---|---|
+| `[video] preset` | `balanced` | Performance: `power_saver` (30 fps, least CPU), `balanced` (60 fps), `best_quality` (60 fps, sharpest), or `custom` to use the three below |
 | `[display] divisor` | `1.5` | Bigger = larger text, fewer pixels on the iPad |
 | `[video] qp` | `26` | Picture quality: lower = sharper, more bandwidth (0–51) |
-| `[video] fps` | `30` | Frame rate while streaming |
+| `[video] fps` | `60` | Frame rate while streaming (with `preset = "custom"`) |
 | `[video] idle_pause_s` | `1.0` | Pause capture after this long with no change; `0` = always stream |
 | `[input] long_press_ms` | `500` | Hold time for right-click |
 | `[session] grace_s` | `10` | How long a dropped connection keeps the monitor |

@@ -46,6 +46,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.3.1" date="2026-10-15">
+      <description>
+        <p>Performance presets: Power saver, Balanced, Best quality or Custom. Each iPad's limits are respected automatically.</p>
+      </description>
+    </release>
     <release version="0.3.0" date="2026-10-15">
       <description>
         <p>Smoother and snappier: 60 frames per second, and a cursor drawn by the iPad that follows your hand.</p>
