@@ -91,4 +91,5 @@ verified by hand against the acceptance criteria in `PROJECT_SPEC.md` §10.
 - **Never add a command channel into the daemon (socket, D-Bus service, signal protocol)** — the window reads the state file and acts through systemd and the config file; the daemon applies config changes by watching the file. See `PROJECT_SPEC.md` §8.8.
 - **Wrap every user-visible string in `_()` (plurals: `ngettext`) and use `.format()` placeholders, never f-strings, inside them** — logs and the diagnostic report stay English. See `PROJECT_SPEC.md` §8.8.
 - **Keep the desktop entry, icon and AppStream ID equal to the app ID and validated** — the build runs `desktop-file-validate` and `appstreamcli validate`; lintian must stay clean. See `PROJECT_SPEC.md` §8.8.
+- **Keep `upgrade.GUI_ONLY` to modules the daemon never imports** — window-only upgrades skip the service restart by fingerprint; the AST test enforces it. See `PROJECT_SPEC.md` §8.7.
 - **Ignore unknown control `type`s and fields, logging each unknown type once** — input arrives at hundreds of messages per second. See `PROJECT_SPEC.md` §7.4.

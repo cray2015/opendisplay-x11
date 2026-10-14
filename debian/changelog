@@ -1,3 +1,11 @@
+opendisplay-x11 (0.2.4) unstable; urgency=medium
+
+  * After an upgrade, restart the service only if its own code changed
+    (fingerprint in /usr/share/opendisplay-x11/SERVICE): updates that only
+    touch the settings window no longer blink the iPad.
+
+ -- vibhanshu <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 00:40:00 +0530
+
 opendisplay-x11 (0.2.3) unstable; urgency=medium
 
   * Window layout after review: Start at login under Settings; Frame rate,

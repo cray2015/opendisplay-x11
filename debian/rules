@@ -18,3 +18,5 @@ override_dh_install:
 	dh_install
 	mkdir -p debian/opendisplay-x11/usr/share/opendisplay-x11
 	echo "$(DEB_VERSION)" > debian/opendisplay-x11/usr/share/opendisplay-x11/VERSION
+	PYTHONPATH=$(CURDIR) python3 -c 'from odx11.upgrade import fingerprint; print(fingerprint("."))' \
+		> debian/opendisplay-x11/usr/share/opendisplay-x11/SERVICE

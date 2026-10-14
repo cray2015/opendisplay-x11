@@ -8,6 +8,7 @@ Build-Depends: debhelper-compat (= 13),
                python3-all,
                python3-setuptools,
                python3-pytest,
+               python3-gi,
                desktop-file-utils,
                appstream
 Standards-Version: 4.6.2

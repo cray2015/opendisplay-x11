@@ -1,5 +1,6 @@
 """The §8.4 state machine, driven with a fake clock — no sockets, X or GLib."""
 import json
+import os
 import plistlib
 
 import pytest
@@ -404,3 +405,76 @@ def test_upgrade_restarts_only_on_a_real_completed_change():
 
 def test_source_checkout_never_self_restarts():
     assert not upgrade.installed_copy() or upgrade.__file__.startswith("/usr/")
+
+
+def test_window_only_changes_do_not_restart_the_service():
+    assert upgrade.service_changed("abc", "abc") is False
+    assert upgrade.service_changed("abc", "def") is True
+    assert upgrade.service_changed(None, "def") is True      # upgraded from a package without one
+    assert upgrade.service_changed("abc", None) is True
+
+
+def test_fingerprint_ignores_the_window_but_not_the_service(tmp_path):
+    import shutil
+    root = os.path.join(os.path.dirname(__file__), "..")
+    shutil.copytree(os.path.join(root, "odx11"), tmp_path / "odx11")
+    (tmp_path / "packaging").mkdir()
+    shutil.copy(os.path.join(root, "packaging", "odx11.service"), tmp_path / "packaging")
+    before = upgrade.fingerprint(str(tmp_path))
+    (tmp_path / "odx11" / "gui.py").write_text("# window change\n", encoding="utf-8")
+    assert upgrade.fingerprint(str(tmp_path)) == before
+    with open(tmp_path / "odx11" / "daemon.py", "a") as f:
+        f.write("# service change\n")
+    assert upgrade.fingerprint(str(tmp_path)) != before
+
+
+def test_service_modules_never_import_window_only_modules():
+    """Guards GUI_ONLY: if the daemon imported one of them, a window-only upgrade
+    would leave the service running stale code."""
+    import ast
+    pkg = os.path.join(os.path.dirname(__file__), "..", "odx11")
+    gui_only = {m[:-3] for m in upgrade.GUI_ONLY}
+    for name in os.listdir(pkg):
+        if not name.endswith(".py") or name in upgrade.GUI_ONLY or name == "__main__.py":
+            continue
+        tree = ast.parse(open(os.path.join(pkg, name), encoding="utf-8").read())
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.level == 1:
+                mods = {node.module} if node.module else {a.name for a in node.names}
+                assert not mods & gui_only, f"{name} imports {mods & gui_only}"
+
+
+def test_watcher_reacts_to_dpkg_style_replacement(tmp_path, monkeypatch):
+    """The real Watcher on a real GLib loop: dpkg writes a new file and renames it over."""
+    gi = pytest.importorskip("gi")
+    gi.require_version("GLib", "2.0")
+    from gi.repository import GLib
+    from odx11.daemon import glib_call_later
+    monkeypatch.setattr(upgrade, "SETTLE_S", 0.05)
+
+    def dpkg_write(name, text):
+        tmp = tmp_path / (name + ".dpkg-new")
+        tmp.write_text(text)
+        os.replace(tmp, tmp_path / name)
+
+    dpkg_write("VERSION", "0.2.4\n")
+    dpkg_write("SERVICE", "aaa\n")
+    restarts = []
+    w = upgrade.Watcher(glib_call_later, lambda: restarts.append(1), str(tmp_path / "VERSION"),
+                        status=lambda: ("install ok installed", ""), service_file=str(tmp_path / "SERVICE"))
+
+    def run_loop(seconds):
+        loop = GLib.MainLoop()
+        GLib.timeout_add(int(seconds * 1000), loop.quit)
+        loop.run()
+
+    dpkg_write("VERSION", "0.2.5\n")                 # window-only update: fingerprint unchanged
+    dpkg_write("SERVICE", "aaa\n")
+    run_loop(0.5)
+    assert restarts == [] and w.running == "0.2.5"
+
+    dpkg_write("SERVICE", "bbb\n")                   # service update
+    dpkg_write("VERSION", "0.2.6\n")
+    run_loop(0.5)
+    assert restarts == [1]
+    w.cancel()
