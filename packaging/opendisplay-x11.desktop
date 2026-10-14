@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=iPad Display service
+Comment=Extends the desktop to an iPad running OpenDisplay when it is plugged in
+Exec=/usr/bin/odx11 autostart
+NoDisplay=true
+X-GNOME-Autostart-enabled=true

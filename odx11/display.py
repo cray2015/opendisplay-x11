@@ -1,6 +1,7 @@
-"""Virtual monitor: mode sizing, the root helper, xrandr and output geometry (PROJECT_SPEC.md §8.1–8.2).
+"""Virtual monitor: mode sizing, the connector force switch, xrandr and output geometry
+(PROJECT_SPEC.md §8.1–8.2, §8.7).
 
-The only caller of xrandr and of the root helper. Pure sizing/placement
+The only caller of xrandr and the only writer of the connector's sysfs `status`. Pure sizing/placement
 functions sit at the top so tests need no X server.
 """
 import logging
@@ -154,9 +155,10 @@ class VirtualDisplay:
         return True
 
     # --- privileged + xrandr ---------------------------------------------------
-    def _helper(self, *args):
-        log.debug("helper %s", " ".join(args))
-        subprocess.run(["sudo", "-n", self.cfg.helper, *args], check=True)
+    def _force(self, state):
+        """Write the connector's force switch: no root, the udev rule makes it group-writable."""
+        log.debug("connector %s <- %s", self.cfg.connector, state)
+        write_status(self.cfg.connector, state)
 
     def _xrandr(self, *args, check=True):
         log.debug("xrandr %s", " ".join(args))
@@ -183,7 +185,7 @@ class VirtualDisplay:
         name = self._ensure_mode(mw, mh)
         if not self.forced:
             self.forced = True          # set first: a failure mid-write must still unforce
-            self._helper("on")
+            self._force("on")
             if not self._wait_until(self._connected, self.cfg.connect_timeout_s):
                 raise RuntimeError(f"{self.output} did not become connected")
             # Give Cinnamon the chance to enable it from its saved layout.
@@ -218,11 +220,11 @@ class VirtualDisplay:
             return                      # never touch an output we did not set up
         if self.forced:
             try:
-                self._helper("detect")
+                self._force("detect")
                 if not self._wait_until(lambda: not self._connected(), self.cfg.connect_timeout_s):
                     log.warning("%s still connected after detect", self.output)
             except Exception as e:      # keep going: the mode should still be removed
-                log.error("teardown: helper detect failed: %s", e)
+                log.error("teardown: unforcing %s failed: %s", self.cfg.connector, e)
         self.forced = False
         self.attached = False
         if self.mode_name:
@@ -235,18 +237,87 @@ class VirtualDisplay:
             self.mode_name = None
         log.info("virtual monitor removed")
 
-ALLOWLIST = "/etc/odx11/connector"     # written by helper/install.sh; the helper's own boundary
+SYSFS_DRM = "/sys/class/drm"
+UDEV_GROUP = "plugdev"                 # the group the packaged udev rule grants (§8.7)
 
 
-def helper_problem(cfg) -> str | None:
-    """Why the root helper cannot serve `cfg` ([display] section), or None if it can."""
-    if not os.access(cfg.helper, os.X_OK):
-        return f"root helper {cfg.helper} not installed — run: sudo bash helper/install.sh"
+def status_path(connector: str, root: str = SYSFS_DRM) -> str | None:
+    """sysfs force switch for a kernel connector name (e.g. HDMI-A-1), on whichever card has it."""
     try:
-        allowed = open(ALLOWLIST).read().strip()
+        for entry in sorted(os.listdir(root)):
+            card, _, name = entry.partition("-")
+            if name == connector and card.startswith("card") and card[4:].isdigit():
+                return os.path.join(root, entry, "status")
     except OSError:
-        return f"{ALLOWLIST} missing — run: sudo bash helper/install.sh"
-    if allowed.split("-", 1)[-1] != cfg.connector:
-        return (f"config connector {cfg.connector} is not the helper's allowlisted {allowed}; "
-                f"fix [display] connector or re-run helper/install.sh")
+        pass
     return None
+
+
+def write_status(connector: str, state: str, root: str = SYSFS_DRM):
+    if state not in ("on", "detect"):
+        raise ValueError(state)
+    path = status_path(connector, root)
+    if path is None:
+        raise FileNotFoundError(f"no connector {connector} under {root}")
+    with open(path, "w") as f:
+        f.write(state)
+
+
+def connector_problem(cfg, root: str = SYSFS_DRM) -> str | None:
+    """Why the daemon cannot force `cfg.connector` ([display] section), in words a user can act
+    on — or None when it can."""
+    path = status_path(cfg.connector, root)
+    if path is None:
+        return (f"There is no {cfg.connector} video port on this computer. Choose a spare HDMI port "
+                f"in the settings ([display] connector).")
+    try:
+        with open(path) as f:
+            status = f.read().strip()
+    except OSError as e:
+        return f"Cannot read {path}: {e}"
+    if not os.access(path, os.W_OK):
+        return (f"Setup is not finished: this account may not switch {cfg.connector}. It needs to be "
+                f"in the '{UDEV_GROUP}' group and the opendisplay-x11 package installed (its udev rule "
+                f"grants the permission); log out and back in after joining the group.")
+    if status == "connected" and not _forced_by_us(path):
+        return (f"{cfg.connector} has a real monitor plugged in. Choose a spare HDMI port in the "
+                f"settings ([display] connector).")
+    return None
+
+
+def _forced_by_us(path: str) -> bool:
+    """A forced connector reads 'connected' too; the kernel exposes no 'forced' flag, but a forced
+    port with no sink has no EDID. Treat connected-without-EDID as ours (left from a crash)."""
+    edid = os.path.join(os.path.dirname(path), "edid")
+    try:
+        with open(edid, "rb") as f:
+            return not f.read(1)
+    except OSError:
+        return True
+
+
+def release_forced(root: str = SYSFS_DRM) -> list[str]:
+    """Unforce every HDMI connector that is connected with no EDID — i.e. forced by us, left
+    behind by a crash or SIGKILL. Independent of the config on purpose: systemd's ExecStopPost
+    must work even if the config is broken or changed mid-session. A real monitor always has
+    an EDID, so it is never touched; `detect` is harmless anyway (back to hotplug detection)."""
+    released = []
+    try:
+        entries = sorted(os.listdir(root))
+    except OSError:
+        return released
+    for entry in entries:
+        card, _, name = entry.partition("-")
+        if not (card.startswith("card") and name.startswith("HDMI-A-")):
+            continue
+        path = os.path.join(root, entry, "status")
+        try:
+            with open(path) as f:
+                connected = f.read().strip() == "connected"
+            if connected and _forced_by_us(path):
+                with open(path, "w") as f:
+                    f.write("detect")
+                released.append(name)
+        except OSError as e:
+            log.warning("could not release %s: %s", name, e)
+    return released

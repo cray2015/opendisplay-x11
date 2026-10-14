@@ -1,0 +1,17 @@
+# opendisplay-x11 user service. Started at login by /etc/xdg/autostart/opendisplay-x11.desktop
+# (`odx11 autostart`), which first hands the session's DISPLAY to the user manager — desktops
+# do not reliably activate graphical-session.target, so there is no [Install] section.
+[Unit]
+Description=opendisplay-x11: iPad as a second monitor over USB
+Documentation=file:///usr/share/doc/opendisplay-x11/README.md
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/odx11 daemon
+# Every exit path, SIGKILL included, unforces the connector: a connector left forced on is an
+# invisible monitor that swallows windows. No root needed (udev rule).
+ExecStopPost=/usr/bin/odx11 release
+Restart=on-failure
+RestartSec=5
+# 78 = configuration problem (no spare port, not permitted): retrying cannot fix it.
+RestartPreventExitStatus=78

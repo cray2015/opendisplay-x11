@@ -1,0 +1,4 @@
+packaging/70-opendisplay-x11.rules usr/lib/udev/rules.d/
+packaging/odx11.service usr/lib/systemd/user/
+packaging/opendisplay-x11.desktop etc/xdg/autostart/
+config.example.toml usr/share/doc/opendisplay-x11/

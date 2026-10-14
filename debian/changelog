@@ -1,0 +1,15 @@
+opendisplay-x11 (0.1.1) unstable; urgency=medium
+
+  * State the hard requirement up front: a free video port (HDMI, or
+    DisplayPort that accepts HDMI adapters). Package description and README
+    explain why an X11 app cannot create a monitor on its own.
+
+ -- vibhanshu <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 14:00:00 +0530
+
+opendisplay-x11 (0.1.0) unstable; urgency=medium
+
+  * First package: iPad as an X11 second monitor over USB (M0–M3 work),
+    udev/plugdev privilege instead of a root helper, user service started
+    by XDG autostart.
+
+ -- vibhanshu <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 13:30:00 +0530

@@ -1,0 +1,17 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    remove|deconfigure)
+        # Stop every user's running daemon so it unforces its connector while its files still
+        # exist, then release anything still forced. On upgrade running daemons keep the old
+        # code until the next login, so they are left alone.
+        pkill -TERM -f '/usr/bin/odx11 daemon' 2>/dev/null || true
+        sleep 2
+        odx11 release >/dev/null 2>&1 || true
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

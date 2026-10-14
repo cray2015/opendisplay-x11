@@ -4,6 +4,16 @@ Use an iPad as a wired, extended second monitor for a Linux X11 desktop —
 plug in the cable, open the app, and the desktop extends onto it. Touch,
 drag, long-press right-click and two-finger scroll work on the iPad.
 
+> [!IMPORTANT]
+> **Your computer needs a free video port.** odx11 turns an *empty* video
+> output socket into the iPad's monitor: an **HDMI socket**, or a
+> **DisplayPort socket that accepts HDMI adapters** (most Intel desktops and
+> many laptops have one). On Linux X11 an app cannot create a monitor out of
+> nothing — the graphics driver only offers monitors for sockets that exist.
+> **It will not work** if every video port already has a monitor, if the only
+> free port is USB-C/Thunderbolt (untested, most likely not), or with NVIDIA's
+> proprietary driver. → [Why a free video port is required](#why-a-free-video-port-is-required)
+
 It is an X11 *sender* for the [OpenDisplay](https://github.com/peetzweg/opendisplay)
 protocol; the iPad runs the unmodified OpenDisplay app as the *receiver*.
 Everything runs over the USB cable through the stock `usbmuxd` — no Wi-Fi,
@@ -20,7 +30,7 @@ iPad (OpenDisplay app, listens on :9000)
    ▲ USB cable — usbmuxd byte pipe: [len][H.264 frame] →   ← [len][JSON: hello/touch/scroll/ping]
    │
 odx11 daemon (systemd --user)
-   ├─ forces a spare HDMI connector "connected" (root helper) → X sees a new monitor
+   ├─ forces a spare HDMI connector "connected" (no root: udev rule) → X sees a new monitor
    ├─ captures that monitor's area (ximagesrc) → H.264 on the GPU (VA-API)
    ├─ touch/scroll → XTest pointer events on that monitor
    └─ pauses capture while nothing on the iPad's monitor changes
@@ -44,31 +54,87 @@ odx11 daemon (systemd --user)
 | | Needed | Notes |
 |---|---|---|
 | Session | X11 | Wayland is not supported (use [opendisplay-linux](https://github.com/tixwho/opendisplay-linux) there). Any X11 desktop or window manager. |
-| GPU | Kernel DRM driver with a **spare HDMI / DP++ port** | Tested on Intel `i915`. `amdgpu` should work for the monitor; encoder settings untested. NVIDIA's proprietary driver cannot force a connector. Nothing may be plugged into the chosen port. |
+| **Free video port** | An **empty** HDMI socket, or a DisplayPort socket that accepts HDMI adapters (DP++) | **Hard requirement** — see [below](#why-a-free-video-port-is-required). Nothing may be plugged into it. |
+| GPU | Kernel DRM driver | Tested on Intel `i915`. `amdgpu` should work for the monitor; encoder settings untested. NVIDIA's proprietary driver cannot do this. |
 | Encoder | VA-API H.264 via `gstreamer1.0-vaapi` | Intel: `intel-media-va-driver` (the free build is enough). |
 | OS | systemd user session, Python ≥ 3.11, Debian/Ubuntu packages | Mint 22.3 / Ubuntu 24.04 tested. The installer uses `apt`. |
 | iPad | iPadOS 15+ (upstream; the Linux fork states 16+), OpenDisplay app, a USB **data** cable | The app is a [TestFlight beta](https://testflight.apple.com/join/3NYaY11c). The iPad must be trusted (paired) and unlocked. |
 
+## Why a free video port is required
+
+**In short:** on X11, monitors come from the graphics hardware, not from apps.
+odx11 needs an unused video socket to pretend a monitor is plugged into it.
+
+**How X11 decides which monitors exist.** The X server (the part of Linux that
+draws your desktop) asks the graphics driver what video outputs it has, and the
+driver answers with one entry per physical socket on the GPU. Every screen in
+your Display settings is one of those sockets with a monitor attached. The chain
+is fixed: *socket on the GPU → kernel connector → X output → a screen your
+desktop can put windows on.* An application cannot add a socket the kernel does
+not know about, so it cannot add a monitor.
+
+**What odx11 does.** It takes a socket that exists but is empty and tells the
+kernel "act as if a monitor were plugged in here". X then sees a new screen,
+your desktop extends onto it, and odx11 captures that screen and sends it to
+the iPad. The GPU is driving a monitor that isn't really there. With no empty
+socket, there is nothing to pretend with.
+
+**Why Windows and macOS don't need this.** Windows has an official feature for
+software-only monitors (the *Indirect Display Driver* framework — spacedesk
+uses it); macOS has a virtual-display API (OpenDisplay's own Mac app uses it);
+Wayland desktops (KDE, GNOME, Hyprland) draw their screens themselves and can
+add a virtual one. X11 has no such feature: with the standard `modesetting`
+driver that modern distributions use, outputs come only from the kernel.
+
+**Will it work on my computer?**
+
+| Computer | Works? |
+|---|---|
+| Free HDMI socket (desktop or laptop) | Yes |
+| Free DisplayPort socket on an Intel desktop (usually DP++, i.e. takes a passive DP→HDMI adapter) | Yes — this is how it was developed: the free DisplayPort socket appears to Linux as both `DP-1` and `HDMI-A-1` |
+| Only free port is USB-C / Thunderbolt | Untested — most likely not (those ports are DisplayPort-only) |
+| AMD graphics with only DisplayPort sockets free | Untested |
+| Every video port already has a monitor | No |
+| NVIDIA proprietary driver | No |
+
+To check without opening a terminal: look at the back or sides of the
+computer for an empty HDMI or DisplayPort socket. For the technically
+inclined, `ls /sys/class/drm` lists the GPU's sockets (`card1-HDMI-A-1`, …)
+and `cat /sys/class/drm/card*-HDMI-A-*/status` shows which are free
+(`disconnected`).
+
+**If you have no free port.** The only dependable option today is a
+*dummy plug* (an HDMI or DisplayPort "headless" adapter, a few dollars) in a
+free socket — but then that monitor exists all the time, even without the
+iPad. Other routes exist and were rejected for now: an extra kernel module that
+adds virtual sockets (EVDI, from DisplayLink — rebuilt on every kernel update,
+needs signing under Secure Boot, breaks after updates), the kernel's virtual GPU
+(`vkms`, not usable with an existing X desktop), the old Intel X driver's
+virtual outputs (replaces your display driver with a deprecated one), and a
+software-only "invisible screen area" trick (unproven: X keeps the mouse
+pointer out of areas no real output shows).
+
 ## Install
 
-```bash
-git clone <this repo> && cd opendisplay-x11
-bash install.sh --check          # reports what is missing; changes nothing
-bash install.sh                  # installs (asks for sudo once, for the root helper)
-```
+1. Download `opendisplay-x11_<version>_all.deb`.
+   **First make sure your computer has a free video port** ([above](#why-a-free-video-port-is-required)).
+2. Double-click it. Your distribution's package installer opens; click
+   **Install** and enter your password. Everything it needs comes with it.
+3. Log out and back in once (or, until the settings app exists, restart).
 
-`install.sh` checks the session, packages (add `--install-deps` to apt-install
-missing ones), GPU driver, encoder and iPad pairing; picks the first free HDMI
-connector (override with `--connector card1-HDMI-A-2`); installs:
+That's all — from then on odx11 starts with your desktop. First time with the
+iPad: plug it in, unlock it and tap **Trust** when it asks.
+
+What the package installs (nothing runs as root):
 
 | What | Where | Why |
 |---|---|---|
-| Root helper | `/usr/local/sbin/odx11-connector`, `/etc/odx11/connector`, `/etc/sudoers.d/odx11` | Forcing a connector needs root; the helper does only that, for one allowlisted connector |
-| User service | `~/.config/systemd/user/odx11.service` | The daemon; unforces the connector on every exit, even SIGKILL |
-| Autostart entry | `~/.config/autostart/odx11.desktop` | Starts the service once your desktop session is up (XDG autostart — honoured by GNOME, KDE, XFCE, MATE, Cinnamon, LXQt) |
+| The program | `/usr/lib/python3/dist-packages/odx11/`, `/usr/bin/odx11` | |
+| udev rule | `/usr/lib/udev/rules.d/70-opendisplay-x11.rules` | Lets members of `plugdev` (desktop users, by default) force a spare HDMI port on/off — the only privilege odx11 needs |
+| User service | `/usr/lib/systemd/user/odx11.service` | The daemon; unforces the port on every exit, even a crash |
+| Autostart entry | `/etc/xdg/autostart/opendisplay-x11.desktop` | Starts the service when your desktop session starts (XDG autostart — GNOME, KDE, XFCE, MATE, Cinnamon, LXQt) |
 
-First time with the iPad: plug it in, unlock it, tap **Trust**, then
-`idevicepair validate` should succeed.
+Switch it off without uninstalling: `[service] enabled = false` in the config.
 
 ## Use
 
@@ -153,9 +219,10 @@ loudly. The ones people change:
 
 - The daemon **listens on nothing** — no port, no D-Bus. It only dials out to
   the iPad through usbmuxd and reads touches from that one connection.
-- The **root helper** can only force one allowlisted connector on/off (and
-  write an EDID, which lockdown blocks anyway). Any process running as you can
-  invoke it via the sudoers rule — the impact is an extra/missing monitor.
+- **Nothing runs as root.** The only privilege is a udev rule that lets the
+  `plugdev` group (desktop users) force HDMI ports on/off — the same thing any
+  of your programs can already do to monitors with `xrandr`. DP ports are
+  never covered.
 - **The OpenDisplay app has no authentication** (protocol v3). Anyone on the
   iPad's Wi-Fi, and any local user via the world-writable usbmuxd socket, can
   connect to it and *replace* the picture or receive your touches. They cannot
@@ -170,24 +237,24 @@ loudly. The ones people change:
 |---|---|
 | Nothing happens when the app opens | `journalctl --user -u odx11 -f`. "dial refused" = the app is not in front or the iPad is locked. |
 | `no USB iOS device` / not paired | Unlock, tap Trust, `idevicepair pair`, `idevicepair validate`. Charge-only cables don't work. |
-| `root helper ... not installed` | `bash install.sh` again. |
-| `config connector ... is not the helper's allowlisted` | `[display] connector` must match `/etc/odx11/connector`; re-run `install.sh` or fix the config. |
+| "Setup is not finished: this account may not switch HDMI-A-n" | Your user must be in `plugdev` (Users and Groups settings); log out and back in. |
+| "HDMI-A-n has a real monitor plugged in" / "no HDMI-A-n port" | Set `[display] connector` to a free HDMI port (`ls /sys/class/drm`). |
 | Monitor appears but iPad stays black | Make sure the app is in front; check `journalctl` for pipeline errors; `gst-inspect-1.0 vaapih264enc` must succeed. |
 | Text too small / too big | `[display] divisor` (lower = smaller text, sharper). |
-| Service not started after login (bare WM) | Your WM must run XDG autostart and `systemctl --user import-environment DISPLAY XAUTHORITY`. |
-| A stuck invisible monitor after a crash | `sudo -n /usr/local/sbin/odx11-connector detect` (the service does this on every exit). |
+| Service not started after login (bare WM) | Your window manager must run XDG autostart entries (e.g. with `dex -a`). |
+| A stuck invisible monitor after a crash | `odx11 release` (no sudo; the service does this on every exit). |
 
 ## Uninstall
 
-```bash
-bash install.sh --uninstall        # service, autostart entry, root helper
-```
-
-Your `~/.config/odx11/config.toml` and the desktop's saved monitor layout are left in place.
+Remove **opendisplay-x11** in your software manager (or `sudo apt remove
+opendisplay-x11`). Running sessions are stopped and the port released. Your
+`~/.config/odx11/config.toml` and the desktop's saved monitor layout are left in place.
 
 ## Development
 
 ```bash
+bash install.sh --check                               # can this machine build and run it?
+bash install.sh                                       # build dist/*.deb from the checkout and install it
 python3 -m venv --system-site-packages .venv && .venv/bin/pip install pytest
 .venv/bin/python -m pytest -q tests/                 # no iPad, X server or GPU needed
 python3 tools/fake_receiver.py --port 9000            # strict stand-in for the iPad...

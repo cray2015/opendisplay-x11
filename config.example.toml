@@ -3,6 +3,9 @@
 # Unknown keys are rejected, so a typo fails loudly instead of being ignored.
 # (tests/test_config.py checks this file parses to exactly the defaults.)
 
+[service]
+enabled = true                        # start automatically at login; false = only when started by hand
+
 [transport]
 usbmuxd_socket = "/var/run/usbmuxd"
 device_port = 9000                    # port the OpenDisplay receiver listens on
@@ -12,7 +15,6 @@ connector = "HDMI-A-1"                # kernel connector to force on; must be an
 # main_output = "HDMI-3"              # xrandr output to place beside; default: the primary output
 divisor = 1.5                         # logical mode = iPad panel / divisor, floored to 16 (§8.2)
 refresh_hz = 60                       # refresh of the generated `cvt -r` mode
-helper = "/usr/local/sbin/odx11-connector"   # must match the sudoers entry
 connect_timeout_s = 5.0               # how long to wait for the forced output to appear
 settle_timeout_s = 3.0                # how long to let Cinnamon restore its saved layout first
 

@@ -14,8 +14,9 @@ sudo apt install usbmuxd libimobiledevice-utils \
 # ximagesrc (good), h264parse (bad), vaapih264enc (vaapi), XTest bindings,
 # pytest, iHD VA-API driver (free build — what M0 was verified on)
 
-# install — checks prerequisites, root helper (sudo) + user service; --check is a dry run
+# install — developer path: checks the machine, builds dist/*.deb, installs it (password dialog)
 bash install.sh --check && bash install.sh
+bash install.sh --build                      # only build the .deb (unit tests run inside the build)
 
 # venv — only if one is needed; PyGObject comes from apt
 python3 -m venv --system-site-packages .venv
@@ -26,9 +27,9 @@ python3 -m odx11 run --verbose
 # list — attached iOS devices as usbmuxd reports them
 python3 -m odx11 list
 
-# service — install/start the user daemon (after helper/install.sh); logs; remove
-bash systemd/install.sh && journalctl --user -u odx11 -f
-bash systemd/install.sh --uninstall
+# service — installed by the package; logs; restart after changing code or config
+journalctl --user -u odx11 -f
+systemctl --user restart odx11
 
 # test — unit tests; need no iPad, no X server, no GPU
 python3 -m pytest -q tests/
@@ -55,9 +56,9 @@ verified by hand against the acceptance criteria in `PROJECT_SPEC.md` §10.
 ## Layout
 - `odx11/protocol.py` is the only module that knows the wire format (framing, demux, message shapes).
 - `odx11/annexb.py` owns every NAL-level rule; `pipeline.py` never edits bytes.
-- `odx11/display.py` is the only caller of xrandr and of the root helper.
+- `odx11/display.py` is the only caller of xrandr and the only writer of the connector's sysfs `status`.
 - `odx11/daemon.py` owns every timer and the session state machine.
-- `helper/odx11-connector` is the only code that runs as root.
+- Nothing runs as root. `packaging/70-opendisplay-x11.rules` (udev) is the project's entire privileged surface; `debian/` builds the `.deb`.
 
 ## Key Constraints
 - **Emit only 4-byte start codes and prefix every IDR with SPS and PPS** — the receiver splits on `00 00 00 01`; a 3-byte code or a bare IDR decodes as garbage or black. See `PROJECT_SPEC.md` §7.5.
@@ -79,7 +80,8 @@ verified by hand against the acceptance criteria in `PROJECT_SPEC.md` §10.
 - **Add the mode before forcing the connector, and never override a position Cinnamon restored** — Cinnamon owns placement and only restores its saved layout if the mode already exists at hotplug. See `PROJECT_SPEC.md` §4, §8.1.
 - **On teardown, `detect` before `--delmode`/`--rmmode`** — while still forced, Cinnamon re-enables the output and the mode cannot be removed. See `PROJECT_SPEC.md` §8.1.
 - **Unforce the connector on every exit path (atexit + `ExecStopPost`)** — a connector left forced on is an invisible monitor that swallows windows. See `PROJECT_SPEC.md` §8.4.
-- **The root helper writes only the allowlisted connector's sysfs status and debugfs EDID** — it is the project's entire privileged surface. See `PROJECT_SPEC.md` §8.5.
+- **Never add root code; the udev rule (group `plugdev`, HDMI-A connectors' `status` only) is the whole privileged surface** — end users install a `.deb` and never use a terminal; DP connectors stay excluded. See `PROJECT_SPEC.md` §8.7.
+- **`odx11 release` must stay config-independent and only unforce connectors that are connected with no EDID** — it runs from `ExecStopPost` and the package's `prerm`, and must never touch a real monitor. See `PROJECT_SPEC.md` §8.7.
 - **Never poll; use usbmuxd `Listen`, RandR, per-window XDamage and XI2 events, with timers only for ping, grace, redial, rotation debounce and the idle pause** — earlier Cinnamon applets were disabled for idle CPU spikes. See `PROJECT_SPEC.md` §4.
 - **Never gate capture on root-window damage** — Cinnamon's compositor reports every repaint as the whole screen; use per-window damage filtered to the virtual monitor (`odx11/activity.py`). See `PROJECT_SPEC.md` §4.
 - **Treat `Detached` as intent: tear down immediately, no grace** — grace is only for EOF, silence and `sleeping`. See `PROJECT_SPEC.md` §8.4.

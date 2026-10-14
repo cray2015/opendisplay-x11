@@ -1,0 +1,11 @@
+#!/usr/bin/make -f
+export PYBUILD_NAME=odx11
+
+%:
+	dh $@ --with python3 --buildsystem=pybuild
+
+# The unit tests need no X server, iPad or GPU; run them from the source tree.
+override_dh_auto_test:
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+	PYTHONPATH=$(CURDIR) python3 -m pytest -q tests/
+endif

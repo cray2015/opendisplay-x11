@@ -1,0 +1,19 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    configure)
+        # Apply the udev rule now, not at the next reboot. Only the HDMI connector devices
+        # are re-triggered: a synthetic change event on the card itself could look like a
+        # monitor hotplug to the desktop.
+        if command -v udevadm >/dev/null 2>&1; then
+            udevadm control --reload || true
+            udevadm trigger --action=change --subsystem-match=drm --sysname-match='card*-HDMI-A-*' || true
+            udevadm settle --timeout=10 || true
+        fi
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

@@ -38,3 +38,13 @@ def test_device_table():
 def test_invalid_config_is_rejected(raw):
     with pytest.raises((ValueError, TypeError)):
         config.parse(raw)
+
+
+def test_service_enabled_by_default_and_switchable():
+    assert config.parse({}).service.enabled is True
+    assert config.parse({"service": {"enabled": False}}).service.enabled is False
+
+
+def test_removed_helper_key_is_rejected():
+    with pytest.raises(ValueError, match="helper"):
+        config.parse({"display": {"helper": "/usr/local/sbin/odx11-connector"}})

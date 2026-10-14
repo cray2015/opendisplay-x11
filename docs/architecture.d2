@@ -33,13 +33,15 @@ host: "HP EliteDesk 800 G3 DM — Mint 22.3 Cinnamon (X11)" {
   config: "~/.config/odx11/config.toml\n(every tunable)"
   config -> daemon: "load + validate"
 
-  helper: "odx11-connector\n(root, sudoers)"
+  udev: "udev rule (package)\nHDMI-A status → group plugdev\n(no root at runtime)"
+  autostart: "XDG autostart\nodx11 autostart"
   i915: "i915 HDMI-A-1\nforced on + EDID"
   xorg: "Xorg + Cinnamon\nvirtual monitor"
   gpu: "HD 530\nVA-API iHD (EncSliceLP)"
 
-  daemon.display -> helper: "on / detect / edid"
-  helper -> i915: "sysfs status on / detect\n(EDID: boot-time only, unused)"
+  daemon.display -> i915: "sysfs status on / detect\n(EDID: boot-time only, unused)"
+  udev -> i915: "chgrp plugdev, chmod g+w\n(at boot / install)"
+  autostart -> daemon: "systemctl --user start\n(if enabled)"
   i915 -> xorg: "connector appears"
   daemon.display -> xorg: "xrandr mode (+ rotate;\nplace only if no saved layout)"
   xorg -> xorg: "Cinnamon restores saved layout\n(cinnamon-monitors.xml)"

@@ -14,6 +14,11 @@ ALIGNS = ("start", "center", "end")
 
 
 @dataclass
+class ServiceConfig:
+    enabled: bool = True                    # start at login (the autostart entry checks this)
+
+
+@dataclass
 class TransportConfig:
     usbmuxd_socket: str = "/var/run/usbmuxd"
     device_port: int = 9000                 # the receiver's listening port
@@ -25,7 +30,6 @@ class DisplayConfig:
     main_output: str | None = None          # None = the primary output
     divisor: float = 1.5                    # logical mode = panel / divisor (§8.2)
     refresh_hz: int = 60                    # refresh of the generated cvt -r mode
-    helper: str = "/usr/local/sbin/odx11-connector"
     connect_timeout_s: float = 5.0          # wait for the forced output to appear in RandR
     settle_timeout_s: float = 3.0           # wait for Cinnamon to restore its saved layout
 
@@ -68,6 +72,7 @@ class DeviceConfig:
 
 @dataclass
 class Config:
+    service: ServiceConfig = field(default_factory=ServiceConfig)
     transport: TransportConfig = field(default_factory=TransportConfig)
     display: DisplayConfig = field(default_factory=DisplayConfig)
     video: VideoConfig = field(default_factory=VideoConfig)
@@ -130,6 +135,7 @@ def parse(raw: dict) -> Config:
     if unknown:
         raise ValueError(f"unknown config sections/keys: {sorted(unknown)}")
     cfg = Config(
+        service=_section(ServiceConfig, raw.get("service", {}), "service"),
         transport=_section(TransportConfig, raw.get("transport", {}), "transport"),
         display=_section(DisplayConfig, raw.get("display", {}), "display"),
         video=_section(VideoConfig, raw.get("video", {}), "video"),

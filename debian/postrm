@@ -1,0 +1,20 @@
+#!/bin/sh
+set -e
+
+case "$1" in
+    remove|purge)
+        # Removing the rule does not undo permissions it already applied: reset them.
+        for f in /sys/class/drm/card*-HDMI-A-*/status; do
+            [ -e "$f" ] || continue
+            chgrp root "$f" 2>/dev/null || true
+            chmod g-w "$f" 2>/dev/null || true
+        done
+        if command -v udevadm >/dev/null 2>&1; then
+            udevadm control --reload || true
+        fi
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

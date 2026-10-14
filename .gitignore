@@ -6,3 +6,16 @@ __pycache__/
 *.png
 # spike captures
 spike/out/
+# Debian build products
+dist/
+debian/.debhelper/
+debian/opendisplay-x11/
+debian/files
+debian/*.substvars
+debian/*.debhelper.log
+debian/debhelper-build-stamp
+.pybuild/
+*.egg-info/
+build/
+dist.build.log
+debian/*.debhelper

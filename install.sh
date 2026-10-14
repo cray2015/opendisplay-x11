@@ -1,128 +1,77 @@
 #!/bin/bash
-# opendisplay-x11 installer — run as your own user from your X11 session.
+# Developer install from a git checkout. End users don't need this: they double-click the
+# .deb. This checks the machine, builds the same .deb from the source tree, and installs it
+# through the package manager — so developers run exactly what users run.
 #
-#   bash install.sh                    check, then install helper (sudo) + user service
-#   bash install.sh --check            only report what is missing; change nothing
-#   bash install.sh --install-deps     also apt-install missing packages (sudo)
-#   bash install.sh --connector card1-HDMI-A-2   force a specific spare connector
-#   bash install.sh --uninstall        remove service, autostart entry and root helper
-#
-# What it installs:
-#   /usr/local/sbin/odx11-connector, /etc/odx11/connector, /etc/sudoers.d/odx11  (root, via sudo)
-#   ~/.config/systemd/user/odx11.service, ~/.config/autostart/odx11.desktop      (you)
-#   ~/.config/odx11/config.toml   only if the connector is not the default and no config exists
+#   bash install.sh --check        report what is missing; change nothing
+#   bash install.sh                build dist/opendisplay-x11_*.deb and install it (password dialog)
+#   bash install.sh --build        only build the .deb
+#   bash install.sh --uninstall    remove the package (password dialog)
 set -uo pipefail
 REPO=$(cd "$(dirname "$0")" && pwd)
-CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}/odx11/config.toml
-PACKAGES=(usbmuxd libimobiledevice-utils python3-gi gir1.2-gstreamer-1.0 gir1.2-gst-plugins-base-1.0
-          gstreamer1.0-tools gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-vaapi
-          python3-xlib vainfo)
-
-MODE=install CONNECTOR="" INSTALL_DEPS=0
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    --check) MODE=check ;;
-    --uninstall) MODE=uninstall ;;
-    --install-deps) INSTALL_DEPS=1 ;;
-    --connector) CONNECTOR=${2:?--connector needs a value like card1-HDMI-A-1}; shift ;;
-    -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
-    *) echo "unknown option $1 (see --help)" >&2; exit 2 ;;
-  esac
-  shift
-done
+MODE=install
+case ${1:-} in
+  --check) MODE=check ;; --build) MODE=build ;; --uninstall) MODE=uninstall ;;
+  "") ;; -h|--help) sed -n '2,10p' "$0"; exit 0 ;;
+  *) echo "unknown option $1 (see --help)" >&2; exit 2 ;;
+esac
+[[ $EUID -ne 0 ]] || { echo "run as your own user; the password dialog appears when needed" >&2; exit 1; }
 
 ok()   { printf '  \033[32mok\033[0m    %s\n' "$*"; }
-warn() { printf '  \033[33mwarn\033[0m  %s\n' "$*"; WARNINGS=$((WARNINGS + 1)); }
+warn() { printf '  \033[33mwarn\033[0m  %s\n' "$*"; }
 fail() { printf '  \033[31mfail\033[0m  %s\n' "$*"; FAILURES=$((FAILURES + 1)); }
-WARNINGS=0 FAILURES=0
-
-[[ $EUID -ne 0 ]] || { echo "run as your own user, not root (sudo is used only where needed)" >&2; exit 1; }
+FAILURES=0
+as_root() { if command -v pkexec >/dev/null; then pkexec "$@"; else sudo "$@"; fi; }
 
 if [[ $MODE == uninstall ]]; then
-  bash "$REPO/systemd/install.sh" --uninstall
-  if [[ -e /usr/local/sbin/odx11-connector || -e /etc/sudoers.d/odx11 ]]; then
-    sudo bash "$REPO/helper/install.sh" --uninstall
-  fi
-  echo "Left in place: $CONFIG (your settings) and Cinnamon/desktop monitor layouts."
-  exit 0
+  as_root apt-get remove -y opendisplay-x11
+  exit $?
 fi
 
-echo "== session"
-if [[ ${XDG_SESSION_TYPE:-} == x11 && -n ${DISPLAY:-} ]]; then ok "X11 session on $DISPLAY"
-else fail "needs an X11 session (XDG_SESSION_TYPE=${XDG_SESSION_TYPE:-unset}); Wayland is not supported"; fi
-command -v systemctl >/dev/null && systemctl --user show-environment >/dev/null 2>&1 \
-  && ok "systemd user manager" || fail "systemd user manager not available"
-if systemctl --user show-environment 2>/dev/null | grep -q '^DISPLAY='; then ok "DISPLAY is exported to the user manager"
-else warn "DISPLAY not in the systemd user environment — add 'systemctl --user import-environment DISPLAY XAUTHORITY' to your session startup (bare window managers)"; fi
-
-echo "== packages"
-MISSING=()
-for p in "${PACKAGES[@]}"; do
-  dpkg-query -W -f='${Status}' "$p" 2>/dev/null | grep -q "install ok installed" || MISSING+=("$p")
-done
-if [[ ${#MISSING[@]} -eq 0 ]]; then ok "all packages present"
-elif [[ $INSTALL_DEPS -eq 1 && $MODE == install ]]; then
-  echo "  installing: ${MISSING[*]}"; sudo apt-get install -y "${MISSING[@]}" && ok "packages installed" || fail "apt-get failed"
-else fail "missing: ${MISSING[*]}  (re-run with --install-deps, or: sudo apt install ${MISSING[*]})"; fi
-python3 -c 'import sys; sys.exit(sys.version_info < (3, 11))' && ok "python $(python3 -V | cut -d' ' -f2)" \
-  || fail "python 3.11+ required (tomllib)"
-
-echo "== GPU and encoder"
+echo "== machine"
+[[ ${XDG_SESSION_TYPE:-} == x11 && -n ${DISPLAY:-} ]] && ok "X11 session on $DISPLAY" \
+  || fail "needs an X11 session (XDG_SESSION_TYPE=${XDG_SESSION_TYPE:-unset}); Wayland is not supported"
 DRIVER=$(basename "$(readlink -f /sys/class/drm/card*/device/driver 2>/dev/null | head -1)" 2>/dev/null)
 case $DRIVER in
   i915|xe) ok "GPU driver $DRIVER (tested: Intel HD 530 / i915)" ;;
-  amdgpu)  warn "GPU driver amdgpu: the forced connector should work; encoder settings are untested" ;;
-  *)       fail "GPU driver '${DRIVER:-none}': the forced-connector virtual monitor needs a kernel DRM driver (i915/amdgpu); NVIDIA's proprietary driver cannot do this" ;;
+  amdgpu)  warn "GPU driver amdgpu: the virtual monitor should work; encoder settings are untested" ;;
+  *)       fail "GPU driver '${DRIVER:-none}': needs a kernel DRM driver (i915/amdgpu); NVIDIA's proprietary driver cannot force a connector" ;;
 esac
-if gst-inspect-1.0 vaapih264enc >/dev/null 2>&1; then ok "VA-API H.264 encoder (vaapih264enc)"
-else fail "no vaapih264enc — install gstreamer1.0-vaapi and a VA-API driver (Intel: intel-media-va-driver)"; fi
-
-echo "== spare connector"
-ALLOWED=$(tr -d '[:space:]' < /etc/odx11/connector 2>/dev/null)
-# Re-install: keep the connector already allowlisted (it reads "connected" while we force it on).
-[[ -z $CONNECTOR && -n $ALLOWED ]] && CONNECTOR=$ALLOWED
-if [[ -z $CONNECTOR ]]; then
-  for s in /sys/class/drm/card*-HDMI-A-*/status; do
-    [[ -e $s && $(cat "$s") == disconnected ]] && { CONNECTOR=$(basename "$(dirname "$s")"); break; }
-  done
+FREE=$(for s in /sys/class/drm/card*-HDMI-A-*/status; do [[ -e $s && $(cat "$s") == disconnected ]] && basename "$(dirname "$s")"; done | head -1)
+[[ -n $FREE ]] && ok "free video port available ($FREE)" || warn "no free video port (HDMI, or DisplayPort with an HDMI alias) right now — required, unless odx11 is already using it; see README 'Why a free video port is required'"
+id -nG | tr ' ' '\n' | grep -qx plugdev && ok "$USER is in plugdev (may force the connector once the package's udev rule is installed)" \
+  || fail "$USER is not in the plugdev group — add it (Users and Groups settings) and log out and back in"
+if command -v idevice_id >/dev/null && [[ -n $(idevice_id -l 2>/dev/null) ]]; then
+  idevicepair validate >/dev/null 2>&1 && ok "iPad attached and paired" || warn "iPad attached but not paired: unlock it and tap Trust"
 fi
-if [[ -n $CONNECTOR && -e /sys/class/drm/$CONNECTOR/status ]]; then
-  if [[ $CONNECTOR == "$ALLOWED" ]]; then
-    ok "using $CONNECTOR (already allowlisted by an earlier install)"
-  elif [[ $(cat "/sys/class/drm/$CONNECTOR/status") == disconnected ]]; then
-    ok "using $CONNECTOR (nothing may be plugged into this port)"
-  else fail "$CONNECTOR has a monitor attached — pick another with --connector"; fi
-else fail "no disconnected HDMI-A connector found (ls /sys/class/drm); a spare HDMI/DP++ port is required"; fi
-LOCKDOWN=$(grep -o '\[[a-z]*\]' /sys/kernel/security/lockdown 2>/dev/null | tr -d '[]')
-[[ -n $LOCKDOWN && $LOCKDOWN != none ]] && warn "kernel lockdown '$LOCKDOWN' (Secure Boot): no runtime EDID, so the monitor is listed as 'unknown' — harmless"
+for f in "$HOME/.config/systemd/user/odx11.service" /usr/local/sbin/odx11-connector /etc/sudoers.d/odx11; do
+  [[ -e $f ]] && fail "leftover from the pre-package developer install: $f — remove it (the user unit would shadow the packaged one)"
+done
 
-echo "== iPad"
-if command -v idevice_id >/dev/null; then
-  if [[ -n $(idevice_id -l 2>/dev/null) ]]; then
-    idevicepair validate >/dev/null 2>&1 && ok "iPad attached and paired" \
-      || warn "iPad attached but not paired: unlock it, tap Trust, then run 'idevicepair pair'"
-  else warn "no iPad attached right now (fine — it can be plugged in later)"; fi
-fi
+echo "== build tools"
+MISSING=$(cd "$REPO" && dpkg-checkbuilddeps 2>&1 | sed -n 's/.*Unmet build dependencies: //p')
+command -v dpkg-buildpackage >/dev/null || MISSING="dpkg-dev $MISSING"
+if [[ -z $MISSING ]]; then ok "build dependencies present"
+elif [[ $MODE == check ]]; then fail "missing build tools: $MISSING"
+else echo "  installing build tools: $MISSING"; as_root apt-get install -y --no-install-recommends $MISSING || fail "could not install build tools"; fi
 
 echo
-if [[ $FAILURES -gt 0 ]]; then echo "$FAILURES problem(s) above must be fixed first."; exit 1; fi
-if [[ $MODE == check ]]; then echo "Ready to install ($WARNINGS warning(s)). Run: bash install.sh"; exit 0; fi
+[[ $FAILURES -eq 0 ]] || { echo "$FAILURES problem(s) above must be fixed first."; exit 1; }
+[[ $MODE == check ]] && { echo "Ready. Run: bash install.sh"; exit 0; }
 
-echo "== installing root helper (sudo)"
-sudo bash "$REPO/helper/install.sh" "$CONNECTOR" || { echo "helper install failed" >&2; exit 1; }
-KCONN=${CONNECTOR#card*-}
-if [[ $KCONN != HDMI-A-1 ]]; then
-  if [[ -e $CONFIG ]]; then
-    grep -q "connector *= *\"$KCONN\"" "$CONFIG" || echo "  NOTE: set [display] connector = \"$KCONN\" in $CONFIG"
-  else
-    mkdir -p "$(dirname "$CONFIG")"
-    printf '# written by install.sh — see config.example.toml for every setting\n[display]\nconnector = "%s"\n' "$KCONN" > "$CONFIG"
-    ok "wrote $CONFIG with connector $KCONN"
-  fi
-fi
+echo "== building"
+( cd "$REPO" && dpkg-buildpackage -b -us -uc ) > "$REPO/dist.build.log" 2>&1 \
+  || { echo "build failed — see dist.build.log" >&2; exit 1; }
+mkdir -p "$REPO/dist"
+mv "$REPO"/../opendisplay-x11_*_all.deb "$REPO"/../opendisplay-x11_*.buildinfo "$REPO"/../opendisplay-x11_*.changes "$REPO/dist/" 2>/dev/null
+DEB=$(ls -t "$REPO"/dist/opendisplay-x11_*_all.deb | head -1)
+ok "built $(basename "$DEB") (unit tests passed during the build)"
+[[ $MODE == build ]] && exit 0
 
-echo "== installing user service"
-bash "$REPO/systemd/install.sh" || { echo "service install failed" >&2; exit 1; }
+echo "== installing (password dialog)"
+as_root apt-get install -y "$DEB" || { echo "install failed" >&2; exit 1; }
+systemctl --user daemon-reload
+odx11 autostart
 echo
-echo "Done. Plug in the iPad, unlock it, open OpenDisplay — the desktop extends."
-echo "Arrange it in your desktop's display settings; logs: journalctl --user -u odx11 -f"
+echo "Installed and started. Plug in the iPad, unlock it, open OpenDisplay."
+echo "Logs: journalctl --user -u odx11 -f"

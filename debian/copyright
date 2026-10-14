@@ -1,0 +1,8 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: opendisplay-x11
+
+Files: *
+Copyright: 2026 vibhanshu
+License: undecided
+ No license has been chosen yet. Until one is, all rights are reserved by the
+ copyright holder. Choose a license before publishing the package.

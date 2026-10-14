@@ -1,0 +1,45 @@
+Source: opendisplay-x11
+Section: x11
+Priority: optional
+Maintainer: vibhanshu <16113990+cray2015@users.noreply.github.com>
+Build-Depends: debhelper-compat (= 13),
+               dh-python,
+               pybuild-plugin-pyproject,
+               python3-all,
+               python3-setuptools,
+               python3-pytest
+Standards-Version: 4.6.2
+Rules-Requires-Root: no
+Homepage: https://github.com/cray2015/opendisplay-x11
+Vcs-Browser: https://github.com/cray2015/opendisplay-x11
+Vcs-Git: https://github.com/cray2015/opendisplay-x11.git
+
+Package: opendisplay-x11
+Architecture: all
+Depends: ${misc:Depends},
+         ${python3:Depends},
+         python3 (>= 3.11),
+         python3-gi,
+         python3-xlib,
+         gir1.2-gstreamer-1.0,
+         gir1.2-gst-plugins-base-1.0,
+         gstreamer1.0-plugins-base,
+         gstreamer1.0-plugins-good,
+         gstreamer1.0-plugins-bad,
+         gstreamer1.0-vaapi,
+         usbmuxd,
+         libimobiledevice-utils,
+         x11-xserver-utils,
+         xcvt,
+         udev,
+         systemd
+Recommends: intel-media-va-driver | va-driver-all
+Description: Use an iPad as a second monitor over USB (needs a free HDMI/DisplayPort)
+ Plug in your iPad, open the OpenDisplay app, and your desktop extends
+ onto it. Tap, drag, scroll and right-click work on the iPad.
+ .
+ Requirement: your computer needs a free HDMI or DisplayPort socket with
+ nothing plugged in. Works on X11 desktops (not Wayland), and not with
+ NVIDIA's own driver.
+ .
+ For further details, check out https://github.com/cray2015/opendisplay-x11
