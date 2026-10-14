@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- OpenDisplay for X11 app icon: a desktop monitor extended onto a tablet. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <!-- monitor -->
+  <rect x="6" y="18" width="78" height="56" rx="6" fill="#3d3846"/>
+  <rect x="11" y="23" width="68" height="46" rx="3" fill="#3584e4"/>
+  <rect x="38" y="74" width="14" height="12" fill="#5e5c64"/>
+  <rect x="26" y="86" width="38" height="6" rx="3" fill="#5e5c64"/>
+  <!-- tablet, overlapping: the extended screen -->
+  <rect x="66" y="44" width="56" height="74" rx="8" fill="#241f31"/>
+  <rect x="71" y="50" width="46" height="62" rx="3" fill="#3584e4"/>
+  <!-- the extended desktop continuing onto the tablet -->
+  <rect x="17" y="30" width="30" height="20" rx="2" fill="#ffffff" fill-opacity="0.85"/>
+  <rect x="77" y="58" width="30" height="20" rx="2" fill="#ffffff" fill-opacity="0.85"/>
+  <path d="M56 50 L70 64" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+  <path d="M62 64 L70 64 L70 56" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
