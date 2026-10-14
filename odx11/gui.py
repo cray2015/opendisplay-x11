@@ -23,6 +23,10 @@ from .i18n import _, ngettext  # noqa: E402
 log = logging.getLogger(__name__)
 
 APP_ID = "io.github.cray2015.OpenDisplayX11"
+# A source-tree run gets the conventional ".Devel" ID, so it never merges into an installed
+# window (GApplication single instance) and can run side by side with it.
+if not os.path.abspath(__file__).startswith("/usr/"):
+    APP_ID += ".Devel"
 SAVE_DELAY_S = 0.8            # sliders: write ~1 s after the last movement
 # Standard symbolic icons + libadwaita style classes for each severity (GNOME HIG).
 STATUS_ICON = {state.OK: ("emblem-ok-symbolic", "success"),
@@ -71,8 +75,8 @@ class Window(Adw.ApplicationWindow):
         page = Adw.PreferencesPage()
         page.add(self._build_status())
         page.add(self._build_settings())
-        page.add(self._build_checklist())
         page.add(self._build_help())
+        page.add(self._build_remove())
         view.set_content(page)
         self.toasts.set_child(view)
         self.set_content(self.toasts)
@@ -94,9 +98,6 @@ class Window(Adw.ApplicationWindow):
         self.power.connect("notify::active", self._on_power)
         self.status_row.add_suffix(self.power)
         group.add(self.status_row)
-        self.login_row = Adw.SwitchRow(title=_("Start at login"))
-        self.login_row.connect("notify::active", self._on_setting)
-        group.add(self.login_row)
         return group
 
     def _scale_row(self, title, subtitle, left, right, count):
@@ -124,21 +125,26 @@ class Window(Adw.ApplicationWindow):
     def _build_settings(self):
         group = Adw.PreferencesGroup(title=_("Settings"),
                                      description=_("Changes apply on their own."))
+        self.login_row = Adw.SwitchRow(title=_("Start at login"), subtitle=_("Starts with your desktop"))
+        self.login_row.connect("notify::active", self._on_setting)
+        group.add(self.login_row)
         self.text_row, self.text_scale = self._scale_row(
             _("Text size"), "", _("smaller"), _("larger"), len(settings.TEXT_SIZES))
         group.add(self.text_row)
         self.sharp_row, self.sharp_scale = self._scale_row(
             _("Sharpness"), None, _("softer"), _("sharper"), len(settings.SHARPNESS_QP))
         group.add(self.sharp_row)
-        self.fps_row = self._combo_row(_("Smoothness"), [l for _v, l in settings.FRAME_RATES])
+        self.fps_row = self._combo_row(_("Frame rate"), [l for _v, l in settings.FRAME_RATES])
         group.add(self.fps_row)
         self.idle_row = self._combo_row(_("Pause when nothing changes after"), [l for _v, l in settings.IDLE_PAUSES],
                                         _("Saves power while the iPad's screen is still"))
         group.add(self.idle_row)
-        self.press_row = self._combo_row(_("Right-click by"), [l for _v, l in settings.LONG_PRESSES])
+        self.press_row = self._combo_row(_("Right-click sensitivity"), [l for _v, l in settings.LONG_PRESSES],
+                                         _("How long to hold a finger still for a right-click"))
         group.add(self.press_row)
-        self.grace_row = self._combo_row(_("Keep the screen after a disconnect"), [l for _v, l in settings.GRACES],
-                                         _("So switching apps on the iPad doesn't move your windows"))
+        self.grace_row = self._combo_row(_("Screen timeout"), [l for _v, l in settings.GRACES],
+                                         _("How long the screen stays after a disconnect, so switching apps "
+                                           "on the iPad doesn't move your windows"))
         group.add(self.grace_row)
         self.port_row = self._combo_row(_("Video port"), [_("Automatic")], _("The iPad will blink"))
         self._port_values = ["auto"]
@@ -147,15 +153,9 @@ class Window(Adw.ApplicationWindow):
                                         subtitle=_("Only when you need to do something"))
         self.notify_row.connect("notify::active", self._on_setting)
         group.add(self.notify_row)
-        open_row = Adw.ActionRow(title=_("Open the settings file"), subtitle=_("Every setting, for advanced use"),
-                                 activatable=True)
-        open_row.add_suffix(Gtk.Image.new_from_icon_name("document-open-symbolic"))
-        open_row.connect("activated", lambda *_: self._open_uri(GLib.filename_to_uri(self._ensure_file())))
-        group.add(open_row)
         return group
 
     def _build_checklist(self):
-        group = Adw.PreferencesGroup()
         self.check_exp = Adw.ExpanderRow(title=_("Setup checklist"))
         self.check_rows = {}
         for key, title in (("session", _("Desktop session is X11")), ("port", _("Free video port")),
@@ -180,25 +180,32 @@ class Window(Adw.ApplicationWindow):
         link = Gtk.LinkButton(uri=checks.TESTFLIGHT, label=_("TestFlight link"), valign=Gtk.Align.CENTER)
         qr_row.add_suffix(link)
         self.check_exp.add_row(qr_row)
-        group.add(self.check_exp)
-        return group
+        return self.check_exp
 
     def _build_help(self):
         group = Adw.PreferencesGroup(title=_("Help"))
+        group.add(self._build_checklist())
         report = Adw.ActionRow(title=_("Copy diagnostic report"),
                                subtitle=_("Versions, checklist and recent log, for a bug report"), activatable=True)
         report.add_suffix(Gtk.Image.new_from_icon_name("edit-copy-symbolic"))
         report.connect("activated", self._on_report)
         group.add(report)
-        remove = Adw.ActionRow(title=_("Remove the virtual monitor now"),
-                               subtitle=_("Turns OpenDisplay for X11 off and releases the video port"), activatable=True)
-        remove.add_suffix(Gtk.Image.new_from_icon_name("edit-clear-symbolic"))
-        remove.connect("activated", self._on_remove)
-        group.add(remove)
         readme = Adw.ActionRow(title=_("How it works and known limitations"), activatable=True)
         readme.add_suffix(Gtk.Image.new_from_icon_name("adw-external-link-symbolic"))
         readme.connect("activated", lambda *_: self._open_uri(checks.README))
         group.add(readme)
+        return group
+
+    def _build_remove(self):
+        """Destructive, so last and red (GNOME HIG: destructive-action). No confirmation: it is
+        undone by turning OpenDisplay for X11 back on."""
+        group = Adw.PreferencesGroup(
+            description=_("Turns OpenDisplay for X11 off and releases the video port."))
+        button = Gtk.Button(label=_("Remove the virtual monitor now"), hexpand=True)
+        button.add_css_class("destructive-action")
+        button.add_css_class("pill")
+        button.connect("clicked", self._on_remove)
+        group.add(button)
         return group
 
     # --- state --------------------------------------------------------------------------
@@ -245,11 +252,6 @@ class Window(Adw.ApplicationWindow):
         return GLib.SOURCE_CONTINUE
 
     # --- config ---------------------------------------------------------------------------
-    def _ensure_file(self):
-        if not os.path.exists(self.config_path):
-            settings.save(self.cfg, self.config_path)
-        return self.config_path
-
     def _load_config(self, error=None):
         if error is None:
             try:

@@ -105,9 +105,9 @@ def describe(facts: dict, now: float | None = None) -> tuple[str, str, str]:
     if state == STREAMING:
         mon = facts.get("monitor")
         if isinstance(mon, list) and len(mon) >= 2:
-            head = _("Showing your desktop on {device} ({w} × {h})").format(device=device, w=mon[0], h=mon[1])
+            head = _("Show Desktop on {device} ({w} × {h})").format(device=device, w=mon[0], h=mon[1])
         else:
-            head = _("Showing your desktop on {device}").format(device=device)
+            head = _("Show Desktop on {device}").format(device=device)
         return head, _("paused while nothing changes") if facts.get("idle") else "", OK
     if state == GRACE:
         left = facts.get("grace_until")

@@ -55,7 +55,7 @@ def test_every_state_has_plain_words():
 def test_streaming_names_device_size_and_idle():
     head, action, level = state.describe({"state": "streaming", "device": "iPad",
                                           "monitor": [1568, 1088, 239, 1080], "idle": True})
-    assert head == "Showing your desktop on iPad (1568 × 1088)"
+    assert head == "Show Desktop on iPad (1568 × 1088)"
     assert action == "paused while nothing changes" and level == state.OK
 
 

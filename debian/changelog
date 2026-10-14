@@ -1,3 +1,14 @@
+opendisplay-x11 (0.2.3) unstable; urgency=medium
+
+  * Window layout after review: Start at login under Settings; Frame rate,
+    Right-click sensitivity and Screen timeout; setup checklist under Help;
+    "Remove the virtual monitor now" last, as a red destructive button;
+    no settings-file row. Status reads "Show Desktop on iPad".
+  * Source-tree runs use the ".Devel" app ID, side by side with an install.
+  * The planned post-upgrade restart is no longer logged as a failure.
+
+ -- vibhanshu <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 00:10:00 +0530
+
 opendisplay-x11 (0.2.2) unstable; urgency=medium
 
   * The service restarts itself onto the new version after a package upgrade
