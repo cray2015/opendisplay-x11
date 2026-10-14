@@ -14,6 +14,9 @@ sudo apt install usbmuxd libimobiledevice-utils \
 # ximagesrc (good), h264parse (bad), vaapih264enc (vaapi), XTest bindings,
 # pytest, iHD VA-API driver (free build — what M0 was verified on)
 
+# install — checks prerequisites, root helper (sudo) + user service; --check is a dry run
+bash install.sh --check && bash install.sh
+
 # venv — only if one is needed; PyGObject comes from apt
 python3 -m venv --system-site-packages .venv
 

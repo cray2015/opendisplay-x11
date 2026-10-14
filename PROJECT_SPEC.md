@@ -25,6 +25,7 @@ for M2's named monitor and persistent placement). Throwaway spike scripts live i
 - Tap clicks, drag drags, and two-finger scroll scrolls, all landing on the iPad monitor's area.
 - An idle desktop costs near-zero CPU; active use stays inside a measured budget on the i5-6500T.
 - Works over any USB 2.0 data cable with stock Mint packages — no custom usbmuxd build, no USB networking, no Ethernet adapter, no browser.
+- Desktop-agnostic on X11 (any desktop or window manager): nothing may depend on Cinnamon-only APIs; desktop features (e.g. remembered placement) are used when present and fallen back from when not. Hardware stays the real constraint: a kernel DRM GPU with a spare HDMI/DP++ port. User-facing limitations are listed in README.md.
 
 ## 3. Non-Goals
 <!-- Tag names when the item could come back, not what release excluded it:
@@ -322,7 +323,8 @@ Sudoers: `<user> ALL=(root) NOPASSWD: /usr/local/sbin/odx11-connector`
 ## 12. Files
 - `PROJECT_SPEC.md` — this file
 - `CLAUDE.md` — build commands and invariants
-- `README.md` — setup and usage (created in M1)
+- `README.md` — what it is, requirements, install, use, configuration, limitations, security, troubleshooting
+- `install.sh` — one-step installer: prerequisite checks, root helper (sudo), user service; `--check`, `--uninstall`
 - `docs/architecture.d2` — architecture diagram source
 - `pyproject.toml` — package metadata, pytest config (created in M1)
 - `config.example.toml` — every config key at its default
@@ -331,5 +333,6 @@ Sudoers: `<user> ALL=(root) NOPASSWD: /usr/local/sbin/odx11-connector`
 - `edid/make_edid.py` — EDID generator
 - `systemd/odx11.service` — user unit
 - `tools/fake_receiver.py` — test receiver
+- `tools/idle_cpu.sh` — AC 23 idle-CPU measurement
 - `tests/` — unit tests
 - `spike/` — M0 throwaway scripts (`m0_connector.sh`, `hello_probe.py`); not product code
