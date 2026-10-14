@@ -2,7 +2,7 @@
 # (`odx11 autostart`), which first hands the session's DISPLAY to the user manager — desktops
 # do not reliably activate graphical-session.target, so there is no [Install] section.
 [Unit]
-Description=opendisplay-x11: iPad as a second monitor over USB
+Description=OpenDisplay for X11: iPad as a second monitor over USB
 Documentation=file:///usr/share/doc/opendisplay-x11/README.md
 
 [Service]

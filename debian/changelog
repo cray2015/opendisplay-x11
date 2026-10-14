@@ -1,3 +1,10 @@
+opendisplay-x11 (0.1.2) unstable; urgency=medium
+
+  * Name the app "OpenDisplay for X11" (unofficial sender for the OpenDisplay
+    iPad app) in the description, autostart entry and service.
+
+ -- vibhanshu <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 20:40:00 +0530
+
 opendisplay-x11 (0.1.1) unstable; urgency=medium
 
   * State the hard requirement up front: a free video port (HDMI, or

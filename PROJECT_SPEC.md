@@ -1,4 +1,6 @@
-# opendisplay-x11 — project spec
+# OpenDisplay for X11 (opendisplay-x11) — project spec
+
+**Name (decided 2026-10-14):** users see **OpenDisplay for X11**, always next to "unofficial sender for the OpenDisplay iPad app" — it follows the ecosystem's "OpenDisplay + platform" pattern (`OpenDisplay Linux Fork`, `opendisplay-android`) while making clear it is not part of upstream, which states it makes no commitment to third-party implementations. Technical identifiers stay `opendisplay-x11` (package, repo) and `odx11` (command, Python package).
 
 ## 1. Overview
 A Linux X11 sender for the OpenDisplay protocol that turns an iPad into a wired,
@@ -290,7 +292,7 @@ ACTION=="add|change", SUBSYSTEM=="drm", KERNEL=="card*-HDMI-A-*", \
 | `/usr/lib/systemd/user/odx11.service` | `ExecStart=/usr/bin/odx11 daemon`, `ExecStopPost=/usr/bin/odx11 release` (writes `detect` — always safe, no root), `Restart=on-failure`; no `[Install]` |
 | `/etc/xdg/autostart/odx11.desktop` | `Exec=/usr/bin/odx11 autostart`: imports `DISPLAY`/`XAUTHORITY` into the user manager (so bare window managers work too), then starts the service if `[service] enabled` (default **true**) — desktop-agnostic XDG autostart |
 | `/usr/lib/udev/rules.d/70-opendisplay-x11.rules` | the privilege rule above |
-| `/usr/share/applications/…desktop` + icon | the GUI (M8) in the app menu, "iPad Display" |
+| `/usr/share/applications/…desktop` + icon | the GUI (M8) in the app menu, "OpenDisplay for X11" |
 | `/usr/share/doc/opendisplay-x11/` | README, `config.example.toml` |
 No file under `/etc` except the autostart entry (a conffile); no per-user state is written by the package.
 

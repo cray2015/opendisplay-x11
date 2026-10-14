@@ -1,4 +1,6 @@
-# opendisplay-x11
+# OpenDisplay for X11
+
+*An unofficial sender for the [OpenDisplay](https://github.com/peetzweg/opendisplay) iPad app — not affiliated with the OpenDisplay project.*
 
 Use an iPad as a wired, extended second monitor for a Linux X11 desktop —
 plug in the cable, open the app, and the desktop extends onto it. Touch,
