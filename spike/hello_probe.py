@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-FileCopyrightText: 2026 Vibhanshu Biswas
 # SPDX-License-Identifier: GPL-3.0-or-later
 """M0 spike — AC 2/3/9 without iproxy. Throwaway; not product code.
 

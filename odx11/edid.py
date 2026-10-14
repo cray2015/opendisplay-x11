@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-FileCopyrightText: 2026 Vibhanshu Biswas
 # SPDX-License-Identifier: GPL-3.0-or-later
 """EDID 1.4 base block for the virtual monitor (PROJECT_SPEC.md §4, §8.1).
 

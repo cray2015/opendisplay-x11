@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-FileCopyrightText: 2026 Vibhanshu Biswas
 # SPDX-License-Identifier: GPL-3.0-or-later
 [build-system]
 requires = ["setuptools>=68"]
@@ -10,7 +10,7 @@ version = "0.2.7"
 description = "iPad as an X11 second monitor over USB, via the OpenDisplay protocol"
 requires-python = ">=3.11"
 license = {text = "GPL-3.0-or-later"}
-authors = [{name = "vibhanshu"}]
+authors = [{name = "Vibhanshu Biswas"}]
 classifiers = ["License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
                "Environment :: X11 Applications :: GTK", "Operating System :: POSIX :: Linux"]
 # PyGObject, GStreamer typelibs and python-xlib come from apt (see CLAUDE.md).

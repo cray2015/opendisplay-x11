@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-FileCopyrightText: 2026 Vibhanshu Biswas
 # SPDX-License-Identifier: GPL-3.0-or-later
 # opendisplay-x11 user service. Started at login by /etc/xdg/autostart/opendisplay-x11.desktop
 # (`odx11 autostart`), which first hands the session's DISPLAY to the user manager — desktops

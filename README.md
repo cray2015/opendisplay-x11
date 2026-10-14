@@ -271,7 +271,7 @@ needs a `Signed-off-by` line (`git commit -s`).
 ## License
 
 OpenDisplay for X11 is free software: GPL-3.0-or-later (see [`LICENSE`](LICENSE)).
-© 2026 vibhanshu and contributors. You may use, change and share it; if you share a
+© 2026 Vibhanshu Biswas and contributors. You may use, change and share it; if you share a
 changed version, it must stay under the same licence with its source available.
 OpenDisplay (the iPad app) is a separate project by its own authors.
 

@@ -3,20 +3,20 @@ opendisplay-x11 (0.2.7) unstable; urgency=medium
   * Licensed under GPL-3.0-or-later (LICENSE, REUSE/SPDX headers, Debian
     copyright, AppStream, About window). CONTRIBUTING.md with DCO sign-off.
 
- -- vibhanshu <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 01:40:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 01:40:00 +0530
 
 opendisplay-x11 (0.2.6) unstable; urgency=medium
 
   * Version row: just the number (the "unofficial" note stays in About).
 
- -- vibhanshu <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 01:10:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 01:10:00 +0530
 
 opendisplay-x11 (0.2.5) unstable; urgency=medium
 
   * Show the version in the settings window (Help → Version) as well as in
     About; the service reports the installed package version.
 
- -- vibhanshu <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 01:00:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 01:00:00 +0530
 
 opendisplay-x11 (0.2.4) unstable; urgency=medium
 
@@ -24,7 +24,7 @@ opendisplay-x11 (0.2.4) unstable; urgency=medium
     (fingerprint in /usr/share/opendisplay-x11/SERVICE): updates that only
     touch the settings window no longer blink the iPad.
 
- -- vibhanshu <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 00:40:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 00:40:00 +0530
 
 opendisplay-x11 (0.2.3) unstable; urgency=medium
 
@@ -35,21 +35,21 @@ opendisplay-x11 (0.2.3) unstable; urgency=medium
   * Source-tree runs use the ".Devel" app ID, side by side with an install.
   * The planned post-upgrade restart is no longer logged as a failure.
 
- -- vibhanshu <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 00:10:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 00:10:00 +0530
 
 opendisplay-x11 (0.2.2) unstable; urgency=medium
 
   * The service restarts itself onto the new version after a package upgrade
     (any update manager), with a brief cut-off of the iPad session.
 
- -- vibhanshu <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 23:40:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 23:40:00 +0530
 
 opendisplay-x11 (0.2.1) unstable; urgency=medium
 
   * Notifications only when the user must act (connected/disconnected off by
     default). App menu category Utility.
 
- -- vibhanshu <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 23:00:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 23:00:00 +0530
 
 opendisplay-x11 (0.2.0) unstable; urgency=medium
 
@@ -59,14 +59,14 @@ opendisplay-x11 (0.2.0) unstable; urgency=medium
   * Desktop notifications; automatic video port; state published for the
     window. Desktop entry, icon and AppStream metadata (validated in the build).
 
- -- vibhanshu <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 22:30:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 22:30:00 +0530
 
 opendisplay-x11 (0.1.2) unstable; urgency=medium
 
   * Name the app "OpenDisplay for X11" (unofficial sender for the OpenDisplay
     iPad app) in the description, autostart entry and service.
 
- -- vibhanshu <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 20:40:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 20:40:00 +0530
 
 opendisplay-x11 (0.1.1) unstable; urgency=medium
 
@@ -74,7 +74,7 @@ opendisplay-x11 (0.1.1) unstable; urgency=medium
     DisplayPort that accepts HDMI adapters). Package description and README
     explain why an X11 app cannot create a monitor on its own.
 
- -- vibhanshu <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 14:00:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 14:00:00 +0530
 
 opendisplay-x11 (0.1.0) unstable; urgency=medium
 
@@ -82,4 +82,4 @@ opendisplay-x11 (0.1.0) unstable; urgency=medium
     udev/plugdev privilege instead of a root helper, user service started
     by XDG autostart.
 
- -- vibhanshu <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 13:30:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 13:30:00 +0530

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-FileCopyrightText: 2026 Vibhanshu Biswas
 # SPDX-License-Identifier: GPL-3.0-or-later
 """The OpenDisplay for X11 settings window — GTK 4 + libadwaita (PROJECT_SPEC.md §8.8).
 
@@ -486,8 +486,8 @@ class App(Adw.Application):
     def _about(self, *_a):
         about = Adw.AboutDialog(
             application_name=_("OpenDisplay for X11"), application_icon=ICON_NAME, version=installed_version(),
-            developer_name="vibhanshu", website=checks.README, issue_url=checks.README + "/issues",
-            copyright="© 2026 vibhanshu", license_type=Gtk.License.GPL_3_0,
+            developer_name="Vibhanshu Biswas", website=checks.README, issue_url=checks.README + "/issues",
+            copyright="© 2026 Vibhanshu Biswas", license_type=Gtk.License.GPL_3_0,
             comments=_("Use an iPad as a second monitor over USB.\n\n"
                        "An unofficial sender for the OpenDisplay iPad app — not affiliated with the "
                        "OpenDisplay project."))

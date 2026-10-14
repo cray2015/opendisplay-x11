@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-FileCopyrightText: 2026 Vibhanshu Biswas
 # SPDX-License-Identifier: GPL-3.0-or-later
 """H.264 Annex B normalisation — every NAL-level rule lives here (PROJECT_SPEC.md §7.5).
 

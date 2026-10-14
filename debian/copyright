@@ -1,14 +1,14 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: opendisplay-x11
-Upstream-Contact: vibhanshu <16113990+cray2015@users.noreply.github.com>
+Upstream-Contact: Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>
 Source: https://github.com/cray2015/opendisplay-x11
 
 Files: *
-Copyright: 2026 vibhanshu
+Copyright: 2026 Vibhanshu Biswas
 License: GPL-3+
 
 Files: packaging/io.github.cray2015.OpenDisplayX11.metainfo.xml
-Copyright: 2026 vibhanshu
+Copyright: 2026 Vibhanshu Biswas
 License: CC0-1.0
 
 License: GPL-3+

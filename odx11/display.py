@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-FileCopyrightText: 2026 Vibhanshu Biswas
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Virtual monitor: mode sizing, the connector force switch, xrandr and output geometry
 (PROJECT_SPEC.md §8.1–8.2, §8.7).

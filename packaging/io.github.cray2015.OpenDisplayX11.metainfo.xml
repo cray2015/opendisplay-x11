@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- SPDX-FileCopyrightText: 2026 vibhanshu -->
+<!-- SPDX-FileCopyrightText: 2026 Vibhanshu Biswas -->
 <!-- SPDX-License-Identifier: CC0-1.0 -->
 <component type="desktop-application">
   <id>io.github.cray2015.OpenDisplayX11</id>
@@ -8,7 +8,7 @@
   <name>OpenDisplay for X11</name>
   <summary>Use your iPad as a second monitor over USB</summary>
   <developer id="io.github.cray2015">
-    <name>vibhanshu</name>
+    <name>Vibhanshu Biswas</name>
   </developer>
   <description>
     <p>

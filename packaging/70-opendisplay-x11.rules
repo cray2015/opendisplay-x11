@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-FileCopyrightText: 2026 Vibhanshu Biswas
 # SPDX-License-Identifier: GPL-3.0-or-later
 # opendisplay-x11 (PROJECT_SPEC.md §8.7): let members of plugdev (on Debian-family systems: the account made at OS install) force an HDMI
 # connector on/off without root, by making its sysfs `status` attribute group-writable —

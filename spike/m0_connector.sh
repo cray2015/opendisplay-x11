@@ -1,5 +1,5 @@
 #!/bin/bash
-# SPDX-FileCopyrightText: 2026 vibhanshu
+# SPDX-FileCopyrightText: 2026 Vibhanshu Biswas
 # SPDX-License-Identifier: GPL-3.0-or-later
 # M0 spike — AC 4/5/6/8 and the HuC/EDID open questions. Run in your own
 # terminal (needs sudo). Reverts itself after the hold, on Ctrl-C and on error.

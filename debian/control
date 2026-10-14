@@ -1,7 +1,7 @@
 Source: opendisplay-x11
 Section: x11
 Priority: optional
-Maintainer: vibhanshu <16113990+cray2015@users.noreply.github.com>
+Maintainer: Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>
 Build-Depends: debhelper-compat (= 13),
                dh-python,
                pybuild-plugin-pyproject,
