@@ -5,7 +5,7 @@
 # real GPU's outputs), plus what the tests import. Same image locally and in CI:
 #   docker build -t odx11-x11 tests/x11
 #   docker run --rm -v "$PWD:/src:ro" odx11-x11
-FROM ubuntu:24.04@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55
+FROM ubuntu:26.04@sha256:f144425ff09be612d6d9ad965196e9cdc23dae1f42110a8a11a3e9a8198759f7
 RUN apt-get update -qq \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
       xserver-xorg-core xserver-xorg-video-dummy x11-xserver-utils xcvt \
