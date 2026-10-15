@@ -31,6 +31,23 @@ Developed and verified on an HP EliteDesk 800 G3 DM (Intel HD 530) with
 Linux Mint 22.3 Cinnamon and an iPad Air (5th gen). Design, decisions and
 acceptance criteria: [`PROJECT_SPEC.md`](PROJECT_SPEC.md).
 
+## Why this exists
+
+I wanted my iPad as a second monitor on Linux without settling for any of these:
+
+- **Old, unmaintained apps or repositories.** Many X11 second-screen tools were abandoned years
+  ago and break with each new driver or desktop release.
+- **Resource-heavy streaming stacks** such as Sunshine and Moonlight. They are built for game
+  streaming and do far more work than a desktop monitor needs.
+- **A dummy plug.** A spare video port on the computer becomes the iPad's monitor; no extra
+  hardware sits in a socket.
+
+So this project stays as native as possible. It uses the kernel's own video port, X11's own
+monitor handling (RandR), the graphics chip's hardware encoder, the stock `usbmuxd` for the USB
+link, and the unmodified OpenDisplay app on the iPad. When the iPad's screen is still, it uses
+almost no CPU. It is meant to be maintained for the long run: every change is tested and every
+release can be verified ([TRUST.md](TRUST.md)).
+
 ## How it works
 
 ```
@@ -396,6 +413,13 @@ to verify a release yourself: **[TRUST.md](TRUST.md)**. To report a vulnerabilit
 Remove **opendisplay-x11** in your software manager (or `sudo apt remove
 opendisplay-x11`). Running sessions are stopped and the port released. Your
 `~/.config/odx11/config.toml` and the desktop's saved monitor layout are left in place.
+
+## Thanks
+
+Thank you to the [OpenDisplay](https://github.com/peetzweg/opendisplay) iPad app and its
+developers. The app laid the foundation for this project: it works flawlessly, and it has been
+the stable platform this sender is built on. Its published protocol is what made an independent
+Linux X11 sender possible.
 
 ## Contributing
 
