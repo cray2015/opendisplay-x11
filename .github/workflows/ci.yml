@@ -1,0 +1,57 @@
+# SPDX-FileCopyrightText: 2026 Vibhanshu Biswas
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Every push and pull request: build the .deb from this source on the release target
+# (Ubuntu 24.04 = Linux Mint 22), which runs the unit tests and validates the desktop entry
+# and AppStream file (debian/rules), then lintian. The built package is kept as an artifact.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build, test and lint the .deb
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends \
+            dpkg-dev lintian debhelper dh-python pybuild-plugin-pyproject python3-all \
+            python3-setuptools python3-pytest python3-gi desktop-file-utils appstream
+          dpkg-checkbuilddeps
+
+      - name: Build (runs the unit tests and metadata validation)
+        run: |
+          dpkg-buildpackage -b -us -uc
+          mkdir -p dist
+          mv ../opendisplay-x11_*_all.deb ../opendisplay-x11_*.buildinfo ../opendisplay-x11_*.changes dist/
+
+      - name: Lintian
+        run: lintian --fail-on error,warning dist/opendisplay-x11_*_all.deb
+
+      - name: SHA256
+        run: sha256sum dist/opendisplay-x11_*_all.deb | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: deb
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14

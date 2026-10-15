@@ -98,6 +98,17 @@ Status: **Active**, **Superseded**, **Deferred** (agreed, not built yet), **Open
 | 2026-10-15 | README: GPU and CPU compared **row by row per preset** ("Frames processed on"), plus a GPU-vs-CPU chart | Column headers "GPU"/"CPU" read as GPU % and CPU % | Active |
 | 2026-10-15 | YouTube jitter: **no change to OpenDisplay** | Measured: the desktop itself stalled every 2 s (the privacy-indicator applet's polling and leaked timers); the stream copied the screen faithfully | Active |
 
+## Trust and release
+
+| Date | Decision | Why | Status |
+|---|---|---|---|
+| 2026-10-15 | Make trustworthiness **verifiable**: CI build, provenance, capability checks, decision records, TRUST.md; badges only for checks that run green | The repo is built with heavy AI assistance; outsiders need evidence, not claims | Active |
+| 2026-10-15 | **The repository becomes public** (after a full-history secret scan came back clean) | Free provenance attestations, CodeQL, Scorecard and private vulnerability reporting need a public repo | Active |
+| 2026-10-15 | **Publish the .deb on GitHub Releases** from version tags, with SHA256, SBOM and a provenance attestation | Gives users one verifiable download; completes M10's release half | Active |
+| 2026-10-15 | **Security contact: the owner, via GitHub private vulnerability reporting** | No email address published; reports stay private until fixed | Active |
+| 2026-10-15 | Capability changes checked by **Semgrep with a project rules file** (`--baseline-commit`), not a third-party capability scanner | No mature Python capability scanner exists (searched GitHub, PyPI, npm, crates.io, web); the rules can name this project's real capabilities (XTest, XInput2, sysfs, D-Bus) | Active |
+| 2026-10-15 | No pip-audit / osv-scanner | No PyPI dependencies or lockfile: they would scan nothing; Ubuntu packages' CVEs are tracked by Ubuntu | Active |
+
 ## Process
 
 | Date | Decision | Why | Status |
