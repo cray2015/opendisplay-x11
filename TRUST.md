@@ -106,6 +106,12 @@ Every action is pinned to a full commit SHA, and every workflow starts with no o
   project or its checks. Its protocol (v3) has no authentication. Anyone on the iPad's Wi-Fi, and any
   local user through the world-writable usbmuxd socket, can connect to it and replace the picture or
   receive your touches; they cannot see your desktop or click on your PC (README, Security).
+- **OpenSSF Scorecard's score is partly limited by the project's shape.** It is 7.0 on its first run
+  (2026-10-15). *Code-Review* is 0 because the owner is the only maintainer and GitHub does not let anyone
+  approve their own pull request; every change to `main` still goes through a PR with all CI checks
+  required. *Branch-Protection* cannot be read with the workflow's own token (Scorecard would need a
+  personal access token stored as a secret; not done). *Maintained* is 0 until the repository is 90 days
+  old.
 - **Untested hardware.** AMD and other Intel GPUs are untested; NVIDIA's proprietary driver cannot work.
 
 ## Baselined findings
@@ -149,8 +155,9 @@ sha256sum -c SHA256SUMS
 gh attestation verify "opendisplay-x11_${TAG#v}_all.deb" -R cray2015/opendisplay-x11
 ```
 
-`gh attestation verify` checks the Sigstore signature. It also shows the workflow
-(`.github/workflows/release.yml`) and the commit that produced the file.
+`gh attestation verify` checks the Sigstore signature and exits 0 when it holds. It shows the
+workflow (`.github/workflows/release.yml`) and the commit that produced the file. It prints only to a
+terminal; in a script, check the exit code, or add `--format json` to see the details.
 
 **2. The source produces the same file (independent rebuild):**
 

@@ -1,5 +1,8 @@
 # OpenDisplay for X11
 
+[![CI](https://github.com/cray2015/opendisplay-x11/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/cray2015/opendisplay-x11/actions/workflows/ci.yml?query=branch%3Amain)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/cray2015/opendisplay-x11/badge)](https://scorecard.dev/viewer/?uri=github.com/cray2015/opendisplay-x11)
+
 *An unofficial sender for the [OpenDisplay](https://github.com/peetzweg/opendisplay) iPad app — not affiliated with the OpenDisplay project.*
 
 Use an iPad as a wired, extended second monitor for a Linux X11 desktop —
