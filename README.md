@@ -35,10 +35,9 @@ acceptance criteria: [`PROJECT_SPEC.md`](PROJECT_SPEC.md).
 
 I wanted my iPad as a second monitor on Linux without settling for any of these:
 
-- **Old, unmaintained apps or repositories.** Many X11 second-screen tools were abandoned years
-  ago and break with each new driver or desktop release.
-- **Resource-heavy streaming stacks** such as Sunshine and Moonlight. They are built for game
-  streaming and do far more work than a desktop monitor needs.
+- **Old, unmaintained apps or repositories.**
+- **More resource-intensive processes** such as Sunshine and Moonlight, which are built for game
+  streaming.
 - **A dummy plug.** A spare video port on the computer becomes the iPad's monitor; no extra
   hardware sits in a socket.
 
