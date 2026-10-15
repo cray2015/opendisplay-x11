@@ -26,8 +26,10 @@ def argb_to_rgba(pixels, width: int, height: int) -> bytes:
     for i, p in enumerate(pixels[:width * height]):
         a = (p >> 24) & 0xFF
         r, g, b = (p >> 16) & 0xFF, (p >> 8) & 0xFF, p & 0xFF
-        if a and a < 255:                       # un-premultiply
+        if a and a < 255:  # pragma: no mutate — un-premultiply; at a = 255 it changes nothing anyway
             r, g, b = min(255, r * 255 // a), min(255, g * 255 // a), min(255, b * 255 // a)
+        # pragma: no mutate block — a longer slice end only drops not-yet-written zeros; the last write
+        # restores the length, so the result is identical for every input
         out[i * 4:i * 4 + 4] = bytes((r, g, b, a))
     return bytes(out)
 
@@ -35,8 +37,10 @@ def argb_to_rgba(pixels, width: int, height: int) -> bytes:
 def png(width: int, height: int, rgba: bytes) -> bytes:
     """A minimal RGBA PNG (no image library needed)."""
     def chunk(kind, data):
+        # pragma: no mutate block — ">i"/">I" pack small lengths identically
         return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
     raw = b"".join(b"\x00" + rgba[y * width * 4:(y + 1) * width * 4] for y in range(height))
+    # pragma: no mutate block — byte-for-byte equivalents ("\x1A", ">iibbbbb" for small values, zlib level)
     return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0))
             + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
 
@@ -50,7 +54,7 @@ def sprite_message(width, height, xhot, yhot, pixels, geom) -> dict | None:
         return None                             # absurdly large cursor: skip rather than break demux
     return {"type": "cursorImg", "nw": round(width / geom.w, 5), "nh": round(height / geom.h, 5),
             "ax": round(xhot / width, 4), "ay": round(yhot / height, 4),
-            "png": base64.b64encode(data).decode("ascii")}
+            "png": base64.b64encode(data).decode()}       # base64 is plain ASCII
 
 
 # --- position -----------------------------------------------------------------------------
@@ -75,17 +79,20 @@ class CursorSender:
         self.clock = clock
         self.call_later = call_later
         self.geom = None
+        # Initial values: any "nothing yet" sentinel and any time 1/max_rate_hz in the past behave the same.
+        # pragma: no mutate start
         self._last = None                       # last position message sent
         self._last_at = -1.0
         self._pending = None                    # latest position waiting for the rate limit
         self._cancel = None
         self._serial = None
+        # pragma: no mutate end
 
     def reset(self, geom, sprite=None, pointer=None):
         """New stream or new geometry: resend everything."""
         self.geom = geom
         self._last, self._serial = None, None
-        self._last_at = -1.0                    # a new stream gets its position at once
+        self._last_at = -1.0  # pragma: no mutate — any time 1/max_rate_hz in the past: the next position goes at once
         if self._cancel:
             self._cancel()
             self._cancel = None

@@ -81,7 +81,7 @@ def to_toml(cfg) -> str:
     out = [HEADER]
     for f in fields(cfg):
         if f.name == "devices":
-            continue
+            continue                    # pragma: no mutate — devices is the last field: break is the same
         section, default = getattr(cfg, f.name), getattr(defaults, f.name)
         lines = [f"{k.name} = {_toml_value(getattr(section, k.name))}" for k in fields(section)
                  if getattr(section, k.name) != getattr(default, k.name) and getattr(section, k.name) is not None]

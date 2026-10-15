@@ -126,3 +126,70 @@ def test_version_is_the_same_everywhere():
     meta = open(os.path.join(root, "packaging", "io.github.cray2015.OpenDisplayX11.metainfo.xml")).read()
     newest = re.search(r'<release version="([^"]+)"', meta).group(1)
     assert py == deb == newest
+
+
+# --- edges found by mutation testing ---------------------------------------------------
+
+def test_auto_prefers_the_port_already_in_use_over_a_free_one():
+    labels = dict(settings.port_choices([("HDMI-A-1", "free"), ("HDMI-A-2", "ours")]))
+    assert labels["auto"] == "Automatic (HDMI-A-2)"
+    labels = dict(settings.port_choices([("HDMI-A-1", "monitor"), ("HDMI-A-2", "free")]))
+    assert labels["auto"] == "Automatic (HDMI-A-2)"
+
+
+@pytest.mark.parametrize("value,toml", [
+    (True, "true"), (False, "false"), (3, "3"), (1.5, "1.5"),
+    ('a "b" \\c', '"a \\"b\\" \\\\c"'),
+    ([1568, 1088], "[1568, 1088]"), (("x", True), '["x", true]'),
+])
+def test_toml_values_are_exact(value, toml):
+    assert settings._toml_value(value) == toml
+
+
+def test_unwritable_value_is_named():
+    with pytest.raises(TypeError) as e:
+        settings._toml_value({"a": 1})
+    assert str(e.value) == "cannot write {'a': 1} to TOML"
+
+
+def test_devices_are_written_after_the_sections_and_none_is_skipped():
+    cfg = config.parse({"video": {"preset": "custom"},
+                        "devices": {"b": {"side": "left"}, "a": {"side": "below", "align": "end"}}})
+    text = settings.to_toml(cfg)
+    assert text.index("[video]") < text.index('[devices."a"]') < text.index('[devices."b"]')
+    assert "mode" not in text
+    assert config.parse(tomllib.loads(text)) == cfg
+
+
+def test_save_creates_the_folder_and_leaves_no_temporary_file(tmp_path):
+    path = tmp_path / "new" / "config.toml"
+    cfg = config.parse({"video": {"fps": 30, "preset": "custom"}})
+    settings.save(cfg, str(path))
+    settings.save(cfg, str(path))                    # the folder already exists: fine
+    assert [p.name for p in path.parent.iterdir()] == ["config.toml"]
+
+
+def test_failed_save_leaves_no_temporary_file(tmp_path, monkeypatch):
+    def boom(src, dst):
+        raise OSError("disk full")
+    monkeypatch.setattr(settings.os, "replace", boom)
+    with pytest.raises(OSError, match="disk full"):
+        settings.save(config.parse({}), str(tmp_path / "config.toml"))
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_temporary_config_is_hidden_and_beside_it(tmp_path, monkeypatch):
+    seen = {}
+    real = settings.tempfile.mkstemp
+    def spy(**kw):
+        seen.update(kw)
+        return real(**kw)
+    monkeypatch.setattr(settings.tempfile, "mkstemp", spy)
+    settings.save(config.parse({}), str(tmp_path / "config.toml"))
+    assert seen == {"dir": str(tmp_path), "prefix": ".config-"}
+
+
+def test_device_values_equal_to_the_defaults_are_not_written():
+    cfg = config.parse({"devices": {"a": {"mode": [1568, 1088], "side": "right"}}})   # right is the default
+    text = settings.to_toml(cfg)
+    assert "mode = [1568, 1088]" in text and "side" not in text and "align" not in text

@@ -69,8 +69,8 @@ class TouchGesture:
         self.slop = slop_px
         self.long_press = long_press_s
         self.state = self.IDLE
-        self.start = None
-        self.t0 = 0.0
+        self.start = None          # pragma: no mutate — set by every "began" before it is read
+        self.t0 = 0.0              # pragma: no mutate — set by every "began" before it is read
 
     def feed(self, phase: str, pt, now: float) -> list:
         acts = [("move", pt)]
