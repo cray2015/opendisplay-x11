@@ -1,3 +1,12 @@
+opendisplay-x11 (0.3.2) unstable; urgency=medium
+
+  * Frames are converted and encoded only for a moment after something on
+    the iPad's monitor changes, not continuously: a window that updates a
+    few times a second (a clock, a system monitor) now costs ~10 % of one
+    core instead of ~40 %.
+
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 11:30:00 +0530
+
 opendisplay-x11 (0.3.1) unstable; urgency=medium
 
   * Performance presets in the settings window: Power saver, Balanced

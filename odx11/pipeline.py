@@ -77,6 +77,9 @@ class Pipeline:
         self.frames = 0
         self._captured = 0               # buffers into the leaky queue
         self._encoded = 0                # buffers out of it, towards the encoder
+        self._gated = 0                  # dropped on purpose: nothing changed on screen
+        self._gate_until = 0.0           # monotonic time until which frames are converted
+        self._always_open = (video.change_tail_ms == 0)
         self._last_health = (time.monotonic(), 0)
         desc = describe(geom, video, display_name, fps)
         log.debug("pipeline: %s", desc)
@@ -84,7 +87,7 @@ class Pipeline:
         self.sink = self.pipe.get_by_name("out")
         self.sink.connect("new-sample", self._on_sample)
         self._count(self.pipe.get_by_name("q").get_static_pad("sink"), "_captured")
-        self._count(self.pipe.get_by_name("conv").get_static_pad("sink"), "_encoded")
+        self.pipe.get_by_name("conv").get_static_pad("sink").add_probe(Gst.PadProbeType.BUFFER, self._gate)
         bus = self.pipe.get_bus()
         bus.add_signal_watch()
         bus.connect("message::error", self._on_bus_error)
@@ -105,6 +108,20 @@ class Pipeline:
         self.pipe.set_state(Gst.State.NULL)
         self.pipe.get_bus().remove_signal_watch()
 
+    def open_gate(self, seconds: float):
+        """Something on the iPad's monitor changed: convert and encode frames for `seconds`.
+        Capture is cheap (~1.5 % of a core at 60 fps); colour conversion and encoding are
+        not, so frames captured while nothing changes are dropped before them — raw frames,
+        never encoded ones (§4). Thread-safe: a float store."""
+        self._gate_until = max(self._gate_until, time.monotonic() + seconds)
+
+    def _gate(self, pad, info):
+        if self._always_open or time.monotonic() < self._gate_until:
+            self._encoded += 1
+            return Gst.PadProbeReturn.OK
+        self._gated += 1
+        return Gst.PadProbeReturn.DROP
+
     def _count(self, pad, attr):
         def probe(pad, info):
             setattr(self, attr, getattr(self, attr) + 1)
@@ -118,7 +135,8 @@ class Pipeline:
         self._last_health = (now, self.frames)
         fps = (self.frames - f0) / (now - t0) if now > t0 else 0.0
         # The leaky queue is the only place frames are dropped; one may be in flight.
-        return {"capFps": round(fps, 1), "encDrops": max(0, self._captured - self._encoded - 1),
+        dropped = self._captured - self._encoded - self._gated - 1     # the leaky queue's drops
+        return {"capFps": round(fps, 1), "encDrops": max(0, dropped),
                 "netDrops": 0}
 
     def _capture_ms(self, buf):

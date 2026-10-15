@@ -49,6 +49,9 @@ odx11 daemon (systemd --user)
   reshuffle.
 - **Cursor:** the iPad draws the cursor itself from small position messages (up
   to 120 a second), so it follows your hand without waiting for video frames.
+- **Only changes cost CPU:** frames are converted and encoded only for a moment
+  after something on the iPad's monitor changes, so a clock or system monitor
+  ticking there costs little.
 - **Idle:** capture pauses after 1 s with nothing changing on the iPad's
   monitor (per-window X damage, pointer motion, touch) — about 1 % of one CPU
   core idle vs ~20 % while streaming.

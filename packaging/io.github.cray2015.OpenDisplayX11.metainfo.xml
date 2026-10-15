@@ -46,6 +46,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.3.2" date="2026-10-15">
+      <description>
+        <p>Uses much less CPU when something on the iPad updates only now and then.</p>
+      </description>
+    </release>
     <release version="0.3.1" date="2026-10-15">
       <description>
         <p>Performance presets: Power saver, Balanced, Best quality or Custom. Each iPad's limits are respected automatically.</p>

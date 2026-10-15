@@ -36,6 +36,8 @@ keyframe_period = 1000000             # frames between unprompted IDRs; large = 
 show_pointer = false                  # draw the cursor into the video (slower; [cursor] does it better)
 convert_threads = 2                   # software colour-conversion threads
 idle_pause_s = 1.0                    # stop capturing after this long with nothing changing; 0 = always capture
+change_tail_ms = 150                  # after a change, send frames for this long (then only on the next change);
+                                      # 0 = send every captured frame
 
 [cursor]
 enabled = true                        # the iPad draws the cursor from small messages: moves at input speed

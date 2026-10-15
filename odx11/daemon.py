@@ -219,6 +219,9 @@ class Session:
         if self.pipeline is None or self.ended:
             return
         self._last_activity = self.monotonic()
+        tail = self.cfg.video.change_tail_ms / 1000
+        if tail > 0 and hasattr(self.pipeline, "open_gate"):
+            self.pipeline.open_gate(tail)
         if self.paused:
             self.paused = False
             self.pipeline.resume()
