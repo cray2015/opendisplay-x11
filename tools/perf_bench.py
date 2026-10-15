@@ -12,7 +12,9 @@ service is stopped for the duration and restarted at the end.
 
 Scenarios:
   idle         nothing changing on the iPad's monitor (keep it empty)
-  light        whatever is on the iPad's monitor now (e.g. a system monitor redrawing)
+  rate         a test window on the iPad's monitor redrawing --hz times a second
+               (tools/test_window.py) — read any app off the CPU-vs-rate curve
+  light        whatever is on the iPad's monitor now
   continuous   every frame converted and encoded (frame gate and idle pause off): worst case
   continuous30 the same at Power saver's 30 fps and sharpness
 """
@@ -29,6 +31,7 @@ import time
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCENARIOS = {
     "idle": "",
+    "rate": "",
     "light": "",
     "continuous": '[video]\npreset = "custom"\nfps = 60\nqp = 26\nidle_pause_s = 0\nchange_tail_ms = 0\n',
     # Power saver's frame rate and sharpness, with pausing off (a preset would set its own pause).
@@ -43,21 +46,39 @@ def cpu_ticks(pid: int) -> int:
     return int(fields[11]) + int(fields[12])          # utime + stime
 
 
-def run_once(scenario: str, warmup: float, seconds: float) -> dict:
+def pss_mb(pid: int) -> float:
+    """Proportional set size: the process's own memory plus its share of shared pages."""
+    with open(f"/proc/{pid}/smaps_rollup") as f:
+        for line in f:
+            if line.startswith("Pss:"):
+                return round(int(line.split()[1]) / 1024, 1)
+    return 0.0
+
+
+def run_once(scenario: str, warmup: float, seconds: float, hz: float | None = None) -> dict:
     cfg = tempfile.NamedTemporaryFile("w", suffix=".toml", delete=False)
     cfg.write(SCENARIOS[scenario])
     cfg.close()
     log = tempfile.NamedTemporaryFile("w+", suffix=".log", delete=False)
     proc = subprocess.Popen([sys.executable, "-m", "odx11", "--config", cfg.name, "run"],
                             cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)
+    window = None
     try:
+        if scenario == "rate":
+            time.sleep(4)                               # the virtual monitor must exist first
+            window = subprocess.Popen([sys.executable, os.path.join(ROOT, "tools", "test_window.py"),
+                                       "--hz", str(hz)])
         time.sleep(warmup)
         mark = os.path.getsize(log.name)
-        hz = os.sysconf("SC_CLK_TCK")
+        ticks_hz = os.sysconf("SC_CLK_TCK")
         t0, c0 = time.monotonic(), cpu_ticks(proc.pid)
         time.sleep(seconds)
         t1, c1 = time.monotonic(), cpu_ticks(proc.pid)
+        mem = pss_mb(proc.pid)
     finally:
+        if window is not None:
+            window.terminate()
+            window.wait(timeout=10)
         proc.send_signal(2)
         proc.wait(timeout=20)
     with open(log.name) as f:
@@ -67,8 +88,9 @@ def run_once(scenario: str, warmup: float, seconds: float) -> dict:
     os.unlink(log.name)
     samples = [json.loads(m.replace("'", '"').replace("True", "true").replace("False", "false"))
                for m in re.findall(r"PHONE-STATS (\{.*\})", text)]
-    row = {"scenario": scenario, "cpu_pct_one_core": round(100 * (c1 - c0) / hz / (t1 - t0), 1),
-           "stats_samples": len(samples)}
+    row = {"scenario": scenario if scenario != "rate" else f"rate{hz:g}",
+           "cpu_pct_one_core": round(100 * (c1 - c0) / ticks_hz / (t1 - t0), 1),
+           "pss_mb": mem, "stats_samples": len(samples)}
     for key in STATS:
         vals = [s[key] for s in samples if isinstance(s.get(key), (int, float))]
         row[key] = round(sum(vals) / len(vals), 1) if vals else ""
@@ -81,8 +103,11 @@ def main():
     ap.add_argument("--runs", type=int, default=3)
     ap.add_argument("--warmup", type=float, default=10)
     ap.add_argument("--seconds", type=float, default=30)
+    ap.add_argument("--hz", type=float, help="redraw rate for --scenario rate")
     ap.add_argument("--csv", help="append rows to this CSV file")
     a = ap.parse_args()
+    if a.scenario == "rate" and not a.hz:
+        ap.error("--scenario rate needs --hz")
     service_was_active = subprocess.run(["systemctl", "--user", "is-active", "--quiet", "odx11"]).returncode == 0
     if service_was_active:
         subprocess.run(["systemctl", "--user", "stop", "odx11"], check=True)
@@ -90,7 +115,7 @@ def main():
     rows = []
     try:
         for i in range(a.runs):
-            row = run_once(a.scenario, a.warmup, a.seconds)
+            row = run_once(a.scenario, a.warmup, a.seconds, a.hz)
             row["run"] = i + 1
             rows.append(row)
             print(json.dumps(row), flush=True)
@@ -102,7 +127,8 @@ def main():
         os.makedirs(os.path.dirname(os.path.abspath(a.csv)), exist_ok=True)
         new = not os.path.exists(a.csv)
         with open(a.csv, "a", newline="") as f:
-            w = csv.DictWriter(f, fieldnames=["date", "scenario", "run", "cpu_pct_one_core", "stats_samples", *STATS])
+            w = csv.DictWriter(f, fieldnames=["date", "scenario", "run", "cpu_pct_one_core", "pss_mb",
+                                              "stats_samples", *STATS])
             if new:
                 w.writeheader()
             for r in rows:

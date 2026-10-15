@@ -183,40 +183,58 @@ systemctl --user stop odx11 && python3 -m odx11 run -v   # foreground, verbose (
 Measured on 2026-10-15 (version 0.3.3) — HP EliteDesk 800 G3 DM: Intel Core
 i5-6500T (4 cores), HD 530 graphics, Linux Mint 22.3 Cinnamon (X11), iPad Air
 (5th gen) over USB, virtual monitor 1568 × 1088, Balanced preset unless noted.
-Each row is the mean of 3 runs of 25 s (after an 8 s warm-up); the spread
-between runs is shown in brackets.
+Each row is the mean of 3 runs of 25 s after an 8 s warm-up (spread in brackets).
 
-| What is on the iPad's screen | CPU (% of one core) | Frames/s | Latency, median | Latency, 95th % | Encode time |
+**How much the iPad's screen changes decides the cost**, not which app changes
+it: every change converts and encodes whole frames. "Changes per second" uses a
+test window redrawing at a fixed rate, so you can place any app on the curve —
+a clock ≈ 1/s, a system monitor ≈ 2/s, typing ≈ 5–10/s in bursts, scrolling or a
+video ≈ continuous.
+
+| iPad screen changes | CPU, % of one core | Frames/s sent | Latency median / 95th % | Encode | Memory (PSS) |
 |---|---|---|---|---|---|
-| Nothing changing | **0.3** (0.2–0.3) | — (paused) | — | — | — |
-| A window redrawing ~2×/s (a system monitor) | **10.2** (10.1–10.3) | 9.9 | 10.8 ms | 20.4 ms | 8.7 ms |
-| Continuous change, 30 fps (Power saver's rate) | **23.1** (23.0–23.1) | 29.5 | 10.1 ms | 16.4 ms | 9.0 ms |
-| Continuous change, 60 fps (Balanced, worst case) | **45.6** (45.3–45.9) | 59.6 | 10.0 ms | 15.6 ms | 8.3 ms |
+| never (idle) | **0.1** (0.1–0.2) | 0 | — | — | 58 MB |
+| 1 × per second | **9.1** (9.0–9.2) | 8.5 | 10.1 / 16.4 ms | 8.7 ms | 58 MB |
+| 2 × per second | **15.7** (15.5–15.8) | 17.2 | 10.5 / 16.2 ms | 8.8 ms | 59 MB |
+| 5 × per second | **35.1** (35.0–35.2) | 44.5 | 10.3 / 16.5 ms | 8.3 ms | 60 MB |
+| 10 × per second | **46.4** (46.3–46.5) | 58.8 | 10.8 / 15.7 ms | 8.9 ms | 59 MB |
+| 30 × per second | **48.6** (47.8–49.0) | 59.7 | 14.9 / 17.6 ms | 12.9 ms | 60 MB |
+| continuously, at 30 fps (Power saver's rate) | **22.9** (22.8–23.0) | 29.5 | 10.1 / 13.6 ms | 8.9 ms | 56 MB |
+| continuously, at 60 fps (worst case) | **45.9** (45.1–46.9) | 59.3 | 10.3 / 14.7 ms | 9.0 ms | 60 MB |
 
-- **CPU** is for the OpenDisplay for X11 service, as a percentage of *one* core;
-  a system monitor that shows the whole processor shows a quarter of that on
-  this 4-core CPU (worst case ≈ 11 %).
-- **Latency** is end to end, from capturing the frame to showing it on the iPad,
-  and with the **encode time** is reported by the iPad itself. At 60 fps a new
-  frame only starts every 16.7 ms, so ~10 ms is close to the floor.
-- **Where the CPU goes** at 60 fps: screen capture ~1.5 %, colour conversion
-  ~32 % (software: this GPU's free driver has no video-processing unit), handing
-  frames to the hardware encoder ~13 %, the program's own code ~1–2 %. Frames are
-  converted and encoded only for a moment after something on the iPad's screen
-  changes, and not at all while it is still — which is why a mostly static
-  screen costs little.
-- The cursor is drawn by the iPad from position messages, so moving the mouse
-  costs almost nothing and does not depend on the frame rate.
-
-Reproduce (iPad attached, OpenDisplay open; the user service is stopped during
-the runs and restarted after):
-
-```bash
-python3 tools/perf_bench.py --scenario continuous --runs 3 --csv docs/perf/results.csv
+```mermaid
+xychart-beta
+    title "CPU (% of one core) vs how often the iPad's screen changes"
+    x-axis ["idle", "1/s", "2/s", "5/s", "10/s", "30/s", "continuous"]
+    y-axis "CPU %" 0 --> 50
+    bar [0.1, 9.1, 15.7, 35.1, 46.4, 48.6, 45.9]
 ```
 
-Scenarios: `idle` (keep the iPad's screen empty), `light` (whatever is on it),
-`continuous`, `continuous30`. Raw data: [`docs/perf/results.csv`](docs/perf/results.csv).
+- **CPU** is for the OpenDisplay for X11 service as a percentage of *one* core; a
+  system monitor showing the whole 4-core processor shows a quarter of it
+  (worst case ≈ 12 %).
+- **Memory** is the service's own share (PSS) and stays flat under load; a
+  system monitor's "resident" figure (~92 MB) also counts shared libraries.
+- **Latency** is end to end, capture to the iPad's screen, and with the **encode
+  time** is reported by the iPad itself. At 60 fps a frame starts every 16.7 ms.
+- **Where the CPU goes** at 60 fps: screen capture ~1.5 %, colour conversion ~32 %
+  (software: this GPU's free driver has no video-processing unit), handing
+  frames to the hardware encoder ~13 %, the program's own code ~1–2 %. After a
+  change, frames are sent for 150 ms (`change_tail_ms`), so from about 7
+  changes a second the cost is the same as continuous change.
+- The cursor is drawn by the iPad from position messages: moving the mouse costs
+  almost nothing and never depends on the frame rate.
+
+Reproduce (iPad attached, OpenDisplay open, nothing else changing on its screen;
+the user service is stopped during the runs and restarted after):
+
+```bash
+python3 tools/perf_bench.py --scenario rate --hz 5 --runs 3 --csv docs/perf/results.csv
+```
+
+Scenarios: `idle`, `rate --hz N` (a test window, `tools/test_window.py`),
+`continuous`, `continuous30`, `light` (whatever is on the iPad's screen). Raw data:
+[`docs/perf/results.csv`](docs/perf/results.csv).
 
 ## Configure
 
