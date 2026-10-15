@@ -14,6 +14,11 @@ drag, long-press right-click and two-finger scroll work on the iPad.
 
 What it can access, and how to verify every release yourself: [TRUST.md](TRUST.md).
 
+> [!NOTE]
+> **Status: alpha.** It is used daily on one machine, and it is ready for others to try. Expect rough
+> edges on hardware and desktops it has not met yet. Testers: please go through the
+> [alpha checklist](docs/alpha-testing.md) and report what worked as well as what did not.
+
 > [!IMPORTANT]
 > **Your computer needs a free video port.** odx11 turns an *empty* video
 > output socket into the iPad's monitor: an **HDMI socket**, or a
@@ -88,7 +93,7 @@ odx11 daemon (systemd --user)
 | **Free video port** | An **empty** HDMI socket, or a DisplayPort socket that accepts HDMI adapters (DP++) | **Hard requirement** — see [below](#why-a-free-video-port-is-required). Nothing may be plugged into it. |
 | GPU | Kernel DRM driver | Tested on Intel `i915`. `amdgpu` should work for the monitor; encoder settings untested. NVIDIA's proprietary driver cannot do this. |
 | Encoder | VA-API H.264 via `gstreamer1.0-vaapi` | Intel: `intel-media-va-driver` (the free build is enough). **Recommended:** `intel-media-va-driver-non-free` — the GPU then also prepares the frames (Processing: iGPU / GPU), for about a third of the CPU ([Performance](#performance)). |
-| OS | systemd user session, Python ≥ 3.11, Debian/Ubuntu packages | Mint 22.3 / Ubuntu 24.04 tested. The installer uses `apt`. |
+| OS | **Linux Mint 22 / Ubuntu 24.04 or newer**, with a systemd user session | Mint 22.3 tested. Older releases (Mint 21, Ubuntu 22.04, Debian 12) are not supported: the package needs Python ≥ 3.11, GTK 4.14 and libadwaita 1.5, and will not install there. |
 | iPad | iPadOS 15+ (upstream; the Linux fork states 16+), OpenDisplay app, a USB **data** cable | The app is a [TestFlight beta](https://testflight.apple.com/join/3NYaY11c). The iPad must be trusted (paired) and unlocked. |
 
 ## Why a free video port is required
@@ -157,6 +162,10 @@ pointer out of areas no real output shows).
 
 That's all — from then on odx11 starts with your desktop. First time with the
 iPad: plug it in, unlock it and tap **Trust** when it asks.
+
+**Updates:** there is no update channel yet, so new versions do not arrive by themselves. To be told
+about them, choose **Watch → Custom → Releases** on the GitHub page, then install the new `.deb` the
+same way; the running service switches over to it on its own.
 
 What the package installs (nothing runs as root):
 

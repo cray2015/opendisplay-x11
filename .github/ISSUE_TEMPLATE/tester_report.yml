@@ -1,0 +1,50 @@
+# SPDX-FileCopyrightText: 2026 Vibhanshu Biswas
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Alpha tester report
+description: Results from going through docs/alpha-testing.md, including what worked.
+labels: ["alpha-test"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing! Reports of what **worked** are as useful as bugs: they show which
+        machines and iPads are covered. Checklist: [docs/alpha-testing.md](https://github.com/cray2015/opendisplay-x11/blob/main/docs/alpha-testing.md).
+  - type: input
+    id: system
+    attributes:
+      label: Distribution and desktop
+      placeholder: Ubuntu 24.04, GNOME on Xorg
+    validations:
+      required: true
+  - type: input
+    id: hardware
+    attributes:
+      label: Computer, graphics chip and video port
+      placeholder: ThinkPad T480, Intel UHD 620, HDMI
+    validations:
+      required: true
+  - type: input
+    id: ipad
+    attributes:
+      label: iPad model and iPadOS version
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: OpenDisplay for X11 version
+    validations:
+      required: true
+  - type: textarea
+    id: results
+    attributes:
+      label: Checklist results
+      description: Paste the checklist with each item marked worked / did not work / not tried, and notes.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostic
+    attributes:
+      label: Diagnostic report
+      description: In the window, Help → Copy diagnostic report.
+      render: text

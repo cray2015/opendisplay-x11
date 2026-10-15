@@ -1,0 +1,60 @@
+# SPDX-FileCopyrightText: 2026 Vibhanshu Biswas
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Bug report
+description: Something does not work or looks wrong.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for testing. The diagnostic report below answers most questions in one paste:
+        open **OpenDisplay for X11** → **Help** → **Copy diagnostic report**.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Plug in the iPad and open OpenDisplay
+        2. …
+  - type: textarea
+    id: diagnostic
+    attributes:
+      label: Diagnostic report
+      description: Paste it here. It has versions, the setup checklist and recent log lines; glance over it first, the log can name your computer and iPad.
+      render: text
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Distribution and desktop
+      placeholder: Linux Mint 22.3, Cinnamon (X11)
+    validations:
+      required: true
+  - type: input
+    id: gpu
+    attributes:
+      label: Graphics chip and the video port in use
+      placeholder: Intel HD 530, spare DisplayPort (HDMI-A-1)
+  - type: input
+    id: ipad
+    attributes:
+      label: iPad model and iPadOS version
+      placeholder: iPad Air (5th gen), iPadOS 27.0.1
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: OpenDisplay for X11 version
+      description: Shown in the window under Help → Version.
+      placeholder: 0.4.3
+    validations:
+      required: true
