@@ -31,8 +31,11 @@ python3 -m odx11 list
 journalctl --user -u odx11 -f
 systemctl --user restart odx11
 
-# test — unit tests; need no iPad, no X server, no GPU
+# test — unit tests; need no iPad, no X server, no GPU (the X11 tests skip)
 python3 -m pytest -q tests/
+
+# test, with the X11 side — inside a throwaway Xorg (dummy driver); never on your desktop
+docker build -t odx11-x11 tests/x11 && docker run --rm -v "$PWD:/src:ro" odx11-x11
 
 # fake receiver — exercise framing and the session without an iPad
 python3 tools/fake_receiver.py --port 9000

@@ -56,7 +56,7 @@ Developer-only (not shipped): `install.sh` uses `pkexec` to install build tools 
 
 | Claim | Check | Runs | Defined in |
 |---|---|---|---|
-| The package builds from this source; the unit tests pass (510); the desktop entry and AppStream file are valid; lintian has no errors or warnings | Build job | Every push and PR | `.github/workflows/ci.yml` (`build`) |
+| The package builds from this source; the unit tests pass (545 with the X11 tests); the desktop entry and AppStream file are valid; lintian has no errors or warnings | Build job | Every push and PR | `.github/workflows/ci.yml` (`build`) |
 | The build is reproducible: two builds give the identical `.deb` | Two builds compared with `cmp` | Every push and PR | `ci.yml` (`reproducible`) |
 | A release `.deb` was built by this repository's release workflow, from the tagged commit | Sigstore-signed build provenance | Every release | `.github/workflows/release.yml` |
 | A release's files are the ones published | `SHA256SUMS`; SPDX SBOM | Every release | `release.yml` |
@@ -64,7 +64,7 @@ Developer-only (not shipped): `install.sh` uses `pkexec` to install build tools 
 | Code style and common bug and security patterns | ruff (pycodestyle, pyflakes, bugbear, bandit's `S` rules), Python 3.11 syntax | Every push and PR | `pyproject.toml`, `ci.yml` (`checks`) |
 | The shell scripts that run as root are free of shellcheck findings | shellcheck, style level | Every push and PR | `ci.yml` (`checks`) |
 | Every file has a licence and copyright | REUSE 3.3 lint | Every push and PR | `REUSE.toml`, `ci.yml` (`checks`) |
-| Test coverage does not fall | coverage.py, fails below 65 % | Every push and PR | `ci.yml` (`checks`) |
+| The X11 side works against a real X server; test coverage does not fall | All tests under Xorg's dummy driver (`tests/x11/`); coverage.py, fails below 75 % | Every push and PR | `ci.yml` (`tests-x11`) |
 | No secrets anywhere in the history | gitleaks over every commit | Every push and PR | `ci.yml` (`secrets-and-workflows`) |
 | The workflows are safe: least-privilege tokens, SHA-pinned actions, no template injection, no persisted credentials | zizmor, pedantic level | Every push and PR | `ci.yml` (`secrets-and-workflows`) |
 | Pinned actions stay current | Dependabot, weekly, 7-day cooldown | Weekly | `.github/dependabot.yml` |
@@ -77,10 +77,14 @@ Every action is pinned to a full commit SHA, and every workflow starts with no o
 
 ## What is not verified
 
-- **Hardware paths have no automated tests.** The settings window (`gui.py`) and the video pipeline
-  (`pipeline.py`) have 0 % coverage; the X11 parts of `activity.py`, `display.py` and `input.py` are
-  partly covered. The daemon's main loop *is* tested end to end with a fake receiver, a fake usbmuxd
-  and fakes for the X server, but nothing here runs against a real GPU, usbmuxd or iPad. They are checked by hand against the acceptance criteria in
+- **Some paths have no automated tests.** The settings window (`gui.py`) and the video pipeline
+  (`pipeline.py`) have 0 % coverage. The X11 side *is* tested against a real X server (Xorg's dummy
+  driver in a container, `tests/x11/`): window and damage tracking, pointer, key and cursor events,
+  touch injection through XTest, and the virtual monitor's RandR modes, placement, resizing and
+  removal. Two things there are still simulated: the kernel's force switch (a sysfs write) with the
+  "connected" state it causes, and rotation (the dummy driver cannot rotate, so portrait is checked by
+  hand). The daemon's main loop is tested end to end with a fake receiver and a fake usbmuxd. Nothing
+  runs against a real GPU, usbmuxd or iPad. They are checked by hand against the acceptance criteria in
   `PROJECT_SPEC.md` §10, by the owner, on one machine (Intel HD 530, Linux Mint 22.3).
 - **Ubuntu's packages are trusted as shipped.** GStreamer, PyGObject, python-xlib, usbmuxd and the
   VA-API drivers come from the distribution. Their vulnerabilities are tracked and fixed by
@@ -112,7 +116,7 @@ Recorded here so CI fails only on new problems. Nothing was silently suppressed.
 | ruff | `S101` (assert) disabled in `tests/` | pytest asserts |
 | ruff | `odx11/activity.py` `close()`: `S110` (`except: pass`) marked `noqa` | Closing an X connection that is already gone; nothing to handle |
 | ruff, shellcheck | `spike/` excluded | Throwaway M0 feasibility scripts, not shipped |
-| coverage | Floor 65 % (measured 69 %) | 100 %: annexb, checks, config, cursor, notify, protocol, usbmux; ≥ 97 %: `__main__`, settings, state, upgrade; daemon 91 %. 0 %: gui, pipeline; activity 34 %, display 50 %, input 64 % (they need an X server; see above) |
+| coverage | Floor 75 % (measured 77 %, with the X11 tests) | 100 %: annexb, config, cursor, input, notify, protocol, usbmux; ≥ 90 %: activity, checks, daemon, display, settings, state, upgrade, `__main__`. 0 %: gui, pipeline |
 | mutation testing | 1,687 mutants, 91 % killed (2026-10-15). annexb, config, cursor, protocol, settings and state: 100 %. edid.py is excluded: it serves only a boot-time EDID fallback that is unused at runtime (`docs/decisions.md`). input 48 %: its 147 untested mutants are all in the X11 injector, which needs an X server | Raised from ~70 % by tests for every config limit, exact messages and wording, the iPad's `hello` fields, the liveness check (a mutant sending SIGHUP survived before), PNG structure and touch edges. Mutants that cannot change behaviour are marked `# pragma: no mutate` with the reason (about 15). Reported monthly; not a gate yet |
 | capability check | `odx11/pipeline.py:169` matches `cap-screen-capture` | A docstring mentioning `ximagesrc`; harmless |
 | lintian | `appstream-metadata-missing-modalias-provide` for the udev rule | The rule grants a permission; it is not hardware support that AppStream should advertise |
