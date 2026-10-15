@@ -21,3 +21,4 @@ dist.build.log
 debian/*.debhelper
 # test coverage data
 .coverage
+mutants/

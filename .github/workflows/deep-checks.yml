@@ -1,0 +1,65 @@
+# SPDX-FileCopyrightText: 2026 Vibhanshu Biswas
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Slower checks, kept off the per-push path: Semgrep's public Python and security-audit
+# rulesets over the whole tree, and mutation testing of the pure modules (do the unit
+# tests notice deliberately broken code?). Results go to the run summary; TRUST.md keeps
+# the baseline.
+name: Deep checks
+
+on:
+  schedule:
+    - cron: "43 2 1 * *"       # monthly
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deep-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  semgrep-full:
+    name: Semgrep (p/python, p/security-audit)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Semgrep
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp --volume "$PWD:/src" --workdir /src \
+            semgrep/semgrep:1.180.0@sha256:529ee8a277ec8adc5b534d7c74eea0a47e9de21d62852b6ba7ac6ba9566845c3 \
+            semgrep scan --metrics=off --disable-version-check --config p/python --config p/security-audit \
+              --exclude spike --error .
+
+  mutation:
+    name: Mutation testing (mutmut)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: mutmut on the pure modules (config in pyproject.toml)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends python3-venv python3-pytest python3-gi
+          python3 -m venv --system-site-packages /tmp/mut
+          /tmp/mut/bin/pip install --quiet mutmut==3.8.0
+          /tmp/mut/bin/mutmut run > mutmut.log 2>&1 || { tail -50 mutmut.log; exit 1; }
+          /tmp/mut/bin/mutmut results --all true > results.txt
+          python3 - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
+          import collections, re
+          c = collections.defaultdict(collections.Counter)
+          for line in open("results.txt"):
+              m = re.match(r"\s*odx11\.(\w+)\.\S+:\s*(\w[\w ]*)", line)
+              if m:
+                  c[m.group(1)][m.group(2).strip()] += 1
+          print("| module | mutants | killed | survived | no tests | score |\n|---|---|---|---|---|---|")
+          for mod, k in sorted(c.items()):
+              tot = sum(k.values()); kil = k["killed"] + k["timeout"]
+              print(f"| {mod} | {tot} | {kil} | {k['survived']} | {k['no tests']} | {100 * kil / tot:.0f} % |")
+          PY
