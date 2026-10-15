@@ -73,6 +73,10 @@ Developer-only (not shipped): `install.sh` uses `pkexec` to install build tools 
 | Repository security practices | OpenSSF Scorecard | Weekly and on `main` | `scorecard.yml` |
 | Decisions were made by a human | Decision log, ADRs, human overrides | — | `docs/decisions.md`, `docs/adr/`, `docs/human-overrides.md` |
 
+The README's coverage badge is drawn by CI (`tools/coverage_badge.py`) on each push to `main` and
+published to this repository's GitHub Pages; no coverage service sees the code. The release and
+licence badges are rendered by shields.io from public GitHub data.
+
 Every action is pinned to a full commit SHA, and every workflow starts with no or read-only permissions.
 
 ## What is not verified

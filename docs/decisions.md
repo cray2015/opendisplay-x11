@@ -118,6 +118,7 @@ Status: **Active**, **Superseded**, **Deferred** (agreed, not built yet), **Open
 | 2026-10-15 | CI runs on **pushes to main, pull requests and by hand**, not on every branch push | A branch's pushes are checked through its pull request; running both doubled every run | Active |
 | 2026-10-15 | **Monthly mutation testing runs in the X11 image** (4 workers, memory capped); locally only capped (`--max-children 2`, `docker --memory=2g --cpus=2`) | The input injector's mutants need an X server; an uncapped local run filled the desktop's RAM | Active |
 | 2026-10-15 | The X11 test image stays on **Ubuntu 24.04**; Dependabot updates only its digest | Tests must match the package's target (Mint 22 = Ubuntu 24.04); Dependabot proposed 26.04 (PR #2, declined) | Active |
+| 2026-10-15 | **Coverage badge drawn by CI and published to GitHub Pages**, not Codecov; plus release and licence badges | Keeps the no-third-party, verifiable posture (Codecov needs a GitHub app with repo access; its uploader was compromised in 2021). Codecov's patch coverage can be replaced by `diff-cover` if outside contributors arrive | Active |
 | 2026-10-15 | Releases also publish the **.buildinfo** | Records the exact toolchain so independent rebuilds can match the hash | Active |
 | 2026-10-15 | README badges only for checks that have run green on GitHub | A badge without evidence is the problem the trust setup solves | Active |
 | 2026-10-15 | No pip-audit / osv-scanner | No PyPI dependencies or lockfile: they would scan nothing; Ubuntu packages' CVEs are tracked by Ubuntu | Active |

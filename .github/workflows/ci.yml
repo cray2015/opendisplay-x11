@@ -139,8 +139,34 @@ jobs:
           docker run --rm --volume "$PWD:/src:ro" odx11-x11 bash -c '
             python3 -m coverage run --source=odx11 -m pytest -q -p no:cacheprovider -rs tests/ &&
             python3 -m coverage report --sort=cover &&
-            python3 -m coverage report --fail-under=78 > /dev/null' | tee coverage.txt
-          { echo '```'; tail -25 coverage.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+            python3 -m coverage report --fail-under=78 > /dev/null &&
+            echo "COVERAGE_TOTAL=$(python3 -m coverage report --format=total)"' | tee coverage.txt
+          { echo '```'; grep -v COVERAGE_TOTAL coverage.txt | tail -25; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      # On main only: the README's coverage badge, drawn here and published to GitHub Pages.
+      - name: Coverage badge
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: python3 tools/coverage_badge.py "$(sed -n 's/^COVERAGE_TOTAL=//p' coverage.txt)" _site
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          path: _site
+
+  coverage-badge:
+    name: Publish the coverage badge
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: tests-x11
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      pages: write             # publish to GitHub Pages
+      id-token: write          # prove the deployment comes from this workflow
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}coverage.svg
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346  # v5.0.1
 
   capabilities:
     name: Capability check (new process, network, file, device, input, D-Bus, dynamic code)
