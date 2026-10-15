@@ -12,8 +12,7 @@ Use an iPad as a wired, extended second monitor for a Linux X11 desktop —
 plug in the cable, open the app, and the desktop extends onto it. Touch,
 drag, long-press right-click and two-finger scroll work on the iPad.
 
-Built with heavy AI assistance under human direction. What it can access and how to
-verify every release yourself: [TRUST.md](TRUST.md).
+What it can access, and how to verify every release yourself: [TRUST.md](TRUST.md).
 
 > [!IMPORTANT]
 > **Your computer needs a free video port.** odx11 turns an *empty* video
