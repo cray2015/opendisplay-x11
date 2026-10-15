@@ -43,7 +43,7 @@ ignore = ["S603", "S607"]
 # only check. Hardware-facing modules are verified by hand (PROJECT_SPEC.md §10).
 [tool.mutmut]
 source_paths = ["odx11"]
-tests_dir = ["tests"]
+pytest_add_cli_args_test_selection = ["tests"]
 # edid.py is excluded: it serves only the boot-time EDID fallback, unused at runtime (docs/decisions.md).
 only_mutate = ["odx11/protocol.py", "odx11/annexb.py", "odx11/config.py", "odx11/state.py",
                "odx11/settings.py", "odx11/input.py", "odx11/cursor.py", "odx11/pipeline.py"]

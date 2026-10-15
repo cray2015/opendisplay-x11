@@ -36,30 +36,19 @@ jobs:
               --exclude spike --error .
 
   mutation:
-    name: Mutation testing (mutmut)
+    name: Mutation testing (mutmut, with an X server)
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
+      # In the X11 test image, so the input injector's mutants are tested too; 4 workers on the
+      # runner's 4 cores, memory capped below the runner's 16 GB.
+      - name: Build the X11 test image
+        run: docker build --quiet --tag odx11-x11 tests/x11
       - name: mutmut on the pure modules (config in pyproject.toml)
+        shell: bash
         run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q --no-install-recommends python3-venv python3-pytest python3-gi
-          python3 -m venv --system-site-packages /tmp/mut
-          /tmp/mut/bin/pip install --quiet mutmut==3.8.0
-          /tmp/mut/bin/mutmut run > mutmut.log 2>&1 || { tail -50 mutmut.log; exit 1; }
-          /tmp/mut/bin/mutmut results --all true > results.txt
-          python3 - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
-          import collections, re
-          c = collections.defaultdict(collections.Counter)
-          for line in open("results.txt"):
-              m = re.match(r"\s*odx11\.(\w+)\.\S+:\s*(\w[\w ]*)", line)
-              if m:
-                  c[m.group(1)][m.group(2).strip()] += 1
-          print("| module | mutants | killed | survived | no tests | score |\n|---|---|---|---|---|---|")
-          for mod, k in sorted(c.items()):
-              tot = sum(k.values()); kil = k["killed"] + k["timeout"]
-              print(f"| {mod} | {tot} | {kil} | {k['survived']} | {k['no tests']} | {100 * kil / tot:.0f} % |")
-          PY
+          docker run --rm --memory=8g --cpus=4 -e MUTMUT_CHILDREN=4 --volume "$PWD:/src:ro" \
+            odx11-x11 /x11/mutation.sh | tee -a "$GITHUB_STEP_SUMMARY"

@@ -10,10 +10,10 @@ RUN apt-get update -qq \
  && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
       xserver-xorg-core xserver-xorg-video-dummy x11-xserver-utils xcvt \
       python3-gi gir1.2-glib-2.0 gir1.2-gstreamer-1.0 gir1.2-gst-plugins-base-1.0 \
-      python3-xlib python3-pytest python3-coverage \
+      python3-xlib python3-pytest python3-coverage python3-venv \
  && rm -rf /var/lib/apt/lists/* \
  && useradd --create-home tester
-COPY xorg-dummy.conf run.sh /x11/
+COPY xorg-dummy.conf run.sh mutation.sh /x11/
 ENV ODX11_X11_TESTS=1
 ENTRYPOINT ["/x11/run.sh"]
 CMD ["python3", "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests/"]

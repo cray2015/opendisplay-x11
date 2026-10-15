@@ -313,3 +313,8 @@ def test_new_input_settings_apply_live(x, inj):
     touch(inj, "began", 0.5, 0.5, t=0.0)
     touch(inj, "ended", 0.5, 0.5, t=0.15)
     assert [e[1] for e in c.events() if e[0] == "press"] == [BUTTON_RIGHT]
+
+
+def test_an_unknown_pointer_action_is_an_error(inj):
+    with pytest.raises(ValueError, match="unknown pointer action 'hover'"):
+        inj._run([("hover", 1)])

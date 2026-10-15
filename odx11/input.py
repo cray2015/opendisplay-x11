@@ -133,11 +133,13 @@ class Injector:
         for kind, arg in acts:
             if kind == "move":
                 self._xtest.fake_input(self.x, self._X.MotionNotify, x=arg[0], y=arg[1])
-            else:
+            elif kind in ("press", "release"):
                 if arg in (BUTTON_LEFT, BUTTON_RIGHT):      # wheel clicks are logged per scroll
                     log.debug("%s button %d", kind, arg)
                 self._xtest.fake_input(
                     self.x, self._X.ButtonPress if kind == "press" else self._X.ButtonRelease, arg)
+            else:
+                raise ValueError(f"unknown pointer action {kind!r}")
 
     def handle(self, msg: dict):
         if self.geometry is None:

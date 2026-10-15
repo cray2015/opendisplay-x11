@@ -1,14 +1,16 @@
 # SPDX-FileCopyrightText: 2026 Vibhanshu Biswas
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Every push and pull request: build the .deb from this source on the release target
+# Pushes to main and every pull request: build the .deb from this source on the release target
 # (Ubuntu 24.04 = Linux Mint 22), which runs the unit tests and validates the desktop entry
 # and AppStream file (debian/rules), then lintian. The built package is kept as an artifact.
 name: CI
 
+# Pushes to main, pull requests, and by hand (Actions tab) — a branch's pushes are checked
+# through its pull request, so they are not run twice.
 on:
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
