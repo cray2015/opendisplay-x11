@@ -46,6 +46,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.3.4" date="2026-10-15">
+      <description>
+        <p>Less CPU when the iPad's screen changes now and then: about half for typing-like activity.</p>
+      </description>
+    </release>
     <release version="0.3.3" date="2026-10-15">
       <description>
         <p>A minimized window no longer keeps the stream awake.</p>

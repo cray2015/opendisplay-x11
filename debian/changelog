@@ -1,3 +1,12 @@
+opendisplay-x11 (0.3.4) unstable; urgency=medium
+
+  * Fewer frames per change: 50 ms after each change plus one settle frame
+    once the screen is quiet (catches fades). A window changing 5 times a
+    second now costs ~14 % of one core instead of ~35 %; continuous change
+    (video) is unchanged.
+
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 15:30:00 +0530
+
 opendisplay-x11 (0.3.3) unstable; urgency=medium
 
   * A minimized window on the iPad's monitor no longer keeps the stream

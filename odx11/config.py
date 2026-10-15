@@ -67,7 +67,8 @@ class VideoConfig:
     show_pointer: bool = False              # draw the cursor into the video (the [cursor] channel replaces it)
     convert_threads: int = 2                # videoconvert worker threads
     idle_pause_s: float = 1.0               # pause capture after this long with no screen change; 0 = never
-    change_tail_ms: int = 150               # convert/encode only this long after a change; 0 = every frame
+    change_tail_ms: int = 50                # convert/encode only this long after a change; 0 = every frame
+    change_settle_ms: int = 300             # then one more frame once quiet this long (fades); 0 = off
 
     def effective(self, key: str):
         """The value in force: the preset's, or the user's own with preset = "custom"."""
@@ -144,6 +145,7 @@ def _validate(cfg: Config):
     need(0 <= cfg.video.qp <= 51, "video.qp must be 0..51")
     need(cfg.video.idle_pause_s >= 0, "video.idle_pause_s must be >= 0")
     need(0 <= cfg.video.change_tail_ms <= 5000, "video.change_tail_ms must be 0..5000")
+    need(0 <= cfg.video.change_settle_ms <= 5000, "video.change_settle_ms must be 0..5000")
     need(cfg.video.preset in PRESETS or cfg.video.preset == CUSTOM,
          f"video.preset must be one of {sorted(PRESETS) + [CUSTOM]}")
     need(cfg.video.keyframe_period > 0, "video.keyframe_period must be > 0 (0 means every 30 frames)")

@@ -25,6 +25,10 @@ from .activity import ActivityMonitor
 
 log = logging.getLogger(__name__)
 
+# A timer that fires this close to its target counts as due. Re-checked timers compute the
+# time left from a float clock; rescheduling a ~1e-17 s remainder would never advance it.
+TIMER_SLACK = 0.001
+
 # How a session ended decides what the daemon does next (§8.4).
 GRACE = "grace"          # EOF, silence, sleeping, errors: keep the display, redial
 TEARDOWN = "teardown"    # closing (app quit), bad hello: remove the display, keep dialing
@@ -79,6 +83,9 @@ class Session:
         self.paused = False              # idle gate: pipeline paused while nothing changes
         self._last_activity = 0.0
         self._cancel_idle = None
+        self._cancel_settle = None           # one late frame after the screen goes quiet
+        self._settled = True                 # the settle frame for the last change was sent
+        self._fps = 60
 
     # --- inbound ---------------------------------------------------------------
     def on_payload(self, payload: bytes):
@@ -145,6 +152,7 @@ class Session:
         self._gen += 1
         gen = self._gen
         fps = min(self.cfg.video.effective("fps"), self.max_fps)
+        self._fps = fps
         if self.limits.max_fps:
             fps = min(fps, int(self.limits.max_fps))
         if self.limits.max_pps:
@@ -222,6 +230,10 @@ class Session:
         tail = self.cfg.video.change_tail_ms / 1000
         if tail > 0 and hasattr(self.pipeline, "open_gate"):
             self.pipeline.open_gate(tail)
+            self._settled = False
+            settle = self.cfg.video.change_settle_ms / 1000
+            if settle > 0 and self._cancel_settle is None and self.call_later:
+                self._cancel_settle = self.call_later(settle, self._settle_check)
         if self.paused:
             self.paused = False
             self.pipeline.resume()
@@ -231,13 +243,32 @@ class Session:
         if self._cancel_idle is None and self.call_later and idle > 0:
             self._cancel_idle = self.call_later(idle, self._idle_check)
 
+    def _settle_check(self):
+        """The screen has been quiet for change_settle_ms: send one more frame. It catches the
+        end of anything the compositor finished after the short change tail — fades, late
+        repaints — at the cost of a single frame. Re-checked like the idle timer."""
+        self._cancel_settle = None
+        if self.pipeline is None or self.ended or self.paused or self._settled:
+            return
+        settle = self.cfg.video.change_settle_ms / 1000
+        left = settle - (self.monotonic() - self._last_activity)
+        if left > TIMER_SLACK:                   # (a float hair short of due is due: no 1e-17 s loops)
+            self._cancel_settle = self.call_later(left, self._settle_check)
+            return
+        self._settled = True
+        if hasattr(self.pipeline, "open_gate"):
+            self.pipeline.open_gate(1.5 / max(1, self._fps))   # just over one frame period
+
     def _idle_check(self):
         self._cancel_idle = None
         if self.pipeline is None or self.ended or self.paused:
             return
+        if self._cancel_settle is not None:          # never pause before the settle frame went out
+            self._cancel_idle = self.call_later(self.cfg.video.change_settle_ms / 1000, self._idle_check)
+            return
         quiet = self.monotonic() - self._last_activity
         idle = self.cfg.video.effective("idle_pause_s")
-        if quiet < idle:
+        if idle - quiet > TIMER_SLACK:
             self._cancel_idle = self.call_later(idle - quiet, self._idle_check)
             return
         self.paused = True
@@ -327,6 +358,9 @@ class Session:
         if self._cancel_idle:
             self._cancel_idle()
             self._cancel_idle = None
+        if self._cancel_settle:
+            self._cancel_settle()
+            self._cancel_settle = None
         if self.cursor is not None:
             self.cursor.stop()
         self._stop_pipeline()

@@ -364,7 +364,7 @@ def test_a_burst_of_activity_keeps_one_timer():
     s, clock, pipes = gated()
     for _ in range(500):                               # a mouse wiggle
         s.on_activity()
-    assert len(clock.pending()) == 1
+    assert len(clock.pending()) == 2                   # one idle timer, one settle timer
 
 
 def test_kf_while_paused_resumes_then_forces_idr():
@@ -562,10 +562,10 @@ def test_cursor_hidden_when_it_leaves_the_ipad():
 
 def test_activity_opens_the_frame_gate_for_the_change_tail():
     s, clock, pipes = gated()
-    assert pipes[0].gates == [0.15]                       # a new stream opens it at once
-    clock.advance(0.5)
+    assert pipes[0].gates == [0.05]                       # a new stream opens it at once
+    clock.advance(0.5)                                    # settle frame after 0.3 s quiet
     s.on_activity()
-    assert pipes[0].gates == [0.15, 0.15]
+    assert pipes[0].gates == [0.05, 1.5 / 60, 0.05]
 
 
 def test_zero_tail_never_gates():
@@ -579,3 +579,32 @@ def test_zero_tail_never_gates():
                 make, call_later=clock.call_later, monotonic=lambda: clock.now)
     s.on_payload(hello(2360, 1640))
     assert made[0].gates == []
+
+
+def test_one_settle_frame_after_the_screen_goes_quiet():
+    s, clock, pipes = gated()
+    g = pipes[0].gates
+    clock.advance(0.2)
+    s.on_activity()                                       # still changing: settle postponed
+    clock.advance(0.25)
+    assert g == [0.05, 0.05]
+    clock.advance(0.1)                                    # 0.35 s after the last change
+    assert g == [0.05, 0.05, 1.5 / 60]
+    clock.advance(5)
+    assert g == [0.05, 0.05, 1.5 / 60]                    # exactly one, then nothing
+
+
+def test_idle_pause_waits_for_the_settle_frame():
+    s, clock, pipes = gated(idle=0.2)                    # shorter than the 0.3 s settle
+    clock.advance(0.25)
+    assert not s.paused                                   # settle still pending
+    clock.advance(0.3)
+    assert pipes[0].gates[-1] == 1.5 / 60 and s.paused
+
+
+def test_timers_never_spin_on_float_remainders():
+    s, clock, pipes = gated()
+    clock.now = 0.1 + 0.2                                 # 0.30000000000000004
+    s.on_activity()
+    clock.advance(10)                                     # must return (no 1e-17 s reschedules)
+    assert s.paused
