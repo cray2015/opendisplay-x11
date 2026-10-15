@@ -203,17 +203,14 @@ video ≈ continuous.
 
 ¹ measured with 0.3.3; continuous change is unaffected by the 0.3.4 change.
 
-```mermaid
-xychart-beta
-    title "CPU (% of one core) vs how often the iPad's screen changes"
-    x-axis ["idle", "1/s", "2/s", "5/s", "10/s", "continuous"]
-    y-axis "CPU %" 0 --> 50
-    bar [0.1, 9.1, 15.7, 35.1, 46.4, 45.9]
-    bar [0.1, 6.0, 8.6, 13.9, 25.1, 45.9]
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/perf/cpu-by-change-rate-dark.svg">
+  <img alt="Grouped bar chart: CPU use (% of one core) by how often the iPad's screen changes, version 0.3.3 vs 0.3.4. Idle 0.1 vs 0.1; 1/s 9.1 vs 6.0; 2/s 15.7 vs 8.6; 5/s 35.1 vs 13.9; 10/s 46.4 vs 25.1; continuous 45.9 vs 45.9." src="docs/perf/cpu-by-change-rate-light.svg" width="760">
+</picture>
 
-*Bars: 0.3.3 (first, sending 150 ms of frames per change) and 0.3.4 (second, 50 ms plus
-one settle frame). Encode time on the iPad ~8–9 ms throughout.*
+*0.3.3 sent 150 ms of frames after every change; 0.3.4 sends 50 ms plus one settle
+frame. The chart is generated from the CSVs by `tools/perf_chart.py`. Encode time
+on the iPad ~8–9 ms throughout.*
 
 - **CPU** is for the OpenDisplay for X11 service as a percentage of *one* core; a
   system monitor showing the whole 4-core processor shows a quarter of it
