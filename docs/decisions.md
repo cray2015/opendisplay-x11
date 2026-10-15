@@ -5,6 +5,8 @@ here **when they are made** (CLAUDE.md makes this a rule). A reversed decision i
 it is marked **Superseded** with a pointer to what replaced it. Details and measurements live in
 `PROJECT_SPEC.md` (section in brackets); this file is the short "what and why".
 
+The five most significant decisions also have full records in [`docs/adr/`](adr/README.md); where the owner redirected the AI is in [`docs/human-overrides.md`](human-overrides.md).
+
 Status: **Active**, **Superseded**, **Deferred** (agreed, not built yet), **Open** (asked, not answered).
 
 ## Product and scope
