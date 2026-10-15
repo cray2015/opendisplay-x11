@@ -60,7 +60,7 @@ Developer-only (not shipped): `install.sh` uses `pkexec` to install build tools 
 | The package builds from this source; the unit tests pass (581 with the X11 tests); the desktop entry and AppStream file are valid; lintian has no errors or warnings | Build job | Every push and PR | `.github/workflows/ci.yml` (`build`) |
 | The build is reproducible: two builds give the identical `.deb` | Two builds compared with `cmp` | Every push and PR | `ci.yml` (`reproducible`) |
 | A release `.deb` was built by this repository's release workflow, from the tagged commit | Sigstore-signed build provenance | Every release | `.github/workflows/release.yml` |
-| A release's files are the ones published | `SHA256SUMS`; SPDX SBOM | Every release | `release.yml` |
+| A release's files are the ones published | `SHA256SUMS`; SPDX SBOM; the signed provenance bundle (`*.deb.sigstore.json`) attached too | Every release | `release.yml` |
 | No pull request adds a capability without review | Semgrep rules, `--baseline-commit` | Every PR | `.semgrep/capabilities.yml`, `ci.yml` (`capabilities`) |
 | Code style and common bug and security patterns | ruff (pycodestyle, pyflakes, bugbear, bandit's `S` rules), Python 3.11 syntax | Every push and PR | `pyproject.toml`, `ci.yml` (`checks`) |
 | The shell scripts that run as root are free of shellcheck findings | shellcheck, style level | Every push and PR | `ci.yml` (`checks`) |

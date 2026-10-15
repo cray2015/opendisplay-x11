@@ -66,6 +66,7 @@ jobs:
           upload-release-assets: false
 
       - name: Build provenance attestation
+        id: attest
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8  # v4.2.2
         with:
           subject-path: ${{ steps.build.outputs.deb }}
@@ -75,7 +76,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+          DEB: ${{ steps.build.outputs.deb }}
         run: |
+          # The signed provenance, also as a release file: verifiable offline with Sigstore's tools,
+          # and what OpenSSF Scorecard looks for (Signed-Releases).
+          cp "$BUNDLE" "$DEB.sigstore.json"
           {
             dpkg-parsechangelog -S Changes | tail -n +4
             echo
@@ -91,4 +97,5 @@ jobs:
           # 0.x versions are alpha: published as pre-releases.
           pre=(); case "$TAG" in v0.*) pre=(--prerelease) ;; esac
           gh release create "$TAG" --repo "$REPO" --title "$TAG" --notes-file notes.md "${pre[@]}" \
-            dist/opendisplay-x11_*_all.deb dist/opendisplay-x11_*.buildinfo dist/SHA256SUMS dist/opendisplay-x11.spdx.json
+            dist/opendisplay-x11_*_all.deb dist/opendisplay-x11_*_all.deb.sigstore.json \
+            dist/opendisplay-x11_*.buildinfo dist/SHA256SUMS dist/opendisplay-x11.spdx.json
