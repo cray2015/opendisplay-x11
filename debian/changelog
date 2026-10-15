@@ -1,3 +1,12 @@
+opendisplay-x11 (0.3.8) unstable; urgency=medium
+
+  * Each performance preset now also sets how long frames are sent after a
+    change: Power saver 100 ms, Balanced 50 ms, Best quality 150 ms
+    (video.change_tail_ms applies with the Custom preset). Balanced and
+    Power saver use less CPU when the screen changes now and then.
+
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 21:00:00 +0530
+
 opendisplay-x11 (0.3.7) unstable; urgency=medium
 
   * Fix Alt+Tab lagging on the iPad. Cinnamon draws its window switcher

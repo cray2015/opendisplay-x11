@@ -184,8 +184,9 @@ Measured on 2026-10-15 with version 0.3.3 — HP EliteDesk 800 G3 DM: Intel Core
 i5-6500T (4 cores), HD 530 graphics, Linux Mint 22.3 Cinnamon (X11), iPad Air
 (5th gen) over USB, virtual monitor 1568 × 1088, Balanced preset (60 fps).
 Each row is the mean of 3 runs of 25 s after an 8 s warm-up (spread in brackets).
-The current version (0.3.5) sends frames the same way, plus at most one extra
-"settle" frame after the screen goes quiet.
+These runs sent frames for 150 ms after each change — what Best quality does
+today. Since 0.3.8 Balanced sends them for 50 ms, which version 0.3.4 measured at
+about half the CPU for 1–10 changes a second; a fresh run is still to come.
 
 **How often the iPad's screen changes decides the cost**, not which app changes
 it: each change converts and encodes whole frames. "Changes per second" uses a
@@ -211,8 +212,9 @@ video ≈ continuous.
 *Generated from the CSVs by `tools/perf_chart.py`. Encode time on the iPad ~8–9 ms
 throughout. Version 0.3.4 tried sending fewer frames per change (about half the
 CPU at 1–10 changes a second, [`results-0.3.4.csv`](docs/perf/results-0.3.4.csv)),
-but the iPad visibly froze on small changes such as moving over a menu, so 0.3.5
-went back — smoothness on the iPad comes first.*
+but the iPad seemed to freeze on small changes such as moving over a menu, so 0.3.5
+went back. The freezes turned out to be the cursor (fixed in 0.3.6) and Alt+Tab
+(0.3.7); with those fixed, 50 ms tested smooth and became Balanced's in 0.3.8.*
 
 - **CPU** is for the OpenDisplay for X11 service as a percentage of *one* core; a
   system monitor showing the whole 4-core processor shows a quarter of it
@@ -224,8 +226,8 @@ went back — smoothness on the iPad comes first.*
 - **Where the CPU goes** at 60 fps: screen capture ~1.5 %, colour conversion ~32 %
   (software: this GPU's free driver has no video-processing unit), handing
   frames to the hardware encoder ~13 %, the program's own code ~1–2 %. After a
-  change, frames are sent for 150 ms (`change_tail_ms`, ~9 frames — fewer let the
-  iPad's decoder hold back the newest picture) and one more once the screen has
+  change, frames are sent for a short while — 100 ms in Power saver, 50 ms in
+  Balanced, 150 ms in Best quality (`change_tail_ms`) — and one more once the screen has
   been quiet for 300 ms (`change_settle_ms`); from about 7 changes a second the
   cost is the same as continuous change. A key press or click with the pointer
   on the iPad's monitor sends frames for 500 ms (`input_tail_ms`): Cinnamon draws
@@ -252,7 +254,7 @@ loudly. The ones people change:
 
 | Setting | Default | Effect |
 |---|---|---|
-| `[video] preset` | `balanced` | Performance: `power_saver` (30 fps, least CPU), `balanced` (60 fps), `best_quality` (60 fps, sharpest), or `custom` to use the three below |
+| `[video] preset` | `balanced` | Performance: `power_saver` (30 fps, least CPU), `balanced` (60 fps), `best_quality` (60 fps, sharpest), or `custom` to use the values below and `change_tail_ms` |
 | `[display] divisor` | `1.5` | Bigger = larger text, fewer pixels on the iPad |
 | `[video] qp` | `26` | Picture quality: lower = sharper, more bandwidth (0–51) |
 | `[video] fps` | `60` | Frame rate while streaming (with `preset = "custom"`) |

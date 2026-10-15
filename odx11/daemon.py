@@ -228,8 +228,9 @@ class Session:
         if self.pipeline is None or self.ended:
             return
         self._last_activity = self.monotonic()
-        tail = max(self.cfg.video.change_tail_ms, tail_ms or 0) / 1000
-        if self.cfg.video.change_tail_ms > 0 and hasattr(self.pipeline, "open_gate"):
+        change_tail = self.cfg.video.effective("change_tail_ms")
+        tail = max(change_tail, tail_ms or 0) / 1000
+        if change_tail > 0 and hasattr(self.pipeline, "open_gate"):
             self.pipeline.open_gate(tail)
             self._settled = False
             settle = self.cfg.video.change_settle_ms / 1000

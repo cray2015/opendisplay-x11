@@ -583,7 +583,7 @@ def test_zero_tail_never_gates():
     def make(*a, **kw):
         made.append(GatePipe())
         return made[-1]
-    s = Session(config.parse({"video": {"change_tail_ms": 0}}), lambda b: None, SDisplay(), SInjector(),
+    s = Session(config.parse({"video": {"preset": "custom", "change_tail_ms": 0}}), lambda b: None, SDisplay(), SInjector(),
                 make, call_later=clock.call_later, monotonic=lambda: clock.now)
     s.on_payload(hello(2360, 1640))
     assert made[0].gates == []

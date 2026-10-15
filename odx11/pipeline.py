@@ -79,7 +79,7 @@ class Pipeline:
         self._encoded = 0                # buffers out of it, towards the encoder
         self._gated = 0                  # dropped on purpose: nothing changed on screen
         self._gate_until = 0.0           # monotonic time until which frames are converted
-        self._always_open = (video.change_tail_ms == 0)
+        self._always_open = (video.effective("change_tail_ms") == 0)
         self._last_health = (time.monotonic(), 0)
         desc = describe(geom, video, display_name, fps)
         log.debug("pipeline: %s", desc)

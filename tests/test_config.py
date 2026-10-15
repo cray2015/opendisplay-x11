@@ -57,6 +57,9 @@ def test_presets_override_and_custom_uses_own_values():
     assert (v.effective("fps"), v.effective("qp")) == (60, 26)
     v = config.parse({"video": {"preset": "power_saver", "fps": 24}}).video
     assert (v.effective("fps"), v.effective("qp"), v.effective("idle_pause_s")) == (30, 30, 0.5)
+    assert v.effective("change_tail_ms") == 100
+    v = config.parse({"video": {"preset": "best_quality", "change_tail_ms": 50}}).video
+    assert v.effective("change_tail_ms") == 150                       # the preset's, not the stray key
     v = config.parse({"video": {"preset": "custom", "fps": 24, "qp": 34}}).video
     assert (v.effective("fps"), v.effective("qp")) == (24, 34)
 
