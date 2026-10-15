@@ -93,3 +93,26 @@ verified by hand against the acceptance criteria in `PROJECT_SPEC.md` §10.
 - **Keep the desktop entry, icon and AppStream ID equal to the app ID and validated** — the build runs `desktop-file-validate` and `appstreamcli validate`; lintian must stay clean. See `PROJECT_SPEC.md` §8.8.
 - **Keep `upgrade.GUI_ONLY` to modules the daemon never imports** — window-only upgrades skip the service restart by fingerprint; the AST test enforces it. See `PROJECT_SPEC.md` §8.7.
 - **Ignore unknown control `type`s and fields, logging each unknown type once** — input arrives at hundreds of messages per second. See `PROJECT_SPEC.md` §7.4.
+
+## Working Rules
+- **Record every decision in `docs/decisions.md` in the same change that acts on it** — date, what, why, status; mark reversed ones *Superseded* with a pointer, never delete them. A decision the user makes in conversation counts, even with no code change.
+- **Log every mistake in "Mistakes" below as soon as it is recognised** — whether the user points it out or you notice it: what happened, its cost, and the rule that prevents it. Read this list before starting work.
+
+## Mistakes
+Each entry is a mistake Claude made on this project and the rule it leaves behind.
+
+1. **Stated the hard constraint too late** (2026-10-14) — the user found the "spare HDMI port required" limit in the .deb description, not up front. *Rule: a constraint that makes the product useless for some users goes first in the README and package description.*
+2. **Package description too long and technical** (2026-10-14) — the user had to ask for KISS and a link. *Rule: user-facing text is short, plain words, with a link for detail.*
+3. **Left the user unsure whether the GUI existed** (2026-10-14) — they installed the .deb and found no window. *Rule: when handing over a build, say what is and isn't in it yet.*
+4. **Defaulted to a maintenance-mode toolkit** (GTK 3) (2026-10-14) — the user pushed back. *Rule: prefer the actively developed option, and say so when recommending.*
+5. **Over-claimed `plugdev` membership** (2026-10-14) — said desktop users are in it; only the installer-created account is. *Rule: verify a system fact before stating it as general.*
+6. **Put an explanation where none belonged** (2026-10-15) — the "unofficial sender" note under the Version row; the version itself had been missing. *Rule: one fact per row; check the window shows basics like the version.*
+7. **Shipped a 50 ms change tail as a win from CPU numbers alone** (0.3.4, 2026-10-15) — the iPad froze on menus; reverted in 0.3.5. *Rule: gating/tail/fps/idle changes need a hands-on iPad check before being called an improvement.*
+8. **Built the cursor channel without testing pointer grabs** (0.3.0) — the cursor froze while dragging or with a menu open (XI 2.0); fixed in 0.3.6. *Rule: test input features during drags, menus and other grabs.*
+9. **Misdiagnosed the Alt+Tab lag as the tail length** (2026-10-15) — reverting to 150 ms changed nothing; the switcher has no damage at all. *Rule: first test with every frame sent (`change_tail_ms = 0`) to separate gating from other causes, and record the screen beside the wake log.*
+10. **Charted two series with Mermaid** (2026-10-15) — GitHub stacked them into one confusing bar. *Rule: draw multi-series charts as generated SVG and look at the render before showing it.*
+11. **Named a folder ambiguously in a status update** (2026-10-15) — "airdrop_support" made the user think AirDrop had to be turned off. *Rule: say what a name is (a window title, a folder) when it could read as an instruction.*
+12. **Said "side by side" without making the chart** (2026-10-15) — the user looked for a new chart that did not exist. *Rule: when a request implies a visual, make it, or say plainly that none was made.*
+13. **Labelled table columns "GPU"/"CPU" over CPU percentages** (2026-10-15) — read as GPU % and CPU %. *Rule: a header names what is measured; a setting's value goes in its own labelled column.*
+14. **Leaked a duplicate applet timer while testing** (2026-10-15) — toggling the privacy-indicator applet's settings and enabling it again left two poll loops until Cinnamon was restarted. *Rule: before changing another program's state to test something, know how to fully restore it, and verify the restore (not only the config file).*
+15. **Placed a test window on a monitor that wasn't there** (2026-10-15) — during the YouTube-jitter check, the "player alone on the iPad's monitor" run happened with the service stopped, so that monitor did not exist and the window landed on the main one. *Rule: check the setup (monitors, service state) before each measurement.*
