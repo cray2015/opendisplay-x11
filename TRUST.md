@@ -17,7 +17,8 @@ Last reviewed: 2026-10-15 (version 0.4.2).
 
 Locations are `file:line` in this revision. `.semgrep/capabilities.yml` finds every one of them,
 so the list cannot silently go stale: a pull request that adds a capability fails CI
-until it is reviewed and added here.
+until it is reviewed. Accepting one means adding it to this table **and** marking the line with
+`# nosemgrep: cap-<rule> — reviewed <date>, listed in TRUST.md`, both visible in the pull request's diff.
 
 **While it runs (as your user, never as root):**
 
@@ -31,13 +32,13 @@ until it is reviewed and added here.
 | **USB link to the iPad** | `odx11/usbmux.py:50` | Unix socket `/var/run/usbmuxd` (Apple device multiplexer), connects to the OpenDisplay app's port |
 | **TCP** | `odx11/daemon.py:830` | Only with the developer flag `odx11 run --tcp HOST:PORT` |
 | **Internet** | — | **None.** The README, TestFlight and upstream URLs are only shown as links and a QR code |
-| **Other programs it runs** | `display.py:78` `cvt`, `display.py:179` `xrandr`; `pipeline.py:26`, `checks.py:72` `gst-inspect-1.0`; `checks.py:85` `idevice_id`, `:91` `idevicepair validate`, `:108` `idevicepair pair`; `gui.py:49`, `:388`, `daemon.py:929`, `__main__.py:74`, `:78` `systemctl --user`; `gui.py:395` and `notify.py:87` its own `odx11` commands; `upgrade.py:55` `dpkg-query`; `gui.py:473` `journalctl --user -u odx11` (diagnostic report) | Fixed argument lists, no shell |
+| **Other programs it runs** | `display.py:78` `cvt`, `display.py:179` `xrandr`; `pipeline.py:26`, `checks.py:72` `gst-inspect-1.0`; `checks.py:85` `idevice_id`, `:91` `idevicepair validate`, `:108` `idevicepair pair`; `gui.py:49`, `:394`, `:396`, `daemon.py:929`, `__main__.py:74`, `:78` `systemctl --user` (incl. `import-environment DISPLAY XAUTHORITY` when you turn it on or log in); `gui.py:403` and `notify.py:87` its own `odx11` commands; `upgrade.py:55` `dpkg-query`; `gui.py:481` `journalctl --user -u odx11` (diagnostic report) | Fixed argument lists, no shell |
 | **Files written** | `state.py:46-65` | `$XDG_RUNTIME_DIR/odx11/state.json` (status for the window) |
 | | `settings.py:103-111`, `gui.py:232` | `~/.config/odx11/config.toml` (only when you change a setting) |
 | **Files watched** | `daemon.py`, `gui.py`, `upgrade.py` | inotify on the usbmuxd socket, its config, its state file and the installed `VERSION` file |
-| **Environment** | `__main__.py:72`, `checks.py:28`, `config.py:14`, `daemon.py:957`, `gui.py:484-485`, `state.py:31` | `DISPLAY`, `XAUTHORITY`, `XDG_CONFIG_HOME`, `XDG_RUNTIME_DIR`, `XDG_SESSION_TYPE`, `XDG_CURRENT_DESKTOP` |
+| **Environment** | `__main__.py:72`, `checks.py:28`, `config.py:14`, `daemon.py:957`, `gui.py:391`, `:492-493`, `state.py:31` | `DISPLAY`, `XAUTHORITY`, `XDG_CONFIG_HOME`, `XDG_RUNTIME_DIR`, `XDG_SESSION_TYPE`, `XDG_CURRENT_DESKTOP` |
 | **D-Bus** | `notify.py:56-73` | Outgoing desktop notifications (`org.freedesktop.Notifications`) and their click signal. It offers no D-Bus service |
-| **Clipboard** | `gui.py:464` | Writes the diagnostic report, only when you click *Copy diagnostic report* |
+| **Clipboard** | `gui.py:472` | Writes the diagnostic report, only when you click *Copy diagnostic report* |
 | **Dynamic code** | — | **None** (`eval`, `exec`, `pickle`, `ctypes`: none; `importlib.metadata` only reads the version) |
 
 **At install and removal (as root, like every package):**

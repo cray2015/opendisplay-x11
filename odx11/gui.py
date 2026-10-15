@@ -387,8 +387,10 @@ class Window(Adw.ApplicationWindow):
             if on:
                 # Hand the session's display to systemd, as the login autostart does
                 # (__main__.cmd_autostart), so turning it on never needs a log-out.
+                # nosemgrep: cap-env — reviewed 2026-10-15, listed in TRUST.md
                 env = [v for v in ("DISPLAY", "XAUTHORITY") if os.environ.get(v)]
                 if env:
+                    # nosemgrep: cap-exec — reviewed 2026-10-15, listed in TRUST.md
                     subprocess.run(["systemctl", "--user", "import-environment", *env], capture_output=True)
                 # a package upgrade may have replaced the unit file: re-read it first
                 subprocess.run(["systemctl", "--user", "daemon-reload"], capture_output=True)
