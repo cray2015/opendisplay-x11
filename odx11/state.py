@@ -36,7 +36,7 @@ class StateFile:
     def __init__(self, file_path: str | None = None, clock=time.time):
         self.path = file_path or path()
         self.clock = clock
-        self._last = None
+        self._last = None          # pragma: no mutate — compared with a dict: None and "" behave the same
 
     def write(self, facts: dict) -> bool:
         """Publish `facts` if they differ from the last write. Returns True if written."""
@@ -60,7 +60,7 @@ class StateFile:
 
     def clear(self):
         """The service is stopping normally: no file means Off."""
-        self._last = None
+        self._last = None          # pragma: no mutate — compared with a dict: None and "" behave the same
         try:
             os.unlink(self.path)
         except FileNotFoundError:
