@@ -49,9 +49,14 @@ d2 docs/architecture.d2 docs/architecture.svg
 ```
 The venv must use `--system-site-packages`: PyGObject and the GStreamer
 typelibs are apt packages and cannot be pip-installed cleanly here.
-Unit tests cover pure modules only (`protocol`, `annexb`, mode sizing, input
-mapping, state machine). Anything touching usbmuxd, xrandr, sysfs or the GPU is
-verified by hand against the acceptance criteria in `PROJECT_SPEC.md` §10.
+Tests need no iPad, X server or GPU (and no python-xlib, GStreamer or GTK): pure
+modules directly; usbmuxd, D-Bus, subprocesses and the daemon's GLib main loop
+through fakes (`tests/test_usbmux.py`, `test_daemon_loop.py`, …). Real X11,
+GStreamer, the window and the hardware are verified by hand against the acceptance
+criteria in `PROJECT_SPEC.md` §10. Mutation testing (mutmut, config in
+`pyproject.toml`): after changing a module's tests run `mutmut run "odx11.<module>*"`;
+the pure modules are at 100 %, mark only provably equivalent mutants
+`# pragma: no mutate` with the reason.
 
 ## Layout
 - `odx11/protocol.py` is the only module that knows the wire format (framing, demux, message shapes).
