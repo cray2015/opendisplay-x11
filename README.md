@@ -6,6 +6,9 @@ Use an iPad as a wired, extended second monitor for a Linux X11 desktop —
 plug in the cable, open the app, and the desktop extends onto it. Touch,
 drag, long-press right-click and two-finger scroll work on the iPad.
 
+Built with heavy AI assistance under human direction. What it can access and how to
+verify every release yourself: [TRUST.md](TRUST.md).
+
 > [!IMPORTANT]
 > **Your computer needs a free video port.** odx11 turns an *empty* video
 > output socket into the iPad's monitor: an **HDMI socket**, or a
@@ -353,6 +356,10 @@ loudly. The ones people change:
   Store release, there is no receiver.
 
 ## Security
+
+What it can access, which automated checks verify each claim, what is not verified, and how
+to verify a release yourself: **[TRUST.md](TRUST.md)**. To report a vulnerability:
+[SECURITY.md](SECURITY.md).
 
 - The daemon **listens on nothing** — no port, no D-Bus. It only dials out to
   the iPad through usbmuxd and reads touches from that one connection.

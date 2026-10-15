@@ -51,7 +51,7 @@ jobs:
         run: |
           dpkg-buildpackage -b -us -uc
           mkdir -p dist
-          mv ../opendisplay-x11_*_all.deb dist/
+          mv ../opendisplay-x11_*_all.deb ../opendisplay-x11_*.buildinfo dist/   # .buildinfo: exact toolchain, for rebuilders
           lintian --fail-on error,warning dist/opendisplay-x11_*_all.deb
           (cd dist && sha256sum opendisplay-x11_*_all.deb > SHA256SUMS && cat SHA256SUMS)
           echo "deb=$(ls dist/opendisplay-x11_*_all.deb)" >> "$GITHUB_OUTPUT"
@@ -89,4 +89,4 @@ jobs:
             echo "Or rebuild it from this tag and compare: see TRUST.md."
           } > notes.md
           gh release create "$TAG" --repo "$REPO" --title "$TAG" --notes-file notes.md \
-            dist/opendisplay-x11_*_all.deb dist/SHA256SUMS dist/opendisplay-x11.spdx.json
+            dist/opendisplay-x11_*_all.deb dist/opendisplay-x11_*.buildinfo dist/SHA256SUMS dist/opendisplay-x11.spdx.json
