@@ -67,7 +67,8 @@ class VideoConfig:
     qp: int = 26                            # CQP: the only rate control on this encoder (§4)
     keyframe_period: int = 1_000_000        # large = no periodic IDRs; 0 means auto (every 30)
     show_pointer: bool = False              # draw the cursor into the video (the [cursor] channel replaces it)
-    convert_threads: int = 2                # videoconvert worker threads
+    convert: str = "auto"                   # colour conversion: auto (GPU when the driver offers it) | gpu | cpu
+    convert_threads: int = 2                # videoconvert worker threads (software conversion)
     idle_pause_s: float = 1.0               # pause capture after this long with no screen change; 0 = never
     change_tail_ms: int = 150               # (custom) convert/encode only this long after a change; 0 = every frame
     change_settle_ms: int = 300             # then one more frame once quiet this long (fades); 0 = off
@@ -146,6 +147,7 @@ def _validate(cfg: Config):
     need(cfg.display.connector == "auto" or cfg.display.connector.startswith("HDMI-A-"),
          "display.connector must be \"auto\" or an HDMI-A-n alias (forcing DP-n is untested)")
     need(cfg.video.fps > 0, "video.fps must be > 0")
+    need(cfg.video.convert in ("auto", "gpu", "cpu"), "video.convert must be \"auto\", \"gpu\" or \"cpu\"")
     need(0 <= cfg.video.qp <= 51, "video.qp must be 0..51")
     need(cfg.video.idle_pause_s >= 0, "video.idle_pause_s must be >= 0")
     need(0 <= cfg.video.change_tail_ms <= 5000, "video.change_tail_ms must be 0..5000")

@@ -150,6 +150,9 @@ class Window(Adw.ApplicationWindow):
         self.idle_row = self._combo_row(_("Pause when nothing changes after"), [l for _v, l in settings.IDLE_PAUSES],
                                         _("Saves power while the iPad's screen is still"))
         group.add(self.idle_row)
+        self.convert_row = self._combo_row(_("Processing"), [l for _v, l in settings.CONVERTS],
+                                           _("The GPU uses less CPU"))
+        group.add(self.convert_row)
         self.press_row = self._combo_row(_("Right-click sensitivity"), [l for _v, l in settings.LONG_PRESSES],
                                          _("How long to hold a finger still for a right-click"))
         group.add(self.press_row)
@@ -281,6 +284,8 @@ class Window(Adw.ApplicationWindow):
         keys = [k for k, _l, _d in settings.PRESET_CHOICES]
         self.perf_row.set_selected(keys.index(c.video.preset) if c.video.preset in keys else 1)
         self._show_preset()
+        convert_keys = [k for k, _l in settings.CONVERTS]
+        self.convert_row.set_selected(convert_keys.index(c.video.convert) if c.video.convert in convert_keys else 0)
         self.press_row.set_selected(settings.nearest(settings.LONG_PRESSES, c.input.long_press_ms))
         self.grace_row.set_selected(settings.nearest(settings.GRACES, c.session.grace_s))
         self.notify_row.set_active(c.notifications.enabled)
@@ -335,6 +340,7 @@ class Window(Adw.ApplicationWindow):
             c.video.qp = settings.SHARPNESS_QP[int(self.sharp_scale.get_value())]
             c.video.fps = settings.FRAME_RATES[self.fps_row.get_selected()][0]
             c.video.idle_pause_s = settings.IDLE_PAUSES[self.idle_row.get_selected()][0]
+        c.video.convert = settings.CONVERTS[self.convert_row.get_selected()][0]
         c.input.long_press_ms = settings.LONG_PRESSES[self.press_row.get_selected()][0]
         c.session.grace_s = settings.GRACES[self.grace_row.get_selected()][0]
         c.notifications.enabled = self.notify_row.get_active()

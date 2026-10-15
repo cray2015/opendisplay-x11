@@ -44,18 +44,31 @@ from . import annexb  # noqa: E402
 Gst.init(None)
 
 
-def describe(geom, video, display_name: str, fps: int | None = None) -> str:
+def gpu_convert_available() -> bool:
+    """vaapipostproc is only registered when the VA driver offers VideoProc — on Intel's
+    iHD that is the non-free build (`intel-media-va-driver-non-free`), not the free one."""
+    return Gst.ElementFactory.find("vaapipostproc") is not None
+
+
+def use_gpu_convert(video) -> bool:
+    return video.convert == "gpu" or (video.convert == "auto" and gpu_convert_available())
+
+
+def describe(geom, video, display_name: str, fps: int | None = None, gpu: bool = False) -> str:
     """gst-launch description for capturing `geom` of the X screen. `video` is [video] config;
-    `fps` overrides video.fps (the session caps it at the iPad's maximum)."""
+    `fps` overrides video.fps (the session caps it at the iPad's maximum). `gpu` converts
+    colour on the GPU (vaapipostproc, ~4× cheaper at 60 fps) instead of in software."""
     x, y, w, h = geom
     fps = fps or video.effective("fps")
+    convert = ('vaapipostproc name=conv ! video/x-raw(memory:VASurface),format=NV12 ' if gpu else
+               f"videoconvert name=conv n-threads={video.convert_threads} ! video/x-raw,format=NV12 ")
     return (
         f"ximagesrc display-name={display_name} startx={x} starty={y} "
         f"endx={x + w - 1} endy={y + h - 1} use-damage=false "
         f"show-pointer={'true' if video.show_pointer else 'false'} "
         f"! video/x-raw,framerate={fps}/1 "
         "! queue name=q leaky=downstream max-size-buffers=1 max-size-bytes=0 max-size-time=0 "
-        f"! videoconvert name=conv n-threads={video.convert_threads} ! video/x-raw,format=NV12 "
+        f"! {convert}"
         # vaapih264enc, not vah264lpenc: the latter answers force-key-unit with a non-IDR I-frame.
         f"! vaapih264enc tune=low-power rate-control=cqp init-qp={video.effective("qp")} max-bframes=0 "
         f"keyframe-period={video.keyframe_period} "
@@ -81,7 +94,13 @@ class Pipeline:
         self._gate_until = 0.0           # monotonic time until which frames are converted
         self._always_open = (video.effective("change_tail_ms") == 0)
         self._last_health = (time.monotonic(), 0)
-        desc = describe(geom, video, display_name, fps)
+        self._args = (geom, video, display_name, fps)
+        self._fallback = video.convert == "auto"
+        self.gpu = use_gpu_convert(video)
+        self._build()
+
+    def _build(self):
+        desc = describe(*self._args, gpu=self.gpu)
         log.debug("pipeline: %s", desc)
         self.pipe = Gst.parse_launch(desc)
         self.sink = self.pipe.get_by_name("out")
@@ -94,7 +113,14 @@ class Pipeline:
 
     def start(self):
         if self.pipe.set_state(Gst.State.PLAYING) == Gst.StateChangeReturn.FAILURE:
-            raise RuntimeError("pipeline failed to start")
+            if not (self.gpu and self._fallback):
+                raise RuntimeError("pipeline failed to start")
+            log.warning("GPU colour conversion failed to start; converting in software")
+            self.stop()
+            self.gpu = False
+            self._build()
+            return self.start()
+        log.info("colour conversion: %s", "GPU (vaapipostproc)" if self.gpu else "software (videoconvert)")
 
     def pause(self):
         """Idle: stop capturing and encoding. A live source produces nothing while paused;

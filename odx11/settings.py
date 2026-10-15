@@ -38,6 +38,8 @@ PRESET_CHOICES = [
     ("best_quality", _("Best quality"), _("Sharpest picture at 60 frames per second; more data over USB")),
     ("custom", _("Custom"), _("Choose sharpness, frame rate and pausing yourself")),
 ]
+# Where frames are prepared for the encoder ([video] convert).
+CONVERTS = [("auto", _("Auto")), ("gpu", _("iGPU / GPU")), ("cpu", _("CPU"))]
 DEFAULT_PANEL = (2360, 1640)                                   # until an iPad has been seen
 
 

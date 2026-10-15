@@ -72,3 +72,10 @@ def test_unknown_preset_is_rejected():
 def test_every_preset_value_is_valid_on_its_own():
     for values in config.PRESETS.values():
         config.parse({"video": {"preset": "custom", **values}})
+
+
+def test_colour_conversion_choice_is_validated():
+    assert config.parse({}).video.convert == "auto"
+    assert config.parse({"video": {"convert": "cpu"}}).video.convert == "cpu"
+    with pytest.raises(ValueError, match="convert"):
+        config.parse({"video": {"convert": "cuda"}})

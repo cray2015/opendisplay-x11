@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="674" viewBox="0 0 760 674" role="img" aria-labelledby="t d">
+<title id="t">CPU use with Processing on the GPU vs the CPU, per performance preset (0.3.8)</title>
+<desc id="d">Three panels, one per preset, each with GPU and CPU bars for every change rate; the README table has every value.</desc>
+<rect width="760" height="674" rx="8" fill="#1a1a19"/>
+<text x="64" y="30" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="16" font-weight="600" fill="#f0efec">CPU used by OpenDisplay: frames processed on the GPU vs the CPU</text>
+<text x="64" y="50" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#c3c2b7">% of one CPU core · lower is better · mean of 3 runs · i5-6500T, HD 530 · version 0.3.8</text>
+<rect x="64" y="64" width="12" height="12" rx="3" fill="#3987e5"/>
+<text x="82" y="74" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#f0efec">Frames processed on the GPU</text>
+<rect x="295" y="64" width="12" height="12" rx="3" fill="#d95926"/>
+<text x="313" y="74" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#f0efec">Frames processed on the CPU</text>
+<text x="64" y="106" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" font-weight="600" fill="#f0efec">Power saver</text>
+<line x1="64" y1="242.0" x2="736" y2="242.0" stroke="#5c5b55" stroke-width="1"/>
+<text x="54" y="246.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="end" fill="#c3c2b7">0%</text>
+<line x1="64" y1="190.0" x2="736" y2="190.0" stroke="#33332f" stroke-width="1"/>
+<text x="54" y="194.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="end" fill="#c3c2b7">20%</text>
+<line x1="64" y1="138.0" x2="736" y2="138.0" stroke="#33332f" stroke-width="1"/>
+<text x="54" y="142.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="end" fill="#c3c2b7">40%</text>
+<path d="M95.0,242.0 V242.0 Q95.0,241.0 96.0,241.0 H118.0 Q119.0,241.0 119.0,242.0 V242.0 Z" fill="#3987e5"><title>Power saver, idle, Frames processed on the GPU: 0.2% of one core</title></path>
+<text x="107.0" y="236.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">0.2</text>
+<path d="M121.0,242.0 V242.0 Q121.0,241.0 122.0,241.0 H144.0 Q145.0,241.0 145.0,242.0 V242.0 Z" fill="#d95926"><title>Power saver, idle, Frames processed on the CPU: 0.1% of one core</title></path>
+<text x="133.0" y="236.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">0.1</text>
+<text x="120.0" y="258.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#c3c2b7">idle</text>
+<path d="M207.0,242.0 V241.0 Q207.0,237.0 211.0,237.0 H227.0 Q231.0,237.0 231.0,241.0 V242.0 Z" fill="#3987e5"><title>Power saver, 1 / s, Frames processed on the GPU: 1.9% of one core</title></path>
+<text x="219.0" y="232.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">1.9</text>
+<path d="M233.0,242.0 V234.6 Q233.0,230.6 237.0,230.6 H253.0 Q257.0,230.6 257.0,234.6 V242.0 Z" fill="#d95926"><title>Power saver, 1 / s, Frames processed on the CPU: 4.4% of one core</title></path>
+<text x="245.0" y="225.6" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">4.4</text>
+<text x="232.0" y="258.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#c3c2b7">1 / s</text>
+<path d="M319.0,242.0 V237.7 Q319.0,233.7 323.0,233.7 H339.0 Q343.0,233.7 343.0,237.7 V242.0 Z" fill="#3987e5"><title>Power saver, 2 / s, Frames processed on the GPU: 3.2% of one core</title></path>
+<text x="331.0" y="228.7" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">3.2</text>
+<path d="M345.0,242.0 V223.8 Q345.0,219.8 349.0,219.8 H365.0 Q369.0,219.8 369.0,223.8 V242.0 Z" fill="#d95926"><title>Power saver, 2 / s, Frames processed on the CPU: 8.5% of one core</title></path>
+<text x="357.0" y="214.8" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">8.5</text>
+<text x="344.0" y="258.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#c3c2b7">2 / s</text>
+<path d="M431.0,242.0 V234.0 Q431.0,230.0 435.0,230.0 H451.0 Q455.0,230.0 455.0,234.0 V242.0 Z" fill="#3987e5"><title>Power saver, 5 / s, Frames processed on the GPU: 4.6% of one core</title></path>
+<text x="443.0" y="225.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">4.6</text>
+<path d="M457.0,242.0 V212.9 Q457.0,208.9 461.0,208.9 H477.0 Q481.0,208.9 481.0,212.9 V242.0 Z" fill="#d95926"><title>Power saver, 5 / s, Frames processed on the CPU: 12.7% of one core</title></path>
+<text x="469.0" y="203.9" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">12.7</text>
+<text x="456.0" y="258.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#c3c2b7">5 / s</text>
+<path d="M543.0,242.0 V226.0 Q543.0,222.0 547.0,222.0 H563.0 Q567.0,222.0 567.0,226.0 V242.0 Z" fill="#3987e5"><title>Power saver, 10 / s, Frames processed on the GPU: 7.7% of one core</title></path>
+<text x="555.0" y="217.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">7.7</text>
+<path d="M569.0,242.0 V184.0 Q569.0,180.0 573.0,180.0 H589.0 Q593.0,180.0 593.0,184.0 V242.0 Z" fill="#d95926"><title>Power saver, 10 / s, Frames processed on the CPU: 23.8% of one core</title></path>
+<text x="581.0" y="175.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">23.8</text>
+<text x="568.0" y="258.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#c3c2b7">10 / s</text>
+<path d="M655.0,242.0 V228.1 Q655.0,224.1 659.0,224.1 H675.0 Q679.0,224.1 679.0,228.1 V242.0 Z" fill="#3987e5"><title>Power saver, continuous, Frames processed on the GPU: 6.9% of one core</title></path>
+<text x="667.0" y="219.1" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">6.9</text>
+<path d="M681.0,242.0 V186.4 Q681.0,182.4 685.0,182.4 H701.0 Q705.0,182.4 705.0,186.4 V242.0 Z" fill="#d95926"><title>Power saver, continuous, Frames processed on the CPU: 22.9% of one core</title></path>
+<text x="693.0" y="177.4" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">22.9</text>
+<text x="680.0" y="258.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#c3c2b7">continuous</text>
+<text x="64" y="290" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" font-weight="600" fill="#f0efec">Balanced (default)</text>
+<line x1="64" y1="426.0" x2="736" y2="426.0" stroke="#5c5b55" stroke-width="1"/>
+<text x="54" y="430.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="end" fill="#c3c2b7">0%</text>
+<line x1="64" y1="374.0" x2="736" y2="374.0" stroke="#33332f" stroke-width="1"/>
+<text x="54" y="378.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="end" fill="#c3c2b7">20%</text>
+<line x1="64" y1="322.0" x2="736" y2="322.0" stroke="#33332f" stroke-width="1"/>
+<text x="54" y="326.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="end" fill="#c3c2b7">40%</text>
+<path d="M95.0,426.0 V426.0 Q95.0,425.0 96.0,425.0 H118.0 Q119.0,425.0 119.0,426.0 V426.0 Z" fill="#3987e5"><title>Balanced (default), idle, Frames processed on the GPU: 0.3% of one core</title></path>
+<text x="107.0" y="420.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">0.3</text>
+<path d="M121.0,426.0 V426.0 Q121.0,425.0 122.0,425.0 H144.0 Q145.0,425.0 145.0,426.0 V426.0 Z" fill="#d95926"><title>Balanced (default), idle, Frames processed on the CPU: 0.1% of one core</title></path>
+<text x="133.0" y="420.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">0.1</text>
+<text x="120.0" y="442.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#c3c2b7">idle</text>
+<path d="M207.0,426.0 V421.1 Q207.0,417.1 211.0,417.1 H227.0 Q231.0,417.1 231.0,421.1 V426.0 Z" fill="#3987e5"><title>Balanced (default), 1 / s, Frames processed on the GPU: 3.4% of one core</title></path>
+<text x="219.0" y="412.1" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">3.4</text>
+<path d="M233.0,426.0 V411.8 Q233.0,407.8 237.0,407.8 H253.0 Q257.0,407.8 257.0,411.8 V426.0 Z" fill="#d95926"><title>Balanced (default), 1 / s, Frames processed on the CPU: 7.0% of one core</title></path>
+<text x="245.0" y="402.8" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">7.0</text>
+<text x="232.0" y="442.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#c3c2b7">1 / s</text>
+<path d="M319.0,426.0 V418.8 Q319.0,414.8 323.0,414.8 H339.0 Q343.0,414.8 343.0,418.8 V426.0 Z" fill="#3987e5"><title>Balanced (default), 2 / s, Frames processed on the GPU: 4.3% of one core</title></path>
+<text x="331.0" y="409.8" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">4.3</text>
+<path d="M345.0,426.0 V405.7 Q345.0,401.7 349.0,401.7 H365.0 Q369.0,401.7 369.0,405.7 V426.0 Z" fill="#d95926"><title>Balanced (default), 2 / s, Frames processed on the CPU: 9.3% of one core</title></path>
+<text x="357.0" y="396.7" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">9.3</text>
+<text x="344.0" y="442.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#c3c2b7">2 / s</text>
+<path d="M431.0,426.0 V414.9 Q431.0,410.9 435.0,410.9 H451.0 Q455.0,410.9 455.0,414.9 V426.0 Z" fill="#3987e5"><title>Balanced (default), 5 / s, Frames processed on the GPU: 5.8% of one core</title></path>
+<text x="443.0" y="405.9" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">5.8</text>
+<path d="M457.0,426.0 V394.1 Q457.0,390.1 461.0,390.1 H477.0 Q481.0,390.1 481.0,394.1 V426.0 Z" fill="#d95926"><title>Balanced (default), 5 / s, Frames processed on the CPU: 13.8% of one core</title></path>
+<text x="469.0" y="385.1" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">13.8</text>
+<text x="456.0" y="442.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#c3c2b7">5 / s</text>
+<path d="M543.0,426.0 V407.2 Q543.0,403.2 547.0,403.2 H563.0 Q567.0,403.2 567.0,407.2 V426.0 Z" fill="#3987e5"><title>Balanced (default), 10 / s, Frames processed on the GPU: 8.8% of one core</title></path>
+<text x="555.0" y="398.2" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">8.8</text>
+<path d="M569.0,426.0 V364.7 Q569.0,360.7 573.0,360.7 H589.0 Q593.0,360.7 593.0,364.7 V426.0 Z" fill="#d95926"><title>Balanced (default), 10 / s, Frames processed on the CPU: 25.1% of one core</title></path>
+<text x="581.0" y="355.7" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">25.1</text>
+<text x="568.0" y="442.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#c3c2b7">10 / s</text>
+<path d="M655.0,426.0 V395.8 Q655.0,391.8 659.0,391.8 H675.0 Q679.0,391.8 679.0,395.8 V426.0 Z" fill="#3987e5"><title>Balanced (default), continuous, Frames processed on the GPU: 13.2% of one core</title></path>
+<text x="667.0" y="386.8" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">13.2</text>
+<path d="M681.0,426.0 V312.0 Q681.0,308.0 685.0,308.0 H701.0 Q705.0,308.0 705.0,312.0 V426.0 Z" fill="#d95926"><title>Balanced (default), continuous, Frames processed on the CPU: 45.4% of one core</title></path>
+<text x="693.0" y="303.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">45.4</text>
+<text x="680.0" y="442.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#c3c2b7">continuous</text>
+<text x="64" y="474" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="13" font-weight="600" fill="#f0efec">Best quality</text>
+<line x1="64" y1="610.0" x2="736" y2="610.0" stroke="#5c5b55" stroke-width="1"/>
+<text x="54" y="614.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="end" fill="#c3c2b7">0%</text>
+<line x1="64" y1="558.0" x2="736" y2="558.0" stroke="#33332f" stroke-width="1"/>
+<text x="54" y="562.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="end" fill="#c3c2b7">20%</text>
+<line x1="64" y1="506.0" x2="736" y2="506.0" stroke="#33332f" stroke-width="1"/>
+<text x="54" y="510.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="end" fill="#c3c2b7">40%</text>
+<path d="M95.0,610.0 V610.0 Q95.0,609.0 96.0,609.0 H118.0 Q119.0,609.0 119.0,610.0 V610.0 Z" fill="#3987e5"><title>Best quality, idle, Frames processed on the GPU: 0.1% of one core</title></path>
+<text x="107.0" y="604.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">0.1</text>
+<path d="M121.0,610.0 V610.0 Q121.0,609.0 122.0,609.0 H144.0 Q145.0,609.0 145.0,610.0 V610.0 Z" fill="#d95926"><title>Best quality, idle, Frames processed on the CPU: 0.2% of one core</title></path>
+<text x="133.0" y="604.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">0.2</text>
+<text x="120.0" y="626.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#c3c2b7">idle</text>
+<path d="M207.0,610.0 V602.4 Q207.0,598.4 211.0,598.4 H227.0 Q231.0,598.4 231.0,602.4 V610.0 Z" fill="#3987e5"><title>Best quality, 1 / s, Frames processed on the GPU: 4.5% of one core</title></path>
+<text x="219.0" y="593.4" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">4.5</text>
+<path d="M233.0,610.0 V586.7 Q233.0,582.7 237.0,582.7 H253.0 Q257.0,582.7 257.0,586.7 V610.0 Z" fill="#d95926"><title>Best quality, 1 / s, Frames processed on the CPU: 10.5% of one core</title></path>
+<text x="245.0" y="577.7" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">10.5</text>
+<text x="232.0" y="626.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#c3c2b7">1 / s</text>
+<path d="M319.0,610.0 V596.8 Q319.0,592.8 323.0,592.8 H339.0 Q343.0,592.8 343.0,596.8 V610.0 Z" fill="#3987e5"><title>Best quality, 2 / s, Frames processed on the GPU: 6.6% of one core</title></path>
+<text x="331.0" y="587.8" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">6.6</text>
+<path d="M345.0,610.0 V567.7 Q345.0,563.7 349.0,563.7 H365.0 Q369.0,563.7 369.0,567.7 V610.0 Z" fill="#d95926"><title>Best quality, 2 / s, Frames processed on the CPU: 17.8% of one core</title></path>
+<text x="357.0" y="558.7" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">17.8</text>
+<text x="344.0" y="626.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#c3c2b7">2 / s</text>
+<path d="M431.0,610.0 V584.7 Q431.0,580.7 435.0,580.7 H451.0 Q455.0,580.7 455.0,584.7 V610.0 Z" fill="#3987e5"><title>Best quality, 5 / s, Frames processed on the GPU: 11.3% of one core</title></path>
+<text x="443.0" y="575.7" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">11.3</text>
+<path d="M457.0,610.0 V521.9 Q457.0,517.9 461.0,517.9 H477.0 Q481.0,517.9 481.0,521.9 V610.0 Z" fill="#d95926"><title>Best quality, 5 / s, Frames processed on the CPU: 35.4% of one core</title></path>
+<text x="469.0" y="512.9" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">35.4</text>
+<text x="456.0" y="626.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#c3c2b7">5 / s</text>
+<path d="M543.0,610.0 V576.9 Q543.0,572.9 547.0,572.9 H563.0 Q567.0,572.9 567.0,576.9 V610.0 Z" fill="#3987e5"><title>Best quality, 10 / s, Frames processed on the GPU: 14.3% of one core</title></path>
+<text x="555.0" y="567.9" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">14.3</text>
+<path d="M569.0,610.0 V492.8 Q569.0,488.8 573.0,488.8 H589.0 Q593.0,488.8 593.0,492.8 V610.0 Z" fill="#d95926"><title>Best quality, 10 / s, Frames processed on the CPU: 46.6% of one core</title></path>
+<text x="581.0" y="483.8" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">46.6</text>
+<text x="568.0" y="626.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#c3c2b7">10 / s</text>
+<path d="M655.0,610.0 V579.2 Q655.0,575.2 659.0,575.2 H675.0 Q679.0,575.2 679.0,579.2 V610.0 Z" fill="#3987e5"><title>Best quality, continuous, Frames processed on the GPU: 13.4% of one core</title></path>
+<text x="667.0" y="570.2" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">13.4</text>
+<path d="M681.0,610.0 V495.5 Q681.0,491.5 685.0,491.5 H701.0 Q705.0,491.5 705.0,495.5 V610.0 Z" fill="#d95926"><title>Best quality, continuous, Frames processed on the CPU: 45.6% of one core</title></path>
+<text x="693.0" y="486.5" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="10" text-anchor="middle" fill="#f0efec">45.6</text>
+<text x="680.0" y="626.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#c3c2b7">continuous</text>
+<text x="400.0" y="662" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" text-anchor="middle" fill="#c3c2b7">how often the iPad's screen changes</text>
+</svg>
