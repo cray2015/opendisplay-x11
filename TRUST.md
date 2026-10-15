@@ -122,8 +122,8 @@ Recorded here so CI fails only on new problems. Nothing was silently suppressed.
 How the owner directed the AI is recorded in three places:
 
 - [`docs/human-overrides.md`](docs/human-overrides.md): 17 places where the owner constrained or
-  corrected the AI, each quoting the owner's own message with its date. **Draft:** entries show
-  *Confirmed* once the owner has reviewed them.
+  corrected the AI, each quoting the owner's own message with its date. All confirmed by the
+  owner (2026-10-15).
 - [`docs/adr/`](docs/adr/README.md): the five most significant decisions, reconstructed from the
   spec, history and code.
 - [`docs/decisions.md`](docs/decisions.md): every decision with its reason and status, kept as
