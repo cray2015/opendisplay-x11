@@ -111,6 +111,7 @@ Status: **Active**, **Superseded**, **Deferred** (agreed, not built yet), **Open
 | 2026-10-15 | Capability changes checked by **Semgrep with a project rules file** (`--baseline-commit`), not a third-party capability scanner | No mature Python capability scanner exists (searched GitHub, PyPI, npm, crates.io, web); the rules can name this project's real capabilities (XTest, XInput2, sysfs, D-Bus) | Active |
 | 2026-10-15 | Pin actions and tool images to versions **at least 7 days old**; Dependabot with a 7-day cooldown | A brand-new release is the most likely to be compromised or broken | Active |
 | 2026-10-15 | Coverage floor **50 %** (measured 52 %); mutation testing reported monthly, not a gate | Prevents decline without failing on the untestable hardware modules; the mutation baseline needs tests added before it can gate | Active |
+| 2026-10-15 | **`edid.py` excluded from mutation testing** (its unit tests stay) | It only serves the boot-time EDID fallback, which is not used at runtime (§4: no EDID on this machine); revisit if a named monitor is ever built | Active |
 | 2026-10-15 | Releases also publish the **.buildinfo** | Records the exact toolchain so independent rebuilds can match the hash | Active |
 | 2026-10-15 | README badges only for checks that have run green on GitHub | A badge without evidence is the problem the trust setup solves | Active |
 | 2026-10-15 | No pip-audit / osv-scanner | No PyPI dependencies or lockfile: they would scan nothing; Ubuntu packages' CVEs are tracked by Ubuntu | Active |
