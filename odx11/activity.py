@@ -93,7 +93,11 @@ class ActivityMonitor:
         self._damages = {}               # window id -> damage id
         self.x.damage_query_version()    # required before any other DAMAGE request
         self._damage_event = self.x.query_extension("DAMAGE").first_event
-        self.x.xinput_query_version()
+        # Announce XI 2.2, not python-xlib's default 2.0: a 2.0 client gets no raw events while
+        # another client grabs the pointer (dragging a selection, an open menu), so the iPad's
+        # cursor would freeze during exactly those gestures. 2.1+ delivers raw events regardless.
+        xinput.XIQueryVersion(display=self.x.display, opcode=self.x.display.get_extension_major(xinput.extname),
+                              major_version=2, minor_version=2)
         self.root.xinput_select_events([(xinput.AllMasterDevices, xinput.RawMotionMask)])
         self.root.change_attributes(event_mask=X.SubstructureNotifyMask)
         # The cursor channel needs to know when the sprite changes (arrow → I-beam → hand …).
