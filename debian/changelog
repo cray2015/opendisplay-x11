@@ -1,3 +1,10 @@
+opendisplay-x11 (0.4.1) unstable; urgency=medium
+
+  * Settings window: new "Colour conversion" choice (Automatic, Graphics
+    chip, Processor) for video.convert; it applies at once.
+
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 22:30:00 +0530
+
 opendisplay-x11 (0.4.0) unstable; urgency=medium
 
   * Convert colours on the graphics chip when the video driver supports it

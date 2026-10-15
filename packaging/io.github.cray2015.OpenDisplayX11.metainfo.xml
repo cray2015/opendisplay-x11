@@ -46,6 +46,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.1" date="2026-10-15">
+      <description>
+        <p>The window can choose where colours are converted: automatically, on the graphics chip or on the processor.</p>
+      </description>
+    </release>
     <release version="0.4.0" date="2026-10-15">
       <description>
         <p>Uses about a third of the CPU on Intel graphics with the non-free video driver installed: the graphics chip now also converts colours.</p>
