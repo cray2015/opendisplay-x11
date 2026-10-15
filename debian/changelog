@@ -1,3 +1,16 @@
+opendisplay-x11 (0.4.3) unstable; urgency=medium
+
+  * Fix: the service failed to start on Python 3.11 (a Python 3.12-only
+    f-string in the video pipeline).
+  * GStreamer now starts through an explicit step at service start; no
+    change in behaviour.
+  * Touch input rejects unknown pointer actions instead of treating them as
+    a button release.
+  * First release built and published by GitHub Actions, with a SHA256,
+    an SBOM and a signed build-provenance attestation (see TRUST.md).
+
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 22:31:08 +0530
+
 opendisplay-x11 (0.4.2) unstable; urgency=medium
 
   * Settings window: the "Colour conversion" row is now "Processing", with
