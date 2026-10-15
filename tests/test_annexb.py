@@ -70,3 +70,39 @@ def test_idr_before_any_parameter_sets_is_an_error():
 
 def test_aud_only_buffer_yields_nothing():
     assert Normaliser().access_unit(S4 + AUD) == (b"", False)
+
+
+# --- edges found by mutation testing ---------------------------------------------------
+
+def test_only_trailing_zero_bytes_are_stripped():
+    # Spaces and 'X' are ordinary payload bytes; a leading zero inside a NAL is kept.
+    assert split_nals(S4 + b"\x41 X" + S4 + b"\x41\x00X\x00\x00") == [b"\x41 X", b"\x41\x00X"]
+    assert split_nals(S4 + b" " + S4 + b"\x00\x00") == [b" "]          # all-zero NALs vanish
+
+
+def test_the_first_idr_ever_needs_parameter_sets_by_name():
+    with pytest.raises(ValueError) as e:
+        Normaliser().access_unit(S4 + IDR)
+    assert str(e.value) == "IDR before any SPS/PPS was seen"
+
+
+def test_idr_with_sps_but_no_pps_gets_the_cached_pair():
+    n = Normaliser()
+    n.access_unit(S4 + SPS + S4 + PPS + S4 + IDR)
+    au, is_idr = n.access_unit(S4 + SPS + S4 + IDR)
+    assert is_idr and au == S4 + SPS + S4 + PPS + S4 + IDR
+
+
+def test_a_cached_sps_alone_is_not_enough():
+    n = Normaliser()
+    n.access_unit(S4 + SPS + S4 + P)              # SPS seen, PPS never
+    with pytest.raises(ValueError):
+        n.access_unit(S4 + IDR)
+    n2 = Normaliser()
+    n2.access_unit(S4 + PPS + S4 + P)             # PPS seen, SPS never
+    with pytest.raises(ValueError):
+        n2.access_unit(S4 + IDR)
+
+
+def test_a_nal_of_only_x_bytes_is_kept():
+    assert split_nals(S4 + b"X" + S4 + b"XX\x00") == [b"X", b"XX"]

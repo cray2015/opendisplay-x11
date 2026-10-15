@@ -128,3 +128,133 @@ def test_legacy_ceiling_and_videocaps_both_apply():
 def test_hevc_entries_do_not_limit_h264_and_garbage_is_ignored():
     hello = {"maxEncodeWide": "big", "videoCaps": [{"codec": "hevc", "maxWidth": 100}, "x", {"codec": "h264"}]}
     assert protocol.decode_limits(hello) == (None, None, None, None)
+
+
+# --- exact bytes, edges and the iPad's hello fields (mutation testing found these unasserted)
+
+def test_control_messages_are_compact_json():
+    assert protocol.welcome() == b'\x00\x00\x00\x21{"type":"welcome","pv":2,"min":1}'
+    assert protocol.pong(5, 9) == b'\x00\x00\x00\x1c{"type":"pong","t":5,"mt":9}'
+
+
+def test_oversize_control_names_its_size():
+    with pytest.raises(protocol.ProtocolError) as e:
+        protocol.encode_control({"type": "x", "pad": "a" * 40000})
+    assert str(e.value) == "control message would demux as video (40021 bytes)"
+
+
+def test_json_looking_video_is_refused_by_name():
+    with pytest.raises(protocol.ProtocolError) as e:
+        protocol.encode_video(b'{"not":"video"}')
+    assert str(e.value) == "video frame would demux as control"
+
+
+def test_telemetry_prefix_is_exact_and_needs_both_times():
+    au = b"\x00\x00\x00\x01\x65"
+    assert protocol.encode_video(au, 12, 34) == protocol.frame(b'{"cap":12,"snd":34}' + au)
+    assert protocol.encode_video(au, 12, None) == protocol.frame(au)
+    assert protocol.encode_video(au, None, 34) == protocol.frame(au)
+
+
+@pytest.mark.parametrize("n,ok", [(0, False), (1, True), ((1 << 20) - 1, True), (1 << 20, False)])
+def test_inbound_length_limits(n, ok):
+    header = struct.pack(">I", n)
+    if ok:
+        assert protocol.Deframer().feed(header) == []      # valid length, payload still to come
+        return
+    with pytest.raises(protocol.ProtocolError) as e:
+        protocol.Deframer().feed(header)
+    assert str(e.value) == f"bad inbound frame length {n}"
+
+
+GOOD_PANEL = {"pixelsWide": 2360, "pixelsHigh": 1640, "scale": 2, "pointsWide": 1180, "pointsHigh": 820}
+
+
+@pytest.mark.parametrize("change,usable", [
+    ({}, True),
+    ({"pixelsWide": 2, "pixelsHigh": 2, "pointsWide": 2, "pointsHigh": 2}, True),     # smallest valid
+    ({"pixelsWide": 1}, False),
+    ({"pixelsHigh": 1}, False),
+    ({"pointsWide": 1}, False),
+    ({"pointsHigh": 1}, False),
+    ({"pointsHigh": None}, False),           # only one of the two points fields
+    ({"pointsWide": None, "pointsHigh": None}, True),   # both absent is allowed
+    ({"pointsWide": True}, False),           # a bool is not a size
+    ({"scale": 0}, False),
+    ({"scale": -2}, False),
+    ({"scale": float("inf")}, False),
+    ({"scale": True}, False),
+    ({"scale": "2"}, False),
+    ({"scale": 0.5}, True),
+])
+def test_each_panel_field_is_checked(change, usable):
+    panel = {k: v for k, v in {**GOOD_PANEL, **change}.items() if v is not None}
+    hello = {"panel": panel, "pixelsWide": 100, "pixelsHigh": 80}
+    expected = (panel["pixelsWide"], panel["pixelsHigh"]) if usable else (100, 80)
+    assert protocol.panel_pixels(hello) == expected
+
+
+@pytest.mark.parametrize("w,h,result", [(2, 2, (2, 2)), (1, 80, None), (100, 1, None), (True, 80, None)])
+def test_deprecated_size_fields_edges(w, h, result):
+    assert protocol.panel_pixels({"pixelsWide": w, "pixelsHigh": h}) == result
+
+
+def h264(**kw):
+    return {"codec": "h264", **kw}
+
+
+def test_no_limits_when_nothing_is_said():
+    assert protocol.decode_limits({}) == (None, None, None, None)
+
+
+def test_legacy_ceiling_alone_and_bad_values_ignored():
+    assert protocol.decode_limits({"maxEncodeWide": 1920, "maxEncodeHigh": 1080}) == (1920, 1080, None, None)
+    assert protocol.decode_limits({"maxEncodeWide": 0, "maxEncodeHigh": -5}) == (None, None, None, None)
+    assert protocol.decode_limits({"maxEncodeWide": True, "maxEncodeHigh": "1080"}) == (None, None, None, None)
+
+
+def test_videocaps_reports_every_limit():
+    hello = {"videoCaps": [h264(maxWidth=3840, maxHeight=2160, maxFrameRate=60, maxPixelsPerSecond=497664000)]}
+    assert protocol.decode_limits(hello) == (3840, 2160, 60, 497664000)
+
+
+@pytest.mark.parametrize("legacy,cap,expected", [
+    ((1920, 1080), (3840, 2160), (1920, 1080)),       # legacy tighter
+    ((3840, 2160), (1920, 1080), (1920, 1080)),       # videoCaps tighter
+    ((1920, 2160), (3840, 1080), (1920, 1080)),       # each tighter in one direction
+    ((None, None), (1920, 1080), (1920, 1080)),       # only videoCaps
+])
+def test_the_tighter_of_legacy_and_videocaps_wins(legacy, cap, expected):
+    hello = {"videoCaps": [h264(maxWidth=cap[0], maxHeight=cap[1])]}
+    if legacy[0]:
+        hello.update(maxEncodeWide=legacy[0], maxEncodeHigh=legacy[1])
+    assert protocol.decode_limits(hello)[:2] == expected
+
+
+def test_videocaps_without_size_keeps_the_legacy_ceiling():
+    hello = {"maxEncodeWide": 1920, "maxEncodeHigh": 1080, "videoCaps": [h264(maxFrameRate=30)]}
+    assert protocol.decode_limits(hello) == (1920, 1080, 30, None)
+
+
+def test_the_roomiest_entry_by_area_is_used():
+    wide_strip = h264(maxWidth=4000, maxHeight=100, maxFrameRate=30)        # area 400 000, ratio 40
+    square = h264(maxWidth=1000, maxHeight=1000, maxFrameRate=60)          # area 1 000 000, ratio 1
+    assert protocol.decode_limits({"videoCaps": [wide_strip, square]})[2] == 60
+    assert protocol.decode_limits({"videoCaps": [square, wide_strip]})[2] == 60
+
+
+def test_a_missing_dimension_counts_as_unlimited_when_choosing():
+    sized = h264(maxWidth=3840, maxHeight=2160, maxFrameRate=30)
+    open_height = h264(maxWidth=1000, maxFrameRate=120)                    # 1000 × unlimited is roomier
+    open_width = h264(maxHeight=1000, maxFrameRate=90)
+    assert protocol.decode_limits({"videoCaps": [sized, open_height]}) == (1000, None, 120, None)
+    assert protocol.decode_limits({"videoCaps": [sized, open_width]}) == (None, 1000, 90, None)
+
+
+def test_videocaps_must_be_a_list_of_dicts():
+    assert protocol.decode_limits({"videoCaps": {"codec": "h264", "maxWidth": 10}}) == (None, None, None, None)
+    assert protocol.decode_limits({"videoCaps": ["h264", None]}) == (None, None, None, None)
+
+
+def test_any_positive_limit_counts_even_one():
+    assert protocol.decode_limits({"videoCaps": [h264(maxFrameRate=1, maxPixelsPerSecond=0.5)]}) == (None, None, 1, 0.5)

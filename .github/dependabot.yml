@@ -1,0 +1,26 @@
+# SPDX-FileCopyrightText: 2026 Vibhanshu Biswas
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Keeps the SHA-pinned GitHub Actions current. Python dependencies come from Ubuntu
+# packages (debian/control), which Ubuntu's own security updates cover.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7          # let a new release age a week before proposing it
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "CI"
+  - package-ecosystem: docker
+    directory: /tests/x11            # the X11 test image's pinned Ubuntu base
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "CI"

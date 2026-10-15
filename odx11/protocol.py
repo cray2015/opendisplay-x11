@@ -6,6 +6,7 @@ The only module that knows the wire format (PROJECT_SPEC.md §7.2). Protocol v4
 replaces the demux heuristic with a typed frame header; that swap is this file.
 """
 import json
+import math
 import struct
 
 HEADER = struct.Struct(">I")
@@ -14,6 +15,7 @@ MAX_CONTROL = 32768            # sender → receiver control must stay below thi
 
 SENDER_PV = 2                  # stays 2 until Pencil handling exists (§4)
 SENDER_MIN_PV = 1
+UNLIMITED = 1e9                # pragma: no mutate — stands for "no limit"; any huge value is equivalent
 
 
 class ProtocolError(Exception):
@@ -105,7 +107,7 @@ def panel_pixels(hello: dict):
         scale = panel.get("scale")
         points = (panel.get("pointsWide"), panel.get("pointsHigh"))
         points_ok = points == (None, None) or all(_int_at_least(p, 2) for p in points)
-        scale_ok = isinstance(scale, (int, float)) and not isinstance(scale, bool) and 0 < scale < float("inf")
+        scale_ok = isinstance(scale, (int, float)) and not isinstance(scale, bool) and 0 < scale < math.inf
         if _int_at_least(pw, 2) and _int_at_least(ph, 2) and scale_ok and points_ok:
             return pw, ph
     pw, ph = hello.get("pixelsWide"), hello.get("pixelsHigh")
@@ -142,7 +144,9 @@ def decode_limits(hello: dict) -> DecodeLimits:
     caps = hello.get("videoCaps")
     entries = [c for c in caps if isinstance(c, dict) and c.get("codec") == "h264"] if isinstance(caps, list) else []
     if entries:
-        best = max(entries, key=lambda c: (pos(c.get("maxWidth")) or 1e9) * (pos(c.get("maxHeight")) or 1e9))
+        def area(c):                    # a missing dimension counts as unlimited
+            return (pos(c.get("maxWidth")) or UNLIMITED) * (pos(c.get("maxHeight")) or UNLIMITED)
+        best = max(entries, key=area)
         w, h = tighter(w, pos(best.get("maxWidth"))), tighter(h, pos(best.get("maxHeight")))
         fps, pps = pos(best.get("maxFrameRate")), pos(best.get("maxPixelsPerSecond"))
     return DecodeLimits(w, h, fps, pps)

@@ -29,7 +29,7 @@ def split_nals(data: bytes) -> list[bytes]:
         nals.append(data[start:])
     # A 4-byte code's leading zero (and any cabac_zero_words) land at the end of the
     # previous NAL; a NAL never legitimately ends in 0x00, so strip them.
-    return [n.rstrip(b"\x00") for n in nals if n.rstrip(b"\x00")]
+    return [n.rstrip(b"\x00") for n in nals if any(n)]     # a NAL of only zero bytes is padding
 
 
 def nal_type(nal: bytes) -> int:

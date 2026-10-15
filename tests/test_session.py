@@ -143,7 +143,7 @@ def test_sleeping_and_closing_end_the_session():
     for t in ("sleeping", "closing"):
         s, _, _ = make()
         ended = []
-        s.on_end = lambda: ended.append(True)
+        s.on_end = lambda ended=ended: ended.append(True)
         feed(s, {"type": t})
         assert s.ended and ended == [True]
 

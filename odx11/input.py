@@ -69,8 +69,8 @@ class TouchGesture:
         self.slop = slop_px
         self.long_press = long_press_s
         self.state = self.IDLE
-        self.start = None
-        self.t0 = 0.0
+        self.start = None          # pragma: no mutate — set by every "began" before it is read
+        self.t0 = 0.0              # pragma: no mutate — set by every "began" before it is read
 
     def feed(self, phase: str, pt, now: float) -> list:
         acts = [("move", pt)]
@@ -133,11 +133,13 @@ class Injector:
         for kind, arg in acts:
             if kind == "move":
                 self._xtest.fake_input(self.x, self._X.MotionNotify, x=arg[0], y=arg[1])
-            else:
+            elif kind in ("press", "release"):
                 if arg in (BUTTON_LEFT, BUTTON_RIGHT):      # wheel clicks are logged per scroll
                     log.debug("%s button %d", kind, arg)
                 self._xtest.fake_input(
                     self.x, self._X.ButtonPress if kind == "press" else self._X.ButtonRelease, arg)
+            else:
+                raise ValueError(f"unknown pointer action {kind!r}")
 
     def handle(self, msg: dict):
         if self.geometry is None:

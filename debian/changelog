@@ -1,16 +1,29 @@
+opendisplay-x11 (0.4.3) unstable; urgency=medium
+
+  * Fix: the service failed to start on Python 3.11 (a Python 3.12-only
+    f-string in the video pipeline).
+  * GStreamer now starts through an explicit step at service start; no
+    change in behaviour.
+  * Touch input rejects unknown pointer actions instead of treating them as
+    a button release.
+  * First release built and published by GitHub Actions, with a SHA256,
+    an SBOM and a signed build-provenance attestation (see TRUST.md).
+
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 22:31:08 +0530
+
 opendisplay-x11 (0.4.2) unstable; urgency=medium
 
   * Settings window: the "Colour conversion" row is now "Processing", with
     the choices Auto, iGPU / GPU and CPU and a shorter explanation.
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 23:00:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 18:30:18 +0530
 
 opendisplay-x11 (0.4.1) unstable; urgency=medium
 
   * Settings window: new "Colour conversion" choice (Automatic, Graphics
     chip, Processor) for video.convert; it applies at once.
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 22:30:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 14:37:18 +0530
 
 opendisplay-x11 (0.4.0) unstable; urgency=medium
 
@@ -19,7 +32,7 @@ opendisplay-x11 (0.4.0) unstable; urgency=medium
     13 % instead of 45 % of one core while the screen changes continuously.
     Falls back to the processor otherwise. New setting video.convert.
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 22:00:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 14:26:55 +0530
 
 opendisplay-x11 (0.3.8) unstable; urgency=medium
 
@@ -28,7 +41,7 @@ opendisplay-x11 (0.3.8) unstable; urgency=medium
     (video.change_tail_ms applies with the Custom preset). Balanced and
     Power saver use less CPU when the screen changes now and then.
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 21:00:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 12:25:09 +0530
 
 opendisplay-x11 (0.3.7) unstable; urgency=medium
 
@@ -37,7 +50,7 @@ opendisplay-x11 (0.3.7) unstable; urgency=medium
     pointer on the iPad's monitor now sends frames for half a second
     (new setting video.input_tail_ms).
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 20:00:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 12:15:05 +0530
 
 opendisplay-x11 (0.3.6) unstable; urgency=medium
 
@@ -45,7 +58,7 @@ opendisplay-x11 (0.3.6) unstable; urgency=medium
     selecting text) or while a menu is open. Pointer movement is now
     received even while another application holds the pointer (XInput 2.2).
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 19:00:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 12:01:41 +0530
 
 opendisplay-x11 (0.3.5) unstable; urgency=medium
 
@@ -54,7 +67,7 @@ opendisplay-x11 (0.3.5) unstable; urgency=medium
     decoder kept the newest picture back until the next change. The settle
     frame from 0.3.4 stays as an extra safety net.
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 17:00:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 11:55:15 +0530
 
 opendisplay-x11 (0.3.4) unstable; urgency=medium
 
@@ -63,7 +76,7 @@ opendisplay-x11 (0.3.4) unstable; urgency=medium
     second now costs ~14 % of one core instead of ~35 %; continuous change
     (video) is unchanged.
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 15:30:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 11:44:42 +0530
 
 opendisplay-x11 (0.3.3) unstable; urgency=medium
 
@@ -71,7 +84,7 @@ opendisplay-x11 (0.3.3) unstable; urgency=medium
     awake (compositors keep minimized windows drawing for previews).
   * Measured performance documented in the README (tools/perf_bench.py).
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 13:00:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 10:52:29 +0530
 
 opendisplay-x11 (0.3.2) unstable; urgency=medium
 
@@ -80,7 +93,7 @@ opendisplay-x11 (0.3.2) unstable; urgency=medium
     few times a second (a clock, a system monitor) now costs ~10 % of one
     core instead of ~40 %.
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 11:30:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 08:50:46 +0530
 
 opendisplay-x11 (0.3.1) unstable; urgency=medium
 
@@ -90,7 +103,7 @@ opendisplay-x11 (0.3.1) unstable; urgency=medium
   * Each iPad's decode limits are honoured automatically (maximum size,
     frame rate and pixel rate from its hello).
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 10:00:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 00:32:38 +0530
 
 opendisplay-x11 (0.3.0) unstable; urgency=medium
 
@@ -100,27 +113,27 @@ opendisplay-x11 (0.3.0) unstable; urgency=medium
     changes are sent as images. Moving the mouse no longer wakes the paused
     stream.
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 02:30:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 22:22:07 +0530
 
 opendisplay-x11 (0.2.7) unstable; urgency=medium
 
   * Licensed under GPL-3.0-or-later (LICENSE, REUSE/SPDX headers, Debian
     copyright, AppStream, About window). CONTRIBUTING.md with DCO sign-off.
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 01:40:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 22:02:14 +0530
 
 opendisplay-x11 (0.2.6) unstable; urgency=medium
 
   * Version row: just the number (the "unofficial" note stays in About).
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 01:10:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 21:50:52 +0530
 
 opendisplay-x11 (0.2.5) unstable; urgency=medium
 
   * Show the version in the settings window (Help → Version) as well as in
     About; the service reports the installed package version.
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 01:00:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 21:49:09 +0530
 
 opendisplay-x11 (0.2.4) unstable; urgency=medium
 
@@ -128,7 +141,7 @@ opendisplay-x11 (0.2.4) unstable; urgency=medium
     (fingerprint in /usr/share/opendisplay-x11/SERVICE): updates that only
     touch the settings window no longer blink the iPad.
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 00:40:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 21:46:16 +0530
 
 opendisplay-x11 (0.2.3) unstable; urgency=medium
 
@@ -139,21 +152,21 @@ opendisplay-x11 (0.2.3) unstable; urgency=medium
   * Source-tree runs use the ".Devel" app ID, side by side with an install.
   * The planned post-upgrade restart is no longer logged as a failure.
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 00:10:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 21:42:27 +0530
 
 opendisplay-x11 (0.2.2) unstable; urgency=medium
 
   * The service restarts itself onto the new version after a package upgrade
     (any update manager), with a brief cut-off of the iPad session.
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 23:40:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 21:29:55 +0530
 
 opendisplay-x11 (0.2.1) unstable; urgency=medium
 
   * Notifications only when the user must act (connected/disconnected off by
     default). App menu category Utility.
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 23:00:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 21:20:13 +0530
 
 opendisplay-x11 (0.2.0) unstable; urgency=medium
 
@@ -163,14 +176,14 @@ opendisplay-x11 (0.2.0) unstable; urgency=medium
   * Desktop notifications; automatic video port; state published for the
     window. Desktop entry, icon and AppStream metadata (validated in the build).
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 22:30:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 21:06:31 +0530
 
 opendisplay-x11 (0.1.2) unstable; urgency=medium
 
   * Name the app "OpenDisplay for X11" (unofficial sender for the OpenDisplay
     iPad app) in the description, autostart entry and service.
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 20:40:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 20:35:26 +0530
 
 opendisplay-x11 (0.1.1) unstable; urgency=medium
 
@@ -178,7 +191,7 @@ opendisplay-x11 (0.1.1) unstable; urgency=medium
     DisplayPort that accepts HDMI adapters). Package description and README
     explain why an X11 app cannot create a monitor on its own.
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 14:00:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 20:27:17 +0530
 
 opendisplay-x11 (0.1.0) unstable; urgency=medium
 
@@ -186,4 +199,4 @@ opendisplay-x11 (0.1.0) unstable; urgency=medium
     udev/plugdev privilege instead of a root helper, user service started
     by XDG autostart.
 
- -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 13:30:00 +0530
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Wed, 14 Oct 2026 20:27:17 +0530

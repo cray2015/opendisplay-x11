@@ -8,7 +8,7 @@ from odx11 import edid
 CVT = "116.00 1568 1616 1648 1728 1088 1091 1101 1119 +hsync -vsync".split()
 
 
-def blob(name="iPad", device_id="7C62722D-9FE3-4473-B88A-D30DFBE0A4DA"):
+def blob(name="iPad", device_id="00000000-1111-4222-8333-444444444444"):
     return edid.build(edid.Timing.from_modeline(CVT), name, edid.serial_for(device_id))
 
 
@@ -50,7 +50,7 @@ def test_preferred_timing_flagged_native():
 
 def test_name_and_serial():
     name, serial = edid.parse_name_and_serial(blob(name="iPad Air"))
-    assert name == "iPad Air" and serial == edid.serial_for("7C62722D-9FE3-4473-B88A-D30DFBE0A4DA")
+    assert name == "iPad Air" and serial == edid.serial_for("00000000-1111-4222-8333-444444444444")
 
 
 def test_serial_is_stable_per_device_and_distinct_across_devices():

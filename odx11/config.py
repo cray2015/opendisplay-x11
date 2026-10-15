@@ -125,7 +125,8 @@ class Config:
     devices: dict[str, DeviceConfig] = field(default_factory=dict)
 
     def device(self, device_id: str | None) -> DeviceConfig:
-        return self.devices.get(device_id or "", DeviceConfig())
+        # Mutating "" is equivalent: any key that is not a device id behaves the same.
+        return self.devices.get(device_id or "", DeviceConfig())  # pragma: no mutate
 
 
 def _section(cls, raw: dict, where: str):
@@ -169,6 +170,8 @@ def _validate(cfg: Config):
     for dev_id, d in cfg.devices.items():
         need(d.side in SIDES and d.align in ALIGNS,
              f"devices.{dev_id}: side must be one of {SIDES}, align one of {ALIGNS}")
+        # Mutating `v > 0` to `v > 1` is equivalent: % 16 rejects 1..15 either way.
+        # pragma: no mutate block
         need(d.mode is None or (len(d.mode) == 2 and all(v > 0 and v % 16 == 0 for v in d.mode)),
              f"devices.{dev_id}.mode must be [w, h], multiples of 16")
 

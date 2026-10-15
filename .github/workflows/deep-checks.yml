@@ -1,0 +1,54 @@
+# SPDX-FileCopyrightText: 2026 Vibhanshu Biswas
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Slower checks, kept off the per-push path: Semgrep's public Python and security-audit
+# rulesets over the whole tree, and mutation testing of the pure modules (do the unit
+# tests notice deliberately broken code?). Results go to the run summary; TRUST.md keeps
+# the baseline.
+name: Deep checks
+
+on:
+  schedule:
+    - cron: "43 2 1 * *"       # monthly
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deep-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  semgrep-full:
+    name: Semgrep (p/python, p/security-audit)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Semgrep
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp --volume "$PWD:/src" --workdir /src \
+            semgrep/semgrep:1.180.0@sha256:529ee8a277ec8adc5b534d7c74eea0a47e9de21d62852b6ba7ac6ba9566845c3 \
+            semgrep scan --metrics=off --disable-version-check --config p/python --config p/security-audit \
+              --exclude spike --error .
+
+  mutation:
+    name: Mutation testing (mutmut, with an X server)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+      # In the X11 test image, so the input injector's mutants are tested too; 4 workers on the
+      # runner's 4 cores, memory capped below the runner's 16 GB.
+      - name: Build the X11 test image
+        run: docker build --quiet --tag odx11-x11 tests/x11
+      - name: mutmut on the pure modules (config in pyproject.toml)
+        shell: bash
+        run: |
+          docker run --rm --memory=8g --cpus=4 -e MUTMUT_CHILDREN=4 --volume "$PWD:/src:ro" \
+            odx11-x11 /x11/mutation.sh | tee -a "$GITHUB_STEP_SUMMARY"

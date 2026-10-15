@@ -1,0 +1,191 @@
+# SPDX-FileCopyrightText: 2026 Vibhanshu Biswas
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Pushes to main and every pull request: build the .deb from this source on the release target
+# (Ubuntu 24.04 = Linux Mint 22), which runs the unit tests and validates the desktop entry
+# and AppStream file (debian/rules), then lintian. The built package is kept as an artifact.
+name: CI
+
+# Pushes to main, pull requests, and by hand (Actions tab) — a branch's pushes are checked
+# through its pull request, so they are not run twice.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build, test and lint the .deb
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends \
+            build-essential dpkg-dev lintian debhelper dh-python pybuild-plugin-pyproject python3-all \
+            python3-setuptools python3-pytest python3-gi desktop-file-utils appstream
+          dpkg-checkbuilddeps
+
+      - name: Build (runs the unit tests and metadata validation)
+        run: |
+          dpkg-buildpackage -b -us -uc
+          mkdir -p dist
+          mv ../opendisplay-x11_*_all.deb ../opendisplay-x11_*.buildinfo ../opendisplay-x11_*.changes dist/
+
+      - name: Lintian
+        run: lintian --fail-on error,warning dist/opendisplay-x11_*_all.deb
+
+      - name: SHA256
+        run: sha256sum dist/opendisplay-x11_*_all.deb | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: deb
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+
+  reproducible:
+    name: Reproducible build (two clean builds, identical .deb)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          path: first
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          path: second
+          persist-credentials: false
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends \
+            build-essential dpkg-dev debhelper dh-python pybuild-plugin-pyproject python3-all \
+            python3-setuptools python3-pytest python3-gi desktop-file-utils appstream
+
+      # Different paths and times; dpkg clamps file times to the newest changelog entry.
+      - name: Build twice and compare
+        run: |
+          (cd first && DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -b -us -uc)
+          sleep 5
+          mkdir -p out-first && mv opendisplay-x11_*_all.deb out-first/
+          (cd second && DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -b -us -uc)
+          sha256sum out-first/*.deb opendisplay-x11_*_all.deb | tee -a "$GITHUB_STEP_SUMMARY"
+          cmp out-first/opendisplay-x11_*_all.deb opendisplay-x11_*_all.deb
+
+  checks:
+    name: Lint and licences
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      # pycodestyle, pyflakes, bugbear and bandit's security rules; config in pyproject.toml.
+      - name: ruff
+        uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89  # v4.1.0
+        with:
+          version: "0.17.0"
+          args: check --output-format github
+
+      # The maintainer scripts run as root at install and removal.
+      - name: shellcheck
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends shellcheck
+          shellcheck -S style install.sh debian/postinst debian/prerm debian/postrm tests/x11/run.sh
+
+      # Every file has a licence and copyright (REUSE.toml covers files without a header).
+      - name: REUSE
+        run: |
+          docker run --rm --volume "$PWD:/data" \
+            fsfe/reuse:6.2.0@sha256:85462a75c0f8efda09ddd190b92816b70e7662577c8427429e11e1b9f25a992e lint
+
+
+  tests-x11:
+    name: All tests with a real X server, and coverage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Xorg's dummy driver in a container (tests/x11/Dockerfile, base image pinned by digest):
+      # the idle gate, touch injection and the virtual monitor run against real X11 and RandR.
+      - name: Build the X11 test image
+        run: docker build --quiet --tag odx11-x11 tests/x11
+
+      # Reported on every run; fails only if coverage drops below the floor (measured 82 % → 78).
+      - name: Tests and coverage
+        shell: bash          # -eo pipefail: a failing test or coverage drop fails the step
+        run: |
+          docker run --rm --volume "$PWD:/src:ro" odx11-x11 bash -c '
+            python3 -m coverage run --source=odx11 -m pytest -q -p no:cacheprovider -rs tests/ &&
+            python3 -m coverage report --sort=cover &&
+            python3 -m coverage report --fail-under=78 > /dev/null' | tee coverage.txt
+          { echo '```'; tail -25 coverage.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+  capabilities:
+    name: Capability check (new process, network, file, device, input, D-Bus, dynamic code)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0            # the PR's base commit is needed for the comparison
+          persist-credentials: false
+
+      # On a pull request, only capabilities the PR adds fail the job (--baseline-commit):
+      # each one must be reviewed and added to TRUST.md. On a push, the full inventory is listed.
+      - name: Semgrep with .semgrep/capabilities.yml
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          args=(scan --metrics=off --disable-version-check --config .semgrep/capabilities.yml)
+          if [ -n "$BASE" ]; then args+=(--baseline-commit "$BASE" --error); fi
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp --volume "$PWD:/src" --workdir /src \
+            semgrep/semgrep:1.180.0@sha256:529ee8a277ec8adc5b534d7c74eea0a47e9de21d62852b6ba7ac6ba9566845c3 \
+            semgrep "${args[@]}" odx11
+
+  secrets-and-workflows:
+    name: Secret scan (full history) and workflow audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0            # gitleaks scans every commit, not only the newest
+          persist-credentials: false
+
+      - name: gitleaks (release binary, checksum-verified)
+        run: |
+          curl -sSfL -o gitleaks.tar.gz \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  gitleaks.tar.gz" | sha256sum -c -
+          tar xzf gitleaks.tar.gz gitleaks
+          ./gitleaks git . --redact --exit-code 1
+
+      # Template injection, over-broad tokens, unpinned actions, credential persistence …
+      - name: zizmor
+        uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482  # v0.6.4
+        with:
+          version: "1.30.1"
+          persona: pedantic
+          advanced-security: false

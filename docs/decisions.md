@@ -5,6 +5,8 @@ here **when they are made** (CLAUDE.md makes this a rule). A reversed decision i
 it is marked **Superseded** with a pointer to what replaced it. Details and measurements live in
 `PROJECT_SPEC.md` (section in brackets); this file is the short "what and why".
 
+The five most significant decisions also have full records in [`docs/adr/`](adr/README.md); where the owner redirected the AI is in [`docs/human-overrides.md`](human-overrides.md).
+
 Status: **Active**, **Superseded**, **Deferred** (agreed, not built yet), **Open** (asked, not answered).
 
 ## Product and scope
@@ -65,7 +67,7 @@ Status: **Active**, **Superseded**, **Deferred** (agreed, not built yet), **Open
 | 2026-10-15 | **Restart only when the service itself changed** (fingerprint of daemon modules) | Window-only releases should never blink the iPad [§8.7] | Active |
 | 2026-10-15 | Package only **suggests** `intel-media-va-driver-non-free` | It replaces the free driver, so the user chooses; Auto uses it when present [§8.8 GPU] | Active (one-click install button: **Open**) |
 | — | Distribution channel (GitHub Releases vs PPA), Software Manager listing | — | Deferred (M9) |
-| 2026-10-15 | GitHub Actions: every PR verified, mergeable only with the owner's approval; releases publish the .deb with changelog | Requested; branch protection on a free private repo returned 403 | Deferred (M10) |
+| 2026-10-15 | GitHub Actions: every PR verified, mergeable only with the owner's approval; releases publish the .deb with changelog | Requested; branch protection on a free private repo returned 403 | Built on `trust-setup` (CI + release workflows); branch protection waits for the repo going public |
 
 ## Window (GUI)
 
@@ -97,6 +99,27 @@ Status: **Active**, **Superseded**, **Deferred** (agreed, not built yet), **Open
 | 2026-10-15 | Window row **"Processing"** with **Auto / iGPU / GPU / CPU** and a one-line explanation (0.4.2) | User: "colour conversion" made the feature sound bigger than it is | Active |
 | 2026-10-15 | README: GPU and CPU compared **row by row per preset** ("Frames processed on"), plus a GPU-vs-CPU chart | Column headers "GPU"/"CPU" read as GPU % and CPU % | Active |
 | 2026-10-15 | YouTube jitter: **no change to OpenDisplay** | Measured: the desktop itself stalled every 2 s (the privacy-indicator applet's polling and leaked timers); the stream copied the screen faithfully | Active |
+
+## Trust and release
+
+| Date | Decision | Why | Status |
+|---|---|---|---|
+| 2026-10-15 | Make trustworthiness **verifiable**: CI build, provenance, capability checks, decision records, TRUST.md; badges only for checks that run green | The repo is built with heavy AI assistance; outsiders need evidence, not claims | Active |
+| 2026-10-15 | **The repository becomes public** (after a full-history secret scan came back clean) | Free provenance attestations, CodeQL, Scorecard and private vulnerability reporting need a public repo | Active |
+| 2026-10-15 | **Publish the .deb on GitHub Releases** from version tags, with SHA256, SBOM and a provenance attestation | Gives users one verifiable download; completes M10's release half | Active |
+| 2026-10-15 | **Security contact: the owner, via GitHub private vulnerability reporting** | No email address published; reports stay private until fixed | Active |
+| 2026-10-15 | Capability changes checked by **Semgrep with a project rules file** (`--baseline-commit`), not a third-party capability scanner | No mature Python capability scanner exists (searched GitHub, PyPI, npm, crates.io, web); the rules can name this project's real capabilities (XTest, XInput2, sysfs, D-Bus) | Active |
+| 2026-10-15 | Pin actions and tool images to versions **at least 7 days old**; Dependabot with a 7-day cooldown | A brand-new release is the most likely to be compromised or broken | Active |
+| 2026-10-15 | Coverage floor **50 %** (measured 52 %), **raised to 65 %** (measured 69 %) after the fake-based tests; mutation testing reported monthly, not a gate | Prevents decline without failing on the untestable hardware modules; the mutation baseline needs tests added before it can gate | Active |
+| 2026-10-15 | **`edid.py` excluded from mutation testing** (its unit tests stay) | It only serves the boot-time EDID fallback, which is not used at runtime (§4: no EDID on this machine); revisit if a named monitor is ever built | Active |
+| 2026-10-15 | **X11 tests run against Xorg's dummy driver in a container** (`tests/x11/`), the same image locally and in CI; they skip unless `ODX11_X11_TESTS=1` | Xvfb cannot add RandR modes, which the virtual monitor needs; the dummy driver can. The guard keeps tests that move the pointer and click off a desktop someone is using | Active |
+| 2026-10-15 | `pipeline.py` starts GStreamer in an explicit `init()` at service start, not on import | Importing it ran `gst-inspect` and `Gst.init`, so its logic could not be tested; `init()` keeps the old timing (before the port is forced), so behaviour is unchanged | Active |
+| 2026-10-15 | Coverage floor **75 %** (measured 77 % with the X11 tests), **then 78 %** (measured 82 % with the pipeline tests); measured in the X11 job | Each step of real tests raised the floor so the gain cannot slip back | Active |
+| 2026-10-15 | CI runs on **pushes to main, pull requests and by hand**, not on every branch push | A branch's pushes are checked through its pull request; running both doubled every run | Active |
+| 2026-10-15 | **Monthly mutation testing runs in the X11 image** (4 workers, memory capped); locally only capped (`--max-children 2`, `docker --memory=2g --cpus=2`) | The input injector's mutants need an X server; an uncapped local run filled the desktop's RAM | Active |
+| 2026-10-15 | Releases also publish the **.buildinfo** | Records the exact toolchain so independent rebuilds can match the hash | Active |
+| 2026-10-15 | README badges only for checks that have run green on GitHub | A badge without evidence is the problem the trust setup solves | Active |
+| 2026-10-15 | No pip-audit / osv-scanner | No PyPI dependencies or lockfile: they would scan nothing; Ubuntu packages' CVEs are tracked by Ubuntu | Active |
 
 ## Process
 

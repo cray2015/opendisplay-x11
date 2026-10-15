@@ -65,7 +65,7 @@ rotation_debounce_ms = 300            # wait for rotation to settle before rebui
 # (`odx11 run --verbose` logs it). Defaults: side = "right", align = "start".
 # Placement belongs to Cinnamon: arrange the iPad in Display settings and it is
 # remembered. side/align only apply when Cinnamon has no saved layout yet.
-# [devices.7C62722D-9FE3-4473-B88A-D30DFBE0A4DA]
+# [devices.00000000-1111-4222-8333-444444444444]
 # side = "right"                      # left | right | above | below the main output
 # align = "start"                     # start | center | end along that edge
 # mode = [1568, 1088]                 # landscape override, multiples of 16

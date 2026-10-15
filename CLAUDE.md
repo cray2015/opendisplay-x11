@@ -31,8 +31,11 @@ python3 -m odx11 list
 journalctl --user -u odx11 -f
 systemctl --user restart odx11
 
-# test — unit tests; need no iPad, no X server, no GPU
+# test — unit tests; need no iPad, no X server, no GPU (the X11 tests skip)
 python3 -m pytest -q tests/
+
+# test, with the X11 side — inside a throwaway Xorg (dummy driver); never on your desktop
+docker build -t odx11-x11 tests/x11 && docker run --rm -v "$PWD:/src:ro" odx11-x11
 
 # fake receiver — exercise framing and the session without an iPad
 python3 tools/fake_receiver.py --port 9000
@@ -49,9 +52,16 @@ d2 docs/architecture.d2 docs/architecture.svg
 ```
 The venv must use `--system-site-packages`: PyGObject and the GStreamer
 typelibs are apt packages and cannot be pip-installed cleanly here.
-Unit tests cover pure modules only (`protocol`, `annexb`, mode sizing, input
-mapping, state machine). Anything touching usbmuxd, xrandr, sysfs or the GPU is
-verified by hand against the acceptance criteria in `PROJECT_SPEC.md` §10.
+Tests need no iPad, X server or GPU (and no python-xlib, GStreamer or GTK): pure
+modules directly; usbmuxd, D-Bus, subprocesses and the daemon's GLib main loop
+through fakes (`tests/test_usbmux.py`, `test_daemon_loop.py`, …). Real X11,
+GStreamer, the window and the hardware are verified by hand against the acceptance
+criteria in `PROJECT_SPEC.md` §10. Mutation testing (mutmut, config in
+`pyproject.toml`): after changing a module's tests run `mutmut run --max-children 2 "odx11.<module>*"`
+(never an uncapped full run on the desktop: it filled the user's RAM once; the full run is the
+monthly CI job, or `docker run --memory=2g --cpus=2 … odx11-x11 /x11/mutation.sh`);
+the pure modules are at 100 %, mark only provably equivalent mutants
+`# pragma: no mutate` with the reason.
 
 ## Layout
 - `odx11/protocol.py` is the only module that knows the wire format (framing, demux, message shapes).
@@ -92,6 +102,8 @@ verified by hand against the acceptance criteria in `PROJECT_SPEC.md` §10.
 - **Wrap every user-visible string in `_()` (plurals: `ngettext`) and use `.format()` placeholders, never f-strings, inside them** — logs and the diagnostic report stay English. See `PROJECT_SPEC.md` §8.8.
 - **Keep the desktop entry, icon and AppStream ID equal to the app ID and validated** — the build runs `desktop-file-validate` and `appstreamcli validate`; lintian must stay clean. See `PROJECT_SPEC.md` §8.8.
 - **Keep `upgrade.GUI_ONLY` to modules the daemon never imports** — window-only upgrades skip the service restart by fingerprint; the AST test enforces it. See `PROJECT_SPEC.md` §8.7.
+- **Any new capability (running a program, a socket, a file write, a device path, D-Bus, input, screen, clipboard, dynamic code) is added to `TRUST.md` and, if the rules miss it, to `.semgrep/capabilities.yml` in the same change** — CI fails a PR that adds one unreviewed; TRUST.md is the public promise. See `TRUST.md`.
+- **Pin every GitHub Action to a full commit SHA of a release at least 7 days old, give each workflow no or read-only top-level permissions, and keep zizmor (pedantic) clean** — see `.github/workflows/`.
 - **Ignore unknown control `type`s and fields, logging each unknown type once** — input arrives at hundreds of messages per second. See `PROJECT_SPEC.md` §7.4.
 
 ## Working Rules
@@ -116,3 +128,8 @@ Each entry is a mistake Claude made on this project and the rule it leaves behin
 13. **Labelled table columns "GPU"/"CPU" over CPU percentages** (2026-10-15) — read as GPU % and CPU %. *Rule: a header names what is measured; a setting's value goes in its own labelled column.*
 14. **Leaked a duplicate applet timer while testing** (2026-10-15) — toggling the privacy-indicator applet's settings and enabling it again left two poll loops until Cinnamon was restarted. *Rule: before changing another program's state to test something, know how to fully restore it, and verify the restore (not only the config file).*
 15. **Placed a test window on a monitor that wasn't there** (2026-10-15) — during the YouTube-jitter check, the "player alone on the iPad's monitor" run happened with the service stopped, so that monitor did not exist and the window landed on the main one. *Rule: check the setup (monitors, service state) before each measurement.*
+16. **Claimed "no capability scanner exists for Python" from one GitHub search** (2026-10-15) — a second look found CapabilityEcho (Python-capable PR-diff tool), an `overreach` crate (repo since deleted) and others; the conclusion (none mature or fitting) held, the claim as stated did not. *Rule: before saying a tool does not exist, search the registries (PyPI, npm, crates.io) and the web, not one site, and state what was searched.*
+17. **Invented the times in `debian/changelog`** (0.1.0–0.4.2) — placeholder times running ahead of the clock put the newest entry in the future, so dpkg did not clamp file times and builds were not reproducible (found 2026-10-15). *Rule: changelog dates come from `date -R` at the moment of the release commit, never made up.*
+18. **Used Python 3.12-only syntax in a package that declares Python ≥ 3.11** (0.3.8, `pipeline.py`: same quotes inside an f-string's `{}`) — a SyntaxError on 3.11; unnoticed because this machine runs 3.12 (found by ruff 2026-10-15). *Rule: ruff's `target-version` matches the lowest supported Python; CI runs it.*
+19. **Ran an uncapped mutation run in a container on the user's desktop** (2026-10-15) — mutmut started a worker per core, each with the test suite and Xorg, no memory limit; the user warned it might take the system down. *Rule: cap every heavy local job (`docker run --memory/--cpus`, `--max-children`), ask before starting long or heavy jobs, and leave full runs to CI.*
+20. **Assumed GitHub's runners register `build-essential`** (2026-10-15) — the same gap had already shown up in a local container; the first CI run of the build jobs failed in 23 s. *Rule: a fact checked in one environment is not checked in another; when a local container needed a package, add it to CI too.*
