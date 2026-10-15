@@ -46,6 +46,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.2" date="2026-10-15">
+      <description>
+        <p>Clearer wording for the processing choice in the window: Auto, iGPU / GPU or CPU.</p>
+      </description>
+    </release>
     <release version="0.4.1" date="2026-10-15">
       <description>
         <p>The window can choose where colours are converted: automatically, on the graphics chip or on the processor.</p>

@@ -1,3 +1,10 @@
+opendisplay-x11 (0.4.2) unstable; urgency=medium
+
+  * Settings window: the "Colour conversion" row is now "Processing", with
+    the choices Auto, iGPU / GPU and CPU and a shorter explanation.
+
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 23:00:00 +0530
+
 opendisplay-x11 (0.4.1) unstable; urgency=medium
 
   * Settings window: new "Colour conversion" choice (Automatic, Graphics

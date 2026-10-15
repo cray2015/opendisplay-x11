@@ -150,9 +150,8 @@ class Window(Adw.ApplicationWindow):
         self.idle_row = self._combo_row(_("Pause when nothing changes after"), [l for _v, l in settings.IDLE_PAUSES],
                                         _("Saves power while the iPad's screen is still"))
         group.add(self.idle_row)
-        self.convert_row = self._combo_row(_("Colour conversion"), [l for _v, l in settings.CONVERTS],
-                                           _("The graphics chip uses far less CPU; Automatic uses it "
-                                             "when the video driver allows"))
+        self.convert_row = self._combo_row(_("Processing"), [l for _v, l in settings.CONVERTS],
+                                           _("The GPU uses less CPU"))
         group.add(self.convert_row)
         self.press_row = self._combo_row(_("Right-click sensitivity"), [l for _v, l in settings.LONG_PRESSES],
                                          _("How long to hold a finger still for a right-click"))
