@@ -1,3 +1,11 @@
+opendisplay-x11 (0.3.3) unstable; urgency=medium
+
+  * A minimized window on the iPad's monitor no longer keeps the stream
+    awake (compositors keep minimized windows drawing for previews).
+  * Measured performance documented in the README (tools/perf_bench.py).
+
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 13:00:00 +0530
+
 opendisplay-x11 (0.3.2) unstable; urgency=medium
 
   * Frames are converted and encoded only for a moment after something on

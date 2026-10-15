@@ -46,6 +46,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.3.3" date="2026-10-15">
+      <description>
+        <p>A minimized window no longer keeps the stream awake.</p>
+      </description>
+    </release>
     <release version="0.3.2" date="2026-10-15">
       <description>
         <p>Uses much less CPU when something on the iPad updates only now and then.</p>

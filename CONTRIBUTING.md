@@ -28,7 +28,9 @@ Before sending a change:
 - **Read [`CLAUDE.md`](CLAUDE.md)** — the project's invariants (wire-format rules,
   no root code, no command channel into the daemon, every tunable in the config,
   every user-visible string in `_()`). Design and decisions: [`PROJECT_SPEC.md`](PROJECT_SPEC.md).
-- **Keep it quiet:** nothing may poll; idle cost must stay near zero.
+- **Keep it quiet:** nothing may poll; idle cost must stay near zero. For a change
+  that can affect performance, re-run `tools/perf_bench.py` (README
+  "Performance") and update the table and `docs/perf/results.csv`.
 - **Every user-facing change keeps "no terminal for end users"** (spec §2).
 - New source files start with the licence header:
   ```

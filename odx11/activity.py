@@ -101,6 +101,9 @@ class ActivityMonitor:
         self._cursor_event = self.x.query_extension("XFIXES").first_event + xfixes.XFixesCursorNotify
         self.x.xfixes_select_cursor_input(self.root, xfixes.XFixesDisplayCursorNotifyMask)
         self.draw_cursor = True          # cursor baked into the video: pointer motion must wake capture
+        self._wm_state = self.x.intern_atom("WM_STATE")
+        self._net_wm_state = self.x.intern_atom("_NET_WM_STATE")
+        self._net_hidden = self.x.intern_atom("_NET_WM_STATE_HIDDEN")
         for w in self.root.query_tree().children:
             self._track(w)
         self.x.sync()
@@ -136,6 +139,24 @@ class ActivityMonitor:
             self.x.damage_destroy(did)   # BadDamage if the window is already gone: ignored
         return self.tracker.unmapped(wid)
 
+    def _minimized(self, wid) -> bool:
+        """Minimized windows stay mapped under a compositor (for previews) and keep sending
+        damage although nothing of them is visible. Checked only for windows overlapping the
+        virtual monitor: the frame's client window carries WM_STATE / _NET_WM_STATE."""
+        X = self._X
+        try:
+            frame = self.x.create_resource_object("window", wid)
+            for w in [frame] + list(frame.query_tree().children):
+                ws = w.get_full_property(self._wm_state, X.AnyPropertyType)
+                if ws is not None and ws.value and ws.value[0] == 3:          # IconicState
+                    return True
+                ns = w.get_full_property(self._net_wm_state, X.AnyPropertyType)
+                if ns is not None and self._net_hidden in ns.value:
+                    return True
+        except self._error.XError:
+            pass
+        return False
+
     def pointer_position(self) -> tuple[int, int]:
         p = self.root.query_pointer()
         return p.root_x, p.root_y
@@ -154,7 +175,9 @@ class ActivityMonitor:
             e = self.x.next_event()
             if e.type == self._damage_event:
                 rearm.append(e.damage)
-                wake |= self.tracker.damaged(getattr(e.drawable, "id", e.drawable))
+                wid = getattr(e.drawable, "id", e.drawable)
+                if self.tracker.damaged(wid) and not self._minimized(wid):
+                    wake = True
             elif e.type == X.MapNotify:
                 wake |= self._track(e.window)
             elif e.type == X.UnmapNotify or e.type == X.DestroyNotify:

@@ -178,6 +178,46 @@ python3 -m odx11 list                         # iPads usbmuxd sees
 systemctl --user stop odx11 && python3 -m odx11 run -v   # foreground, verbose (debugging)
 ```
 
+## Performance
+
+Measured on 2026-10-15 (version 0.3.3) — HP EliteDesk 800 G3 DM: Intel Core
+i5-6500T (4 cores), HD 530 graphics, Linux Mint 22.3 Cinnamon (X11), iPad Air
+(5th gen) over USB, virtual monitor 1568 × 1088, Balanced preset unless noted.
+Each row is the mean of 3 runs of 25 s (after an 8 s warm-up); the spread
+between runs is shown in brackets.
+
+| What is on the iPad's screen | CPU (% of one core) | Frames/s | Latency, median | Latency, 95th % | Encode time |
+|---|---|---|---|---|---|
+| Nothing changing | **0.3** (0.2–0.3) | — (paused) | — | — | — |
+| A window redrawing ~2×/s (a system monitor) | **10.2** (10.1–10.3) | 9.9 | 10.8 ms | 20.4 ms | 8.7 ms |
+| Continuous change, 30 fps (Power saver's rate) | **23.1** (23.0–23.1) | 29.5 | 10.1 ms | 16.4 ms | 9.0 ms |
+| Continuous change, 60 fps (Balanced, worst case) | **45.6** (45.3–45.9) | 59.6 | 10.0 ms | 15.6 ms | 8.3 ms |
+
+- **CPU** is for the OpenDisplay for X11 service, as a percentage of *one* core;
+  a system monitor that shows the whole processor shows a quarter of that on
+  this 4-core CPU (worst case ≈ 11 %).
+- **Latency** is end to end, from capturing the frame to showing it on the iPad,
+  and with the **encode time** is reported by the iPad itself. At 60 fps a new
+  frame only starts every 16.7 ms, so ~10 ms is close to the floor.
+- **Where the CPU goes** at 60 fps: screen capture ~1.5 %, colour conversion
+  ~32 % (software: this GPU's free driver has no video-processing unit), handing
+  frames to the hardware encoder ~13 %, the program's own code ~1–2 %. Frames are
+  converted and encoded only for a moment after something on the iPad's screen
+  changes, and not at all while it is still — which is why a mostly static
+  screen costs little.
+- The cursor is drawn by the iPad from position messages, so moving the mouse
+  costs almost nothing and does not depend on the frame rate.
+
+Reproduce (iPad attached, OpenDisplay open; the user service is stopped during
+the runs and restarted after):
+
+```bash
+python3 tools/perf_bench.py --scenario continuous --runs 3 --csv docs/perf/results.csv
+```
+
+Scenarios: `idle` (keep the iPad's screen empty), `light` (whatever is on it),
+`continuous`, `continuous30`. Raw data: [`docs/perf/results.csv`](docs/perf/results.csv).
+
 ## Configure
 
 Optional: `cp config.example.toml ~/.config/odx11/config.toml`. Every setting
