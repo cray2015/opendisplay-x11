@@ -19,3 +19,5 @@ debian/debhelper-build-stamp
 build/
 dist.build.log
 debian/*.debhelper
+# test coverage data
+.coverage
