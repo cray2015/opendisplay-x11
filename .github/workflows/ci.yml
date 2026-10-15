@@ -55,3 +55,34 @@ jobs:
           path: dist/
           if-no-files-found: error
           retention-days: 14
+
+  reproducible:
+    name: Reproducible build (two clean builds, identical .deb)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          path: first
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          path: second
+          persist-credentials: false
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends \
+            dpkg-dev debhelper dh-python pybuild-plugin-pyproject python3-all \
+            python3-setuptools python3-pytest python3-gi desktop-file-utils appstream
+
+      # Different paths and times; dpkg clamps file times to the newest changelog entry.
+      - name: Build twice and compare
+        run: |
+          (cd first && DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -b -us -uc)
+          sleep 5
+          mkdir -p out-first && mv opendisplay-x11_*_all.deb out-first/
+          (cd second && DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -b -us -uc)
+          sha256sum out-first/*.deb opendisplay-x11_*_all.deb | tee -a "$GITHUB_STEP_SUMMARY"
+          cmp out-first/opendisplay-x11_*_all.deb opendisplay-x11_*_all.deb
