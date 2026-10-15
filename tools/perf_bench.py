@@ -9,14 +9,18 @@ records the daemon's CPU and the iPad's own stats (PHONE-STATS). The user
 service is stopped for the duration and restarted at the end.
 
   python3 tools/perf_bench.py --scenario continuous --runs 3 --csv docs/perf/results.csv
+  python3 tools/perf_bench.py --preset power_saver --scenario rate --hz 5 --csv docs/perf/results-power_saver.csv
 
 Scenarios:
   idle         nothing changing on the iPad's monitor (keep it empty)
   rate         a test window on the iPad's monitor redrawing --hz times a second
                (tools/test_window.py) — read any app off the CPU-vs-rate curve
   light        whatever is on the iPad's monitor now
-  continuous   every frame converted and encoded (frame gate and idle pause off): worst case
+  continuous   every frame converted and encoded (frame gate and idle pause off): worst case,
+               at the preset's frame rate and sharpness
   continuous30 the same at Power saver's 30 fps and sharpness
+
+--preset picks the performance preset (default balanced); every scenario runs with it.
 """
 import argparse
 import csv
@@ -29,6 +33,9 @@ import tempfile
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
+from odx11.config import PRESETS  # noqa: E402
+
 SCENARIOS = {
     "idle": "",
     "rate": "",
@@ -55,9 +62,18 @@ def pss_mb(pid: int) -> float:
     return 0.0
 
 
-def run_once(scenario: str, warmup: float, seconds: float, hz: float | None = None) -> dict:
+def scenario_config(scenario: str, preset: str) -> str:
+    if scenario == "continuous":                 # the preset's rate and sharpness, nothing gated
+        p = PRESETS[preset]
+        return (f'[video]\npreset = "custom"\nfps = {p["fps"]}\nqp = {p["qp"]}\n'
+                'idle_pause_s = 0\nchange_tail_ms = 0\n')
+    return SCENARIOS[scenario] or f'[video]\npreset = "{preset}"\n'
+
+
+def run_once(scenario: str, warmup: float, seconds: float, hz: float | None = None,
+             preset: str = "balanced") -> dict:
     cfg = tempfile.NamedTemporaryFile("w", suffix=".toml", delete=False)
-    cfg.write(SCENARIOS[scenario])
+    cfg.write(scenario_config(scenario, preset))
     cfg.close()
     log = tempfile.NamedTemporaryFile("w+", suffix=".log", delete=False)
     proc = subprocess.Popen([sys.executable, "-m", "odx11", "--config", cfg.name, "run"],
@@ -104,6 +120,7 @@ def main():
     ap.add_argument("--warmup", type=float, default=10)
     ap.add_argument("--seconds", type=float, default=30)
     ap.add_argument("--hz", type=float, help="redraw rate for --scenario rate")
+    ap.add_argument("--preset", choices=PRESETS, default="balanced")
     ap.add_argument("--csv", help="append rows to this CSV file")
     a = ap.parse_args()
     if a.scenario == "rate" and not a.hz:
@@ -115,7 +132,7 @@ def main():
     rows = []
     try:
         for i in range(a.runs):
-            row = run_once(a.scenario, a.warmup, a.seconds, a.hz)
+            row = run_once(a.scenario, a.warmup, a.seconds, a.hz, a.preset)
             row["run"] = i + 1
             rows.append(row)
             print(json.dumps(row), flush=True)

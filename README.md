@@ -180,13 +180,11 @@ systemctl --user stop odx11 && python3 -m odx11 run -v   # foreground, verbose (
 
 ## Performance
 
-Measured on 2026-10-15 with version 0.3.3 — HP EliteDesk 800 G3 DM: Intel Core
+Measured on 2026-10-15 with version 0.3.8 — HP EliteDesk 800 G3 DM: Intel Core
 i5-6500T (4 cores), HD 530 graphics, Linux Mint 22.3 Cinnamon (X11), iPad Air
-(5th gen) over USB, virtual monitor 1568 × 1088, Balanced preset (60 fps).
-Each row is the mean of 3 runs of 25 s after an 8 s warm-up (spread in brackets).
-These runs sent frames for 150 ms after each change — what Best quality does
-today. Since 0.3.8 Balanced sends them for 50 ms, which version 0.3.4 measured at
-about half the CPU for 1–10 changes a second; a fresh run is still to come.
+(5th gen) over USB, virtual monitor 1568 × 1088, once per performance preset.
+Each value is the mean of 3 runs of 25 s after an 8 s warm-up; every run is in
+[`docs/perf/`](docs/perf/).
 
 **How often the iPad's screen changes decides the cost**, not which app changes
 it: each change converts and encodes whole frames. "Changes per second" uses a
@@ -194,27 +192,34 @@ test window redrawing at a fixed rate, so you can place any app on the curve —
 a clock ≈ 1/s, a system monitor ≈ 2/s, typing ≈ 5–10/s in bursts, scrolling or a
 video ≈ continuous.
 
-| iPad screen changes | CPU, % of one core | Frames/s sent | Latency median / 95th % | Memory (PSS) |
-|---|---|---|---|---|
-| never (idle) | **0.1** (0.1–0.2) | 0 | — | 58 MB |
-| 1 × per second | **9.1** (9.0–9.2) | 8.5 | 10.1 / 16.4 ms | 58 MB |
-| 2 × per second | **15.7** (15.5–15.8) | 17.2 | 10.5 / 16.2 ms | 59 MB |
-| 5 × per second | **35.1** (35.0–35.2) | 44.5 | 10.3 / 16.5 ms | 60 MB |
-| 10 × per second | **46.4** (46.3–46.5) | 58.8 | 10.8 / 15.7 ms | 59 MB |
-| continuously (video, scrolling) | **45.9** (45.1–46.9) | 59.3 | 10.3 / 14.7 ms | 60 MB |
-| continuously, Power saver (30 fps) | **22.9** (22.8–23.0) | 29.5 | 10.1 / 13.6 ms | 56 MB |
+| iPad screen changes | Power saver | Balanced (default) | Best quality |
+|---|---|---|---|
+| never (idle) | **0.1** | **0.1** | **0.2** |
+| 1 × per second | **4.4** | **7.0** | **10.5** |
+| 2 × per second | **8.5** | **9.3** | **17.8** |
+| 5 × per second | **12.7** | **13.8** | **35.4** |
+| 10 × per second | **23.8** | **25.1** | **46.6** |
+| continuously (video, scrolling) | **22.9** | **45.4** | **45.6** |
+
+CPU, % of one core. The presets: Power saver 30 fps, softer picture, frames for
+100 ms after a change; Balanced 60 fps, 50 ms; Best quality 60 fps, sharpest,
+150 ms. Latency, capture to the iPad's screen, is 10–14 ms median and 12–18 ms
+95th percentile for every preset; memory (PSS) 48–59 MB. Idle is with nothing else
+changing on the desktop either: every window's changes are sorted, so a busy
+window elsewhere (a terminal animating, a video on the main monitor) adds a
+little — about 0.05 % of a core per 1 change a second.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/perf/cpu-by-change-rate-dark.svg">
-  <img alt="Bar chart: CPU use (% of one core) by how often the iPad's screen changes. Idle 0.1; 1/s 9.1; 2/s 15.7; 5/s 35.1; 10/s 46.4; continuous 45.9." src="docs/perf/cpu-by-change-rate-light.svg" width="760">
+  <img alt="Bar chart: CPU use (% of one core) by how often the iPad's screen changes, for each preset. Power saver / Balanced / Best quality — idle 0.1 / 0.1 / 0.2; 1/s 4.4 / 7.0 / 10.5; 2/s 8.5 / 9.3 / 17.8; 5/s 12.7 / 13.8 / 35.4; 10/s 23.8 / 25.1 / 46.6; continuous 22.9 / 45.4 / 45.6." src="docs/perf/cpu-by-change-rate-light.svg" width="760">
 </picture>
 
-*Generated from the CSVs by `tools/perf_chart.py`. Encode time on the iPad ~8–9 ms
-throughout. Version 0.3.4 tried sending fewer frames per change (about half the
-CPU at 1–10 changes a second, [`results-0.3.4.csv`](docs/perf/results-0.3.4.csv)),
-but the iPad seemed to freeze on small changes such as moving over a menu, so 0.3.5
-went back. The freezes turned out to be the cursor (fixed in 0.3.6) and Alt+Tab
-(0.3.7); with those fixed, 50 ms tested smooth and became Balanced's in 0.3.8.*
+*Generated from the CSVs by `tools/perf_chart.py`. Encode time on the iPad ~9 ms
+throughout. Version 0.3.4 first tried 50 ms (`results-0.3.4.csv`), but the iPad
+seemed to freeze on small changes such as moving over a menu, so 0.3.5 went
+back to 150 ms. The freezes turned out to be the cursor (fixed in 0.3.6) and
+Alt+Tab (0.3.7); with those fixed, 50 ms tested smooth and became Balanced's in
+0.3.8. Earlier single-preset runs: `results-0.3.3.csv`.*
 
 - **CPU** is for the OpenDisplay for X11 service as a percentage of *one* core; a
   system monitor showing the whole 4-core processor shows a quarter of it
@@ -228,8 +233,9 @@ went back. The freezes turned out to be the cursor (fixed in 0.3.6) and Alt+Tab
   frames to the hardware encoder ~13 %, the program's own code ~1–2 %. After a
   change, frames are sent for a short while — 100 ms in Power saver, 50 ms in
   Balanced, 150 ms in Best quality (`change_tail_ms`) — and one more once the screen has
-  been quiet for 300 ms (`change_settle_ms`); from about 7 changes a second the
-  cost is the same as continuous change. A key press or click with the pointer
+  been quiet for 300 ms (`change_settle_ms`). With Best quality the cost reaches
+  continuous change at about 7 changes a second; Balanced's shorter tail costs
+  half that at 10 a second. A key press or click with the pointer
   on the iPad's monitor sends frames for 500 ms (`input_tail_ms`): Cinnamon draws
   its Alt+Tab switcher and menus itself, and no window reports those changes.
 - The cursor is drawn by the iPad from position messages: moving the mouse costs

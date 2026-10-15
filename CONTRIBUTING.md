@@ -30,7 +30,7 @@ Before sending a change:
   every user-visible string in `_()`). Design and decisions: [`PROJECT_SPEC.md`](PROJECT_SPEC.md).
 - **Keep it quiet:** nothing may poll; idle cost must stay near zero. For a change
   that can affect performance, re-run `tools/perf_bench.py` (README
-  "Performance") and update the table and `docs/perf/results.csv`.
+  "Performance", `--preset` for each preset) and update the table and the CSVs in `docs/perf/`.
 - **Every user-facing change keeps "no terminal for end users"** (spec §2).
 - New source files start with the licence header:
   ```
