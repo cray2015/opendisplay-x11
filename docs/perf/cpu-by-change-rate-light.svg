@@ -3,7 +3,7 @@
 <desc id="d">Grouped bars of CPU, percent of one core, for each change rate; the README table has every value.</desc>
 <rect width="760" height="380" rx="8" fill="#fcfcfb"/>
 <text x="64" y="30" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="16" font-weight="600" fill="#0b0b0b">CPU use by how often the iPad's screen changes</text>
-<text x="64" y="50" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#52514e">% of one CPU core · lower is better · mean of 3 runs · i5-6500T, HD 530 converting colours · version 0.3.8</text>
+<text x="64" y="50" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#52514e">% of one CPU core · lower is better · mean of 3 runs · i5-6500T · Processing on the GPU (HD 530) · version 0.3.8</text>
 <rect x="64" y="64" width="12" height="12" rx="3" fill="#2a78d6"/>
 <text x="82" y="74" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#0b0b0b">Power saver</text>
 <rect x="194" y="64" width="12" height="12" rx="3" fill="#eb6834"/>
