@@ -194,20 +194,27 @@ video ≈ continuous.
 
 | iPad screen changes | Power saver | Balanced (default) | Best quality |
 |---|---|---|---|
-| never (idle) | **0.1** | **0.1** | **0.2** |
-| 1 × per second | **4.4** | **7.0** | **10.5** |
-| 2 × per second | **8.5** | **9.3** | **17.8** |
-| 5 × per second | **12.7** | **13.8** | **35.4** |
-| 10 × per second | **23.8** | **25.1** | **46.6** |
-| continuously (video, scrolling) | **22.9** | **45.4** | **45.6** |
+| never (idle) | **0.1 %** | **0.1 %** | **0.2 %** |
+| 1 × per second | **4.4 %** | **7.0 %** | **10.5 %** |
+| 2 × per second | **8.5 %** | **9.3 %** | **17.8 %** |
+| 5 × per second | **12.7 %** | **13.8 %** | **35.4 %** |
+| 10 × per second | **23.8 %** | **25.1 %** | **46.6 %** |
+| continuously (video, scrolling) | **22.9 %** | **45.4 %** | **45.6 %** |
 
-CPU, % of one core. The presets: Power saver 30 fps, softer picture, frames for
-100 ms after a change; Balanced 60 fps, 50 ms; Best quality 60 fps, sharpest,
-150 ms. Latency, capture to the iPad's screen, is 10–14 ms median and 12–18 ms
-95th percentile for every preset; memory (PSS) 48–59 MB. Idle is with nothing else
-changing on the desktop either: every window's changes are sorted, so a busy
-window elsewhere (a terminal animating, a video on the main monitor) adds a
-little — about 0.05 % of a core per 1 change a second.
+CPU is the percentage of **one** core. What the presets differ in:
+
+- **Power saver** — 30 fps, softer picture, frames sent for 100 ms after each change
+- **Balanced** — 60 fps, frames sent for 50 ms after each change
+- **Best quality** — 60 fps, sharpest picture, frames sent for 150 ms after each change
+
+The same for every preset:
+
+- **Latency** (capture to the iPad's screen): 10–14 ms median, 12–18 ms at the 95th percentile
+- **Memory** (PSS): 48–59 MB
+- **Idle** assumes nothing else on the desktop is changing either. Changes in
+  other windows are checked and ignored, so a busy window elsewhere (a terminal
+  animating, a video on the main monitor) adds about 0.05 % of a core per
+  change a second.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/perf/cpu-by-change-rate-dark.svg">
