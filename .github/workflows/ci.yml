@@ -35,7 +35,7 @@ jobs:
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q --no-install-recommends \
-            dpkg-dev lintian debhelper dh-python pybuild-plugin-pyproject python3-all \
+            build-essential dpkg-dev lintian debhelper dh-python pybuild-plugin-pyproject python3-all \
             python3-setuptools python3-pytest python3-gi desktop-file-utils appstream
           dpkg-checkbuilddeps
 
@@ -76,7 +76,7 @@ jobs:
         run: |
           sudo apt-get update -q
           sudo apt-get install -y -q --no-install-recommends \
-            dpkg-dev debhelper dh-python pybuild-plugin-pyproject python3-all \
+            build-essential dpkg-dev debhelper dh-python pybuild-plugin-pyproject python3-all \
             python3-setuptools python3-pytest python3-gi desktop-file-utils appstream
 
       # Different paths and times; dpkg clamps file times to the newest changelog entry.
