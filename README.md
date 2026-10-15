@@ -3,7 +3,7 @@
 [![CI](https://github.com/cray2015/opendisplay-x11/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/cray2015/opendisplay-x11/actions/workflows/ci.yml?query=branch%3Amain)
 [![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/cray2015/opendisplay-x11/badge)](https://scorecard.dev/viewer/?uri=github.com/cray2015/opendisplay-x11)
 [![Coverage](https://cray2015.github.io/opendisplay-x11/coverage.svg)](https://github.com/cray2015/opendisplay-x11/actions/workflows/ci.yml?query=branch%3Amain)
-[![Release](https://img.shields.io/github/v/release/cray2015/opendisplay-x11)](https://github.com/cray2015/opendisplay-x11/releases/latest)
+[![Release](https://img.shields.io/github/v/release/cray2015/opendisplay-x11?include_prereleases)](https://github.com/cray2015/opendisplay-x11/releases)
 [![Licence: GPL-3.0-or-later](https://img.shields.io/github/license/cray2015/opendisplay-x11)](LICENSE)
 
 *An unofficial sender for the [OpenDisplay](https://github.com/peetzweg/opendisplay) iPad app — not affiliated with the OpenDisplay project.*
@@ -153,7 +153,7 @@ pointer out of areas no real output shows).
 ## Install
 
 1. Download `opendisplay-x11_<version>_all.deb` from the
-   [latest release](https://github.com/cray2015/opendisplay-x11/releases/latest).
+   [Releases page](https://github.com/cray2015/opendisplay-x11/releases).
    **First make sure your computer has a free video port** ([above](#why-a-free-video-port-is-required)).
    To check the download is genuine, see [Verify a release yourself](TRUST.md#verify-a-release-yourself).
 2. Double-click it. Your distribution's package installer opens; click

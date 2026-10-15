@@ -25,7 +25,7 @@ Mark each item **worked / did not work / not tried**, with a note if anything lo
 
 ## 1. Install and first connection
 
-- [ ] Download the `.deb` from the [latest release](https://github.com/cray2015/opendisplay-x11/releases/latest);
+- [ ] Download the `.deb` from the [Releases page](https://github.com/cray2015/opendisplay-x11/releases);
       optionally [verify it](../TRUST.md#verify-a-release-yourself).
 - [ ] Double-click it and install with your password. Note any warning the installer shows.
 - [ ] Open **OpenDisplay for X11** from the application menu. Does the setup checklist show what you
