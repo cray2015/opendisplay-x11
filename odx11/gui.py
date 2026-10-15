@@ -100,7 +100,8 @@ class Window(Adw.ApplicationWindow):
     def _build_status(self):
         group = Adw.PreferencesGroup()
         self.status_row = Adw.ActionRow(title_lines=2, subtitle_lines=3)
-        self.status_icon = Gtk.Image(pixel_size=32, valign=Gtk.Align.CENTER, accessible_role=Gtk.AccessibleRole.PRESENTATION)
+        self.status_icon = Gtk.Image(pixel_size=32, valign=Gtk.Align.CENTER,
+                                     accessible_role=Gtk.AccessibleRole.PRESENTATION)
         self.status_row.add_prefix(self.status_icon)
         self.power = Gtk.Switch(valign=Gtk.Align.CENTER, tooltip_text=_("Turn OpenDisplay for X11 on or off"))
         self.power.update_property([Gtk.AccessibleProperty.LABEL], [_("OpenDisplay for X11 on or off")])
@@ -140,23 +141,24 @@ class Window(Adw.ApplicationWindow):
         self.text_row, self.text_scale = self._scale_row(
             _("Text size"), "", _("smaller"), _("larger"), len(settings.TEXT_SIZES))
         group.add(self.text_row)
-        self.perf_row = self._combo_row(_("Performance"), [l for _k, l, _d in settings.PRESET_CHOICES])
+        self.perf_row = self._combo_row(_("Performance"), [label for _k, label, _d in settings.PRESET_CHOICES])
         group.add(self.perf_row)
         self.sharp_row, self.sharp_scale = self._scale_row(
             _("Sharpness"), None, _("softer"), _("sharper"), len(settings.SHARPNESS_QP))
         group.add(self.sharp_row)
-        self.fps_row = self._combo_row(_("Frame rate"), [l for _v, l in settings.FRAME_RATES])
+        self.fps_row = self._combo_row(_("Frame rate"), [label for _v, label in settings.FRAME_RATES])
         group.add(self.fps_row)
-        self.idle_row = self._combo_row(_("Pause when nothing changes after"), [l for _v, l in settings.IDLE_PAUSES],
+        self.idle_row = self._combo_row(_("Pause when nothing changes after"),
+                                        [label for _v, label in settings.IDLE_PAUSES],
                                         _("Saves power while the iPad's screen is still"))
         group.add(self.idle_row)
-        self.convert_row = self._combo_row(_("Processing"), [l for _v, l in settings.CONVERTS],
+        self.convert_row = self._combo_row(_("Processing"), [label for _v, label in settings.CONVERTS],
                                            _("The GPU uses less CPU"))
         group.add(self.convert_row)
-        self.press_row = self._combo_row(_("Right-click sensitivity"), [l for _v, l in settings.LONG_PRESSES],
+        self.press_row = self._combo_row(_("Right-click sensitivity"), [label for _v, label in settings.LONG_PRESSES],
                                          _("How long to hold a finger still for a right-click"))
         group.add(self.press_row)
-        self.grace_row = self._combo_row(_("Screen timeout"), [l for _v, l in settings.GRACES],
+        self.grace_row = self._combo_row(_("Screen timeout"), [label for _v, label in settings.GRACES],
                                          _("How long the screen stays after a disconnect, so switching apps "
                                            "on the iPad doesn't move your windows"))
         group.add(self.grace_row)
@@ -247,7 +249,8 @@ class Window(Adw.ApplicationWindow):
             running = _service("is-active").stdout.strip() == "active"   # an older daemon writes no file
             if running:
                 self.status_row.set_title(GLib.markup_escape_text(_("On")))
-                self.status_row.set_subtitle(GLib.markup_escape_text(_("Running — details appear once it publishes its state.")))
+                self.status_row.set_subtitle(
+                    GLib.markup_escape_text(_("Running — details appear once it publishes its state.")))
         self._updating = True
         self.power.set_active(running)
         self._updating = False
@@ -296,7 +299,7 @@ class Window(Adw.ApplicationWindow):
     def _fill_ports(self):
         choices = settings.port_choices(display.hdmi_ports())
         self._port_values = [v for v, _ in choices]
-        self.port_row.set_model(Gtk.StringList.new([l for _, l in choices]))
+        self.port_row.set_model(Gtk.StringList.new([label for _, label in choices]))
         want = self.cfg.display.connector
         self.port_row.set_selected(self._port_values.index(want) if want in self._port_values else 0)
 
@@ -346,7 +349,8 @@ class Window(Adw.ApplicationWindow):
         c.notifications.enabled = self.notify_row.get_active()
         port = self._port_values[self.port_row.get_selected()] if self._port_values else "auto"
         if port != "auto" and dict(display.hdmi_ports()).get(port) == "monitor":
-            self.toasts.add_toast(Adw.Toast.new(_("{port} has a monitor plugged in — choose a free port").format(port=port)))
+            self.toasts.add_toast(Adw.Toast.new(
+                _("{port} has a monitor plugged in — choose a free port").format(port=port)))
             self._updating = True
             self.port_row.set_selected(self._port_values.index(c.display.connector)
                                        if c.display.connector in self._port_values else 0)
@@ -471,7 +475,7 @@ def diagnostic_report(cfg, config_path, check_list) -> str:
             return f"({e})"
     try:
         with open("/etc/os-release") as f:
-            distro = next((l.split("=", 1)[1].strip().strip('"') for l in f if l.startswith("PRETTY_NAME=")), "?")
+            distro = next((ln.split("=", 1)[1].strip().strip('"') for ln in f if ln.startswith("PRETTY_NAME=")), "?")
     except OSError:
         distro = "?"
     lines = [
@@ -484,7 +488,7 @@ def diagnostic_report(cfg, config_path, check_list) -> str:
         "checklist:",
         *[f"  {'✓' if c.ok else ('✗' if c.ok is False else '?')} {c.title} {c.detail}" for c in check_list],
         f"settings ({config_path}):",
-        *("  " + l for l in settings.to_toml(cfg).splitlines() if l and not l.startswith("#")),
+        *("  " + ln for ln in settings.to_toml(cfg).splitlines() if ln and not ln.startswith("#")),
         "recent log:",
         run("journalctl", "--user", "-u", "odx11", "-n", "200", "--no-pager", "-o", "short-iso"),
     ]

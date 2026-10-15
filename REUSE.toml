@@ -1,0 +1,9 @@
+# Files that cannot carry a header (data, charts, docs, packaging metadata) take this;
+# a file's own SPDX header wins where it has one ("closest").
+version = 1
+
+[[annotations]]
+path = "**"
+precedence = "closest"
+SPDX-FileCopyrightText = "2026 Vibhanshu Biswas"
+SPDX-License-Identifier = "GPL-3.0-or-later"

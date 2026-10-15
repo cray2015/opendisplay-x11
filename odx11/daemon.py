@@ -829,7 +829,7 @@ def run(cfg, display, injector, make_pipeline, tcp=None, udid=None, config_path=
             try:
                 return socket.create_connection(tcp, timeout=cfg.session.silence_timeout_s)
             except ConnectionRefusedError:
-                raise usbmux.MuxError(usbmux.RESULT_REFUSED)
+                raise usbmux.MuxError(usbmux.RESULT_REFUSED) from None
         return usbmux.connect(cfg.transport.usbmuxd_socket, device_id, cfg.transport.device_port)
 
     def open_connection(sock, on_end, on_hello):

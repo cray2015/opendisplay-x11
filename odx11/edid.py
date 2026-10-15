@@ -115,7 +115,8 @@ def build(timing: Timing, name: str, serial: int, year: int = 2026) -> bytes:
     b += _text_descriptor(0xFF, f"{serial:08X}")   # serial string, shown by some tools
     b += bytes([0])                             # no extension blocks
     b += bytes([(-sum(b)) & 0xFF])
-    assert len(b) == 128
+    if len(b) != 128:
+        raise ValueError(f"EDID base block must be 128 bytes, got {len(b)}")
     return bytes(b)
 
 

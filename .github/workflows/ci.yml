@@ -86,3 +86,39 @@ jobs:
           (cd second && DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -b -us -uc)
           sha256sum out-first/*.deb opendisplay-x11_*_all.deb | tee -a "$GITHUB_STEP_SUMMARY"
           cmp out-first/opendisplay-x11_*_all.deb opendisplay-x11_*_all.deb
+
+  checks:
+    name: Lint, licences and test coverage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      # pycodestyle, pyflakes, bugbear and bandit's security rules; config in pyproject.toml.
+      - name: ruff
+        uses: astral-sh/ruff-action@278981a28ce3188b1e39527901f38254bf3aac89  # v4.1.0
+        with:
+          version: "0.17.0"
+          args: check --output-format github
+
+      # The maintainer scripts run as root at install and removal.
+      - name: shellcheck
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends shellcheck
+          shellcheck -S style install.sh debian/postinst debian/prerm debian/postrm
+
+      # Every file has a licence and copyright (REUSE.toml covers files without a header).
+      - name: REUSE
+        run: |
+          docker run --rm --volume "$PWD:/data" \
+            fsfe/reuse:6.2.0@sha256:85462a75c0f8efda09ddd190b92816b70e7662577c8427429e11e1b9f25a992e lint
+
+      # Reported on every run; fails only if coverage drops below today's floor (52 % → 50).
+      - name: Test coverage
+        run: |
+          sudo apt-get install -y -q --no-install-recommends python3-pytest python3-gi python3-coverage
+          python3 -m coverage run --source=odx11 -m pytest -q tests/
+          python3 -m coverage report --sort=cover | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 -m coverage report --fail-under=50 > /dev/null

@@ -231,5 +231,5 @@ class ActivityMonitor:
     def close(self):
         try:
             self.x.close()
-        except Exception:
+        except Exception:   # noqa: S110 — closing a dead X connection; nothing to do
             pass

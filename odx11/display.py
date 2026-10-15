@@ -77,7 +77,7 @@ def xrandr_name(kernel_connector: str) -> str:
 def cvt_modeline(w: int, h: int, refresh: int) -> list[str]:
     out = subprocess.run(["cvt", "-r", str(w), str(h), str(refresh)],
                          capture_output=True, text=True, check=True).stdout
-    line = next(l for l in out.splitlines() if l.startswith("Modeline"))
+    line = next(ln for ln in out.splitlines() if ln.startswith("Modeline"))
     return line.split()[2:]          # drop 'Modeline' and the quoted name
 
 

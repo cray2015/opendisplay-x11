@@ -63,7 +63,8 @@ def render(theme):
     step = Y_STEP if top > 25 else Y_STEP // 2
     Y_MAX = step * math.ceil(top / step)
     plot_w, plot_h = W - LEFT - RIGHT, H - TOP - BOTTOM
-    y_of = lambda v: TOP + plot_h * (1 - min(v, Y_MAX) / Y_MAX)
+    def y_of(v):
+        return TOP + plot_h * (1 - min(v, Y_MAX) / Y_MAX)
     font = "font-family=\"-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif\""
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" viewBox="0 0 {W} {H}" '
            f'role="img" aria-labelledby="t d">',
@@ -74,7 +75,8 @@ def render(theme):
            f'<text x="{LEFT}" y="30" {font} font-size="16" font-weight="600" fill="{t["text"]}">'
            'CPU use by how often the iPad\'s screen changes</text>',
            f'<text x="{LEFT}" y="50" {font} font-size="12" fill="{t["muted"]}">'
-           f'% of one CPU core · lower is better · mean of 3 runs · i5-6500T · Processing on the GPU (HD 530) · version {VERSION}</text>']
+           '% of one CPU core · lower is better · mean of 3 runs · i5-6500T · '
+           f'Processing on the GPU (HD 530) · version {VERSION}</text>']
     # legend only when there are two or more series (a single series is named by the title)
     lx = LEFT
     for i, (name, _) in enumerate(SERIES if len(SERIES) > 1 else []):
@@ -154,7 +156,8 @@ def render_compare(theme):
         y0 = top_y + pi * (PANEL_H + PANEL_GAP) + 20          # panel's plot top
         base = y0 + PANEL_H - 20
         ph = base - y0
-        y_of = lambda v: base - ph * min(v, y_max) / y_max
+        def y_of(v, base=base, ph=ph):
+            return base - ph * min(v, y_max) / y_max
         out.append(f'<text x="{LEFT}" y="{y0 - 6}" {font} font-size="13" font-weight="600" '
                    f'fill="{t["text"]}">{esc(pname)}</text>')
         for v in range(0, y_max + 1, step * 2):

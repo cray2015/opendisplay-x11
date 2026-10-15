@@ -70,7 +70,7 @@ def describe(geom, video, display_name: str, fps: int | None = None, gpu: bool =
         "! queue name=q leaky=downstream max-size-buffers=1 max-size-bytes=0 max-size-time=0 "
         f"! {convert}"
         # vaapih264enc, not vah264lpenc: the latter answers force-key-unit with a non-IDR I-frame.
-        f"! vaapih264enc tune=low-power rate-control=cqp init-qp={video.effective("qp")} max-bframes=0 "
+        f"! vaapih264enc tune=low-power rate-control=cqp init-qp={video.effective('qp')} max-bframes=0 "
         f"keyframe-period={video.keyframe_period} "
         "! h264parse config-interval=-1 "
         "! video/x-h264,stream-format=byte-stream,alignment=au "

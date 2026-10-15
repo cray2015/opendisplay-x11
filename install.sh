@@ -31,8 +31,8 @@ if [[ $MODE == uninstall ]]; then
 fi
 
 echo "== machine"
-[[ ${XDG_SESSION_TYPE:-} == x11 && -n ${DISPLAY:-} ]] && ok "X11 session on $DISPLAY" \
-  || fail "needs an X11 session (XDG_SESSION_TYPE=${XDG_SESSION_TYPE:-unset}); Wayland is not supported"
+if [[ ${XDG_SESSION_TYPE:-} == x11 && -n ${DISPLAY:-} ]]; then ok "X11 session on $DISPLAY"
+else fail "needs an X11 session (XDG_SESSION_TYPE=${XDG_SESSION_TYPE:-unset}); Wayland is not supported"; fi
 DRIVER=$(basename "$(readlink -f /sys/class/drm/card*/device/driver 2>/dev/null | head -1)" 2>/dev/null)
 case $DRIVER in
   i915|xe) ok "GPU driver $DRIVER (tested: Intel HD 530 / i915)" ;;
@@ -40,11 +40,13 @@ case $DRIVER in
   *)       fail "GPU driver '${DRIVER:-none}': needs a kernel DRM driver (i915/amdgpu); NVIDIA's proprietary driver cannot force a connector" ;;
 esac
 FREE=$(for s in /sys/class/drm/card*-HDMI-A-*/status; do [[ -e $s && $(cat "$s") == disconnected ]] && basename "$(dirname "$s")"; done | head -1)
-[[ -n $FREE ]] && ok "free video port available ($FREE)" || warn "no free video port (HDMI, or DisplayPort with an HDMI alias) right now — required, unless odx11 is already using it; see README 'Why a free video port is required'"
-id -nG | tr ' ' '\n' | grep -qx plugdev && ok "$USER is in plugdev (may force the connector once the package's udev rule is installed)" \
-  || fail "$USER is not in the plugdev group — add it (Users and Groups settings) and log out and back in"
+if [[ -n $FREE ]]; then ok "free video port available ($FREE)"; else warn "no free video port (HDMI, or DisplayPort with an HDMI alias) right now — required, unless odx11 is already using it; see README 'Why a free video port is required'"; fi
+if id -nG | tr ' ' '\n' | grep -qx plugdev; then
+  ok "$USER is in plugdev (may force the connector once the package's udev rule is installed)"
+else fail "$USER is not in the plugdev group — add it (Users and Groups settings) and log out and back in"; fi
 if command -v idevice_id >/dev/null && [[ -n $(idevice_id -l 2>/dev/null) ]]; then
-  idevicepair validate >/dev/null 2>&1 && ok "iPad attached and paired" || warn "iPad attached but not paired: unlock it and tap Trust"
+  if idevicepair validate >/dev/null 2>&1; then ok "iPad attached and paired"
+  else warn "iPad attached but not paired: unlock it and tap Trust"; fi
 fi
 for f in "$HOME/.config/systemd/user/odx11.service" /usr/local/sbin/odx11-connector /etc/sudoers.d/odx11; do
   [[ -e $f ]] && fail "leftover from the pre-package developer install: $f — remove it (the user unit would shadow the packaged one)"
@@ -55,7 +57,7 @@ MISSING=$(cd "$REPO" && dpkg-checkbuilddeps 2>&1 | sed -n 's/.*Unmet build depen
 command -v dpkg-buildpackage >/dev/null || MISSING="dpkg-dev $MISSING"
 if [[ -z $MISSING ]]; then ok "build dependencies present"
 elif [[ $MODE == check ]]; then fail "missing build tools: $MISSING"
-else echo "  installing build tools: $MISSING"; as_root apt-get install -y --no-install-recommends $MISSING || fail "could not install build tools"; fi
+else echo "  installing build tools: $MISSING"; read -ra PKGS <<< "$MISSING"; as_root apt-get install -y --no-install-recommends "${PKGS[@]}" || fail "could not install build tools"; fi
 
 echo
 [[ $FAILURES -eq 0 ]] || { echo "$FAILURES problem(s) above must be fixed first."; exit 1; }
@@ -66,7 +68,7 @@ echo "== building"
   || { echo "build failed — see dist.build.log" >&2; exit 1; }
 mkdir -p "$REPO/dist"
 mv "$REPO"/../opendisplay-x11_*_all.deb "$REPO"/../opendisplay-x11_*.buildinfo "$REPO"/../opendisplay-x11_*.changes "$REPO/dist/" 2>/dev/null
-DEB=$(ls -t "$REPO"/dist/opendisplay-x11_*_all.deb | head -1)
+DEB=$(find "$REPO/dist" -maxdepth 1 -name 'opendisplay-x11_*_all.deb' -printf '%T@ %p\n' | sort -rn | head -1 | cut -d' ' -f2-)
 ok "built $(basename "$DEB") (unit tests passed during the build)"
 [[ $MODE == build ]] && exit 0
 
