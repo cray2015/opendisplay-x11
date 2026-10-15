@@ -317,11 +317,13 @@ def test_mux_reader_rejects_garbage_length():
 class GatePipe:
     def __init__(self, *a):
         self.log = []
+        self.gates = []
     def start(self): self.log.append("start")
     def stop(self): self.log.append("stop")
     def pause(self): self.log.append("pause")
     def resume(self): self.log.append("resume")
     def force_idr(self): self.log.append("idr")
+    def open_gate(self, seconds): self.gates.append(seconds)
 
 
 def gated(idle=1.0):
@@ -556,3 +558,24 @@ def test_cursor_hidden_when_it_leaves_the_ipad():
     clock.advance(1)
     s.on_pointer(5000, 5000)
     assert json.loads(raw[-1][4:]) == {"type": "cursor", "v": 0}
+
+
+def test_activity_opens_the_frame_gate_for_the_change_tail():
+    s, clock, pipes = gated()
+    assert pipes[0].gates == [0.15]                       # a new stream opens it at once
+    clock.advance(0.5)
+    s.on_activity()
+    assert pipes[0].gates == [0.15, 0.15]
+
+
+def test_zero_tail_never_gates():
+    clock = Clock()
+    made = []
+
+    def make(*a, **kw):
+        made.append(GatePipe())
+        return made[-1]
+    s = Session(config.parse({"video": {"change_tail_ms": 0}}), lambda b: None, SDisplay(), SInjector(),
+                make, call_later=clock.call_later, monotonic=lambda: clock.now)
+    s.on_payload(hello(2360, 1640))
+    assert made[0].gates == []
