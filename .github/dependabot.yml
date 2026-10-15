@@ -16,3 +16,11 @@ updates:
         patterns: ["*"]
     commit-message:
       prefix: "CI"
+  - package-ecosystem: docker
+    directory: /tests/x11            # the X11 test image's pinned Ubuntu base
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: "CI"

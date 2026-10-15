@@ -120,7 +120,7 @@ Recorded here so CI fails only on new problems. Nothing was silently suppressed.
 | mutation testing | 1,687 mutants, 91 % killed (2026-10-15). annexb, config, cursor, protocol, settings and state: 100 %. edid.py is excluded: it serves only a boot-time EDID fallback that is unused at runtime (`docs/decisions.md`). input 48 %: its 147 untested mutants are all in the X11 injector, which needs an X server | Raised from ~70 % by tests for every config limit, exact messages and wording, the iPad's `hello` fields, the liveness check (a mutant sending SIGHUP survived before), PNG structure and touch edges. Mutants that cannot change behaviour are marked `# pragma: no mutate` with the reason (about 15). Reported monthly; not a gate yet |
 | capability check | `odx11/pipeline.py:169` matches `cap-screen-capture` | A docstring mentioning `ximagesrc`; harmless |
 | lintian | `appstream-metadata-missing-modalias-provide` for the udev rule | The rule grants a permission; it is not hardware support that AppStream should advertise |
-| manual updates | gitleaks binary (SHA256 in `ci.yml`), the `fsfe/reuse` and `semgrep/semgrep` images (by digest), mutmut's version | Pinned inside `run:` steps, which Dependabot does not update |
+| manual updates | gitleaks binary (SHA256 in `ci.yml`), the `fsfe/reuse` and `semgrep/semgrep` images (by digest), mutmut's version (the X11 test image's Ubuntu base is updated by Dependabot) | Pinned inside `run:` steps, which Dependabot does not update |
 
 ## Human direction
 
