@@ -17,7 +17,8 @@ Last reviewed: 2026-10-15 (version 0.4.2).
 
 Locations are `file:line` in this revision. `.semgrep/capabilities.yml` finds every one of them,
 so the list cannot silently go stale: a pull request that adds a capability fails CI
-until it is reviewed and added here.
+until it is reviewed. Accepting one means adding it to this table **and** marking the line with
+`# nosemgrep: cap-<rule> — reviewed <date>, listed in TRUST.md`, both visible in the pull request's diff.
 
 **While it runs (as your user, never as root):**
 
@@ -31,13 +32,13 @@ until it is reviewed and added here.
 | **USB link to the iPad** | `odx11/usbmux.py:50` | Unix socket `/var/run/usbmuxd` (Apple device multiplexer), connects to the OpenDisplay app's port |
 | **TCP** | `odx11/daemon.py:830` | Only with the developer flag `odx11 run --tcp HOST:PORT` |
 | **Internet** | — | **None.** The README, TestFlight and upstream URLs are only shown as links and a QR code |
-| **Other programs it runs** | `display.py:78` `cvt`, `display.py:179` `xrandr`; `pipeline.py:26`, `checks.py:72` `gst-inspect-1.0`; `checks.py:85` `idevice_id`, `:91` `idevicepair validate`, `:108` `idevicepair pair`; `gui.py:49`, `:388`, `daemon.py:929`, `__main__.py:74`, `:78` `systemctl --user`; `gui.py:395` and `notify.py:87` its own `odx11` commands; `upgrade.py:55` `dpkg-query`; `gui.py:473` `journalctl --user -u odx11` (diagnostic report) | Fixed argument lists, no shell |
+| **Other programs it runs** | `display.py:78` `cvt`, `display.py:179` `xrandr`; `pipeline.py:26`, `checks.py:72` `gst-inspect-1.0`; `checks.py:85` `idevice_id`, `:91` `idevicepair validate`, `:108` `idevicepair pair`; `gui.py:49`, `:394`, `:396`, `daemon.py:929`, `__main__.py:74`, `:78` `systemctl --user` (incl. `import-environment DISPLAY XAUTHORITY` when you turn it on or log in); `gui.py:403` and `notify.py:87` its own `odx11` commands; `upgrade.py:55` `dpkg-query`; `gui.py:481` `journalctl --user -u odx11` (diagnostic report) | Fixed argument lists, no shell |
 | **Files written** | `state.py:46-65` | `$XDG_RUNTIME_DIR/odx11/state.json` (status for the window) |
 | | `settings.py:103-111`, `gui.py:232` | `~/.config/odx11/config.toml` (only when you change a setting) |
 | **Files watched** | `daemon.py`, `gui.py`, `upgrade.py` | inotify on the usbmuxd socket, its config, its state file and the installed `VERSION` file |
-| **Environment** | `__main__.py:72`, `checks.py:28`, `config.py:14`, `daemon.py:957`, `gui.py:484-485`, `state.py:31` | `DISPLAY`, `XAUTHORITY`, `XDG_CONFIG_HOME`, `XDG_RUNTIME_DIR`, `XDG_SESSION_TYPE`, `XDG_CURRENT_DESKTOP` |
+| **Environment** | `__main__.py:72`, `checks.py:28`, `config.py:14`, `daemon.py:957`, `gui.py:391`, `:492-493`, `state.py:31` | `DISPLAY`, `XAUTHORITY`, `XDG_CONFIG_HOME`, `XDG_RUNTIME_DIR`, `XDG_SESSION_TYPE`, `XDG_CURRENT_DESKTOP` |
 | **D-Bus** | `notify.py:56-73` | Outgoing desktop notifications (`org.freedesktop.Notifications`) and their click signal. It offers no D-Bus service |
-| **Clipboard** | `gui.py:464` | Writes the diagnostic report, only when you click *Copy diagnostic report* |
+| **Clipboard** | `gui.py:472` | Writes the diagnostic report, only when you click *Copy diagnostic report* |
 | **Dynamic code** | — | **None** (`eval`, `exec`, `pickle`, `ctypes`: none; `importlib.metadata` only reads the version) |
 
 **At install and removal (as root, like every package):**
@@ -73,6 +74,10 @@ Developer-only (not shipped): `install.sh` uses `pkexec` to install build tools 
 | Repository security practices | OpenSSF Scorecard | Weekly and on `main` | `scorecard.yml` |
 | Decisions were made by a human | Decision log, ADRs, human overrides | — | `docs/decisions.md`, `docs/adr/`, `docs/human-overrides.md` |
 
+The README's coverage badge is drawn by CI (`tools/coverage_badge.py`) on each push to `main` and
+published to this repository's GitHub Pages; no coverage service sees the code. The release and
+licence badges are rendered by shields.io from public GitHub data.
+
 Every action is pinned to a full commit SHA, and every workflow starts with no or read-only permissions.
 
 ## What is not verified
@@ -106,6 +111,12 @@ Every action is pinned to a full commit SHA, and every workflow starts with no o
   project or its checks. Its protocol (v3) has no authentication. Anyone on the iPad's Wi-Fi, and any
   local user through the world-writable usbmuxd socket, can connect to it and replace the picture or
   receive your touches; they cannot see your desktop or click on your PC (README, Security).
+- **OpenSSF Scorecard's score is partly limited by the project's shape.** It is 7.0 on its first run
+  (2026-10-15). *Code-Review* is 0 because the owner is the only maintainer and GitHub does not let anyone
+  approve their own pull request; every change to `main` still goes through a PR with all CI checks
+  required. *Branch-Protection* cannot be read with the workflow's own token (Scorecard would need a
+  personal access token stored as a secret; not done). *Maintained* is 0 until the repository is 90 days
+  old.
 - **Untested hardware.** AMD and other Intel GPUs are untested; NVIDIA's proprietary driver cannot work.
 
 ## Baselined findings
@@ -149,8 +160,9 @@ sha256sum -c SHA256SUMS
 gh attestation verify "opendisplay-x11_${TAG#v}_all.deb" -R cray2015/opendisplay-x11
 ```
 
-`gh attestation verify` checks the Sigstore signature. It also shows the workflow
-(`.github/workflows/release.yml`) and the commit that produced the file.
+`gh attestation verify` checks the Sigstore signature and exits 0 when it holds. It shows the
+workflow (`.github/workflows/release.yml`) and the commit that produced the file. It prints only to a
+terminal; in a script, check the exit code, or add `--format json` to see the details.
 
 **2. The source produces the same file (independent rebuild):**
 

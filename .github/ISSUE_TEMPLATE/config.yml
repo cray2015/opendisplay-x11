@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: 2026 Vibhanshu Biswas
+# SPDX-License-Identifier: GPL-3.0-or-later
+blank_issues_enabled: true
+contact_links:
+  - name: Security problem
+    url: https://github.com/cray2015/opendisplay-x11/security/advisories/new
+    about: Report vulnerabilities privately, not as a public issue (see SECURITY.md).
+  - name: Problem with the iPad app itself
+    url: https://github.com/peetzweg/opendisplay
+    about: OpenDisplay (the iPad app) is a separate project.

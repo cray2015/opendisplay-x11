@@ -88,5 +88,7 @@ jobs:
             echo
             echo "Or rebuild it from this tag and compare: see TRUST.md."
           } > notes.md
-          gh release create "$TAG" --repo "$REPO" --title "$TAG" --notes-file notes.md \
+          # 0.x versions are alpha: published as pre-releases.
+          pre=(); case "$TAG" in v0.*) pre=(--prerelease) ;; esac
+          gh release create "$TAG" --repo "$REPO" --title "$TAG" --notes-file notes.md "${pre[@]}" \
             dist/opendisplay-x11_*_all.deb dist/opendisplay-x11_*.buildinfo dist/SHA256SUMS dist/opendisplay-x11.spdx.json

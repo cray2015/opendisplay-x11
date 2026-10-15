@@ -1,3 +1,12 @@
+opendisplay-x11 (0.4.4) unstable; urgency=medium
+
+  * Settings window: turning it on hands the desktop session's display to
+    the service first, so it works right after installing, with no log-out.
+  * Alpha: tester checklist, issue forms for bug and tester reports, and
+    0.x releases published as pre-releases.
+
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 23:37:02 +0530
+
 opendisplay-x11 (0.4.3) unstable; urgency=medium
 
   * Fix: the service failed to start on Python 3.11 (a Python 3.12-only

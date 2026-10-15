@@ -1,13 +1,23 @@
 # OpenDisplay for X11
 
+[![CI](https://github.com/cray2015/opendisplay-x11/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/cray2015/opendisplay-x11/actions/workflows/ci.yml?query=branch%3Amain)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/cray2015/opendisplay-x11/badge)](https://scorecard.dev/viewer/?uri=github.com/cray2015/opendisplay-x11)
+[![Coverage](https://cray2015.github.io/opendisplay-x11/coverage.svg)](https://github.com/cray2015/opendisplay-x11/actions/workflows/ci.yml?query=branch%3Amain)
+[![Release](https://img.shields.io/github/v/release/cray2015/opendisplay-x11?include_prereleases)](https://github.com/cray2015/opendisplay-x11/releases)
+[![Licence: GPL-3.0-or-later](https://img.shields.io/github/license/cray2015/opendisplay-x11)](LICENSE)
+
 *An unofficial sender for the [OpenDisplay](https://github.com/peetzweg/opendisplay) iPad app — not affiliated with the OpenDisplay project.*
 
 Use an iPad as a wired, extended second monitor for a Linux X11 desktop —
 plug in the cable, open the app, and the desktop extends onto it. Touch,
 drag, long-press right-click and two-finger scroll work on the iPad.
 
-Built with heavy AI assistance under human direction. What it can access and how to
-verify every release yourself: [TRUST.md](TRUST.md).
+What it can access, and how to verify every release yourself: [TRUST.md](TRUST.md).
+
+> [!NOTE]
+> **Status: alpha.** It is used daily on one machine, and it is ready for others to try. Expect rough
+> edges on hardware and desktops it has not met yet. Testers: please go through the
+> [alpha checklist](docs/alpha-testing.md) and report what worked as well as what did not.
 
 > [!IMPORTANT]
 > **Your computer needs a free video port.** odx11 turns an *empty* video
@@ -27,6 +37,22 @@ no USB networking, no browser, no custom kernel.
 Developed and verified on an HP EliteDesk 800 G3 DM (Intel HD 530) with
 Linux Mint 22.3 Cinnamon and an iPad Air (5th gen). Design, decisions and
 acceptance criteria: [`PROJECT_SPEC.md`](PROJECT_SPEC.md).
+
+## Why this exists
+
+I wanted my iPad as a second monitor on Linux without settling for any of these:
+
+- **Old, unmaintained apps or repositories.**
+- **More resource-intensive processes** such as Sunshine and Moonlight, which are built for game
+  streaming.
+- **A dummy plug.** A spare video port on the computer becomes the iPad's monitor; no extra
+  hardware sits in a socket.
+
+So this project stays as native as possible. It uses the kernel's own video port, X11's own
+monitor handling (RandR), the graphics chip's hardware encoder, the stock `usbmuxd` for the USB
+link, and the unmodified OpenDisplay app on the iPad. When the iPad's screen is still, it uses
+almost no CPU. It is meant to be maintained for the long run: every change is tested and every
+release can be verified ([TRUST.md](TRUST.md)).
 
 ## How it works
 
@@ -67,7 +93,7 @@ odx11 daemon (systemd --user)
 | **Free video port** | An **empty** HDMI socket, or a DisplayPort socket that accepts HDMI adapters (DP++) | **Hard requirement** — see [below](#why-a-free-video-port-is-required). Nothing may be plugged into it. |
 | GPU | Kernel DRM driver | Tested on Intel `i915`. `amdgpu` should work for the monitor; encoder settings untested. NVIDIA's proprietary driver cannot do this. |
 | Encoder | VA-API H.264 via `gstreamer1.0-vaapi` | Intel: `intel-media-va-driver` (the free build is enough). **Recommended:** `intel-media-va-driver-non-free` — the GPU then also prepares the frames (Processing: iGPU / GPU), for about a third of the CPU ([Performance](#performance)). |
-| OS | systemd user session, Python ≥ 3.11, Debian/Ubuntu packages | Mint 22.3 / Ubuntu 24.04 tested. The installer uses `apt`. |
+| OS | **Linux Mint 22 / Ubuntu 24.04 or newer**, with a systemd user session | Mint 22.3 tested. Older releases (Mint 21, Ubuntu 22.04, Debian 12) are not supported: the package needs Python ≥ 3.11, GTK 4.14 and libadwaita 1.5, and will not install there. |
 | iPad | iPadOS 15+ (upstream; the Linux fork states 16+), OpenDisplay app, a USB **data** cable | The app is a [TestFlight beta](https://testflight.apple.com/join/3NYaY11c). The iPad must be trusted (paired) and unlocked. |
 
 ## Why a free video port is required
@@ -126,14 +152,20 @@ pointer out of areas no real output shows).
 
 ## Install
 
-1. Download `opendisplay-x11_<version>_all.deb`.
+1. Download `opendisplay-x11_<version>_all.deb` from the
+   [Releases page](https://github.com/cray2015/opendisplay-x11/releases).
    **First make sure your computer has a free video port** ([above](#why-a-free-video-port-is-required)).
+   To check the download is genuine, see [Verify a release yourself](TRUST.md#verify-a-release-yourself).
 2. Double-click it. Your distribution's package installer opens; click
    **Install** and enter your password. Everything it needs comes with it.
-3. Log out and back in once (or, until the settings app exists, restart).
+3. Open **OpenDisplay for X11** from the application menu and turn it on.
 
 That's all — from then on odx11 starts with your desktop. First time with the
 iPad: plug it in, unlock it and tap **Trust** when it asks.
+
+**Updates:** there is no update channel yet, so new versions do not arrive by themselves. To be told
+about them, choose **Watch → Custom → Releases** on the GitHub page, then install the new `.deb` the
+same way; the running service switches over to it on its own.
 
 What the package installs (nothing runs as root):
 
@@ -393,6 +425,13 @@ to verify a release yourself: **[TRUST.md](TRUST.md)**. To report a vulnerabilit
 Remove **opendisplay-x11** in your software manager (or `sudo apt remove
 opendisplay-x11`). Running sessions are stopped and the port released. Your
 `~/.config/odx11/config.toml` and the desktop's saved monitor layout are left in place.
+
+## Thanks
+
+Thank you to the [OpenDisplay](https://github.com/peetzweg/opendisplay) iPad app and its
+developers. The app laid the foundation for this project: it works flawlessly, and it has been
+the stable platform this sender is built on. Its published protocol is what made an independent
+Linux X11 sender possible.
 
 ## Contributing
 

@@ -20,6 +20,11 @@ updates:
     directory: /tests/x11            # the X11 test image's pinned Ubuntu base
     schedule:
       interval: weekly
+    # Tests run on the Ubuntu the package targets (24.04 = Linux Mint 22): take refreshed
+    # 24.04 images (new digests), never a new Ubuntu release.
+    ignore:
+      - dependency-name: ubuntu
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
     cooldown:
       default-days: 7
     commit-message:
