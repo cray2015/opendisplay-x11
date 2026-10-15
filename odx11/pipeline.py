@@ -11,6 +11,8 @@ import logging
 import subprocess
 import time
 
+from . import annexb
+
 log = logging.getLogger(__name__)
 
 
@@ -32,21 +34,30 @@ def _refresh_registry():
             log.debug("gst-plugin-scanner: %s", line.strip())
 
 
-_refresh_registry()
+Gst = GstVideo = None          # set by init(): importing this module starts nothing
 
-import gi  # noqa: E402
-gi.require_version("Gst", "1.0")
-gi.require_version("GstVideo", "1.0")
-from gi.repository import Gst, GstVideo  # noqa: E402
 
-from . import annexb  # noqa: E402
-
-Gst.init(None)
+def init():
+    """Start GStreamer, once. The service calls this at startup, before it forces the video
+    port: forcing the port touches the GPU device, which would make the first GStreamer start
+    after it rescan its plugins (a delay on connect, and the vaapi plugin's CRITICAL in the
+    journal). Later calls do nothing."""
+    global Gst, GstVideo
+    if Gst is not None:
+        return
+    _refresh_registry()
+    import gi
+    gi.require_version("Gst", "1.0")
+    gi.require_version("GstVideo", "1.0")
+    from gi.repository import Gst as gst, GstVideo as gstvideo
+    gst.init(None)
+    Gst, GstVideo = gst, gstvideo
 
 
 def gpu_convert_available() -> bool:
     """vaapipostproc is only registered when the VA driver offers VideoProc — on Intel's
     iHD that is the non-free build (`intel-media-va-driver-non-free`), not the free one."""
+    init()
     return Gst.ElementFactory.find("vaapipostproc") is not None
 
 
@@ -84,6 +95,7 @@ class Pipeline:
     on_error(message) runs on the main loop (bus errors)."""
 
     def __init__(self, geom, video, display_name, on_au, on_error, fps=None):
+        init()                          # normally done at service start already
         self.on_au = on_au
         self.on_error = on_error
         self.normaliser = annexb.Normaliser()
@@ -91,7 +103,7 @@ class Pipeline:
         self._captured = 0               # buffers into the leaky queue
         self._encoded = 0                # buffers out of it, towards the encoder
         self._gated = 0                  # dropped on purpose: nothing changed on screen
-        self._gate_until = 0.0           # monotonic time until which frames are converted
+        self._gate_until = 0.0  # pragma: no mutate — monotonic time until which frames are converted (any past value)
         self._always_open = (video.effective("change_tail_ms") == 0)
         self._last_health = (time.monotonic(), 0)
         self._args = (geom, video, display_name, fps)

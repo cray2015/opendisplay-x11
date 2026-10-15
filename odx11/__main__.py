@@ -19,6 +19,7 @@ EX_CONFIG = 78          # sysexits: configuration error — the unit does not re
 def cmd_run(cfg, args):
     from . import daemon, display, input as odinput, pipeline
 
+    pipeline.init()                          # GStreamer starts now, before the port is forced
     problem = display.connector_problem(cfg.display)
     if problem:
         log.error("%s", problem)

@@ -130,14 +130,14 @@ jobs:
       - name: Build the X11 test image
         run: docker build --quiet --tag odx11-x11 tests/x11
 
-      # Reported on every run; fails only if coverage drops below the floor (measured 77 % → 75).
+      # Reported on every run; fails only if coverage drops below the floor (measured 82 % → 78).
       - name: Tests and coverage
         shell: bash          # -eo pipefail: a failing test or coverage drop fails the step
         run: |
           docker run --rm --volume "$PWD:/src:ro" odx11-x11 bash -c '
             python3 -m coverage run --source=odx11 -m pytest -q -p no:cacheprovider -rs tests/ &&
             python3 -m coverage report --sort=cover &&
-            python3 -m coverage report --fail-under=75 > /dev/null' | tee coverage.txt
+            python3 -m coverage report --fail-under=78 > /dev/null' | tee coverage.txt
           { echo '```'; tail -25 coverage.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 
   capabilities:

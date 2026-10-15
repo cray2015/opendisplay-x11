@@ -144,11 +144,12 @@ def service(monkeypatch, tmp_path):
         def __init__(self, geom, video, xname, on_au, on_error, fps):
             seen["pipelines"].append((geom, xname, on_au, on_error, fps))
 
-    monkeypatch.setattr(display, "connector_problem", lambda d: seen.get("problem"))
+    order = seen.setdefault("order", [])
+    monkeypatch.setattr(display, "connector_problem", lambda d: order.append("port check") or seen.get("problem"))
     monkeypatch.setattr(display, "VirtualDisplay", VDisplay)
     monkeypatch.setattr(cli.atexit, "register", lambda fn: seen["atexit"].append(fn))
     fake_module(monkeypatch, "input", Injector=lambda cfg: "injector")
-    fake_module(monkeypatch, "pipeline", Pipeline=Pipeline)
+    fake_module(monkeypatch, "pipeline", Pipeline=Pipeline, init=lambda: order.append("gstreamer"))
     fake_module(monkeypatch, "daemon", run=run, display_name=lambda: ":7")
     return seen
 
@@ -159,6 +160,7 @@ def test_run_wires_the_daemon_together(service, cfgfile):
     assert service["run"] == {"tcp": ("127.0.0.1", 9000), "udid": "00008103-ABC", "config_path": path}
     assert service["pipelines"] == [((0, 0, 16, 16), ":7", "on_au", "on_error", 30)]
     assert len(service["atexit"]) == 1 and service["teardown"] == 0       # teardown left to exit
+    assert service["order"] == ["gstreamer", "port check"]                  # GStreamer first, as before
 
 
 def test_run_without_tcp_dials_usb(service, cfgfile):
