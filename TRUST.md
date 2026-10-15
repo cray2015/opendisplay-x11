@@ -117,6 +117,18 @@ Recorded here so CI fails only on new problems. Nothing was silently suppressed.
 | lintian | `appstream-metadata-missing-modalias-provide` for the udev rule | The rule grants a permission; it is not hardware support that AppStream should advertise |
 | manual updates | gitleaks binary (SHA256 in `ci.yml`), the `fsfe/reuse` and `semgrep/semgrep` images (by digest), mutmut's version | Pinned inside `run:` steps, which Dependabot does not update |
 
+## Human direction
+
+How the owner directed the AI is recorded in three places:
+
+- [`docs/human-overrides.md`](docs/human-overrides.md): 17 places where the owner constrained or
+  corrected the AI, each quoting the owner's own message with its date. **Draft:** entries show
+  *Confirmed* once the owner has reviewed them.
+- [`docs/adr/`](docs/adr/README.md): the five most significant decisions, reconstructed from the
+  spec, history and code.
+- [`docs/decisions.md`](docs/decisions.md): every decision with its reason and status, kept as
+  they are made.
+
 ## Verify a release yourself
 
 Replace `v0.4.2` with the release you downloaded. You need `gh` (GitHub CLI) and Docker.
