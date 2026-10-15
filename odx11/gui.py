@@ -384,7 +384,13 @@ class Window(Adw.ApplicationWindow):
                 self.toasts.add_toast(Adw.Toast.new(msg.format(error=r.stderr.strip())))
             self._on_state_changed()
         def work():
-            if on:   # a package upgrade may have replaced the unit file: re-read it first
+            if on:
+                # Hand the session's display to systemd, as the login autostart does
+                # (__main__.cmd_autostart), so turning it on never needs a log-out.
+                env = [v for v in ("DISPLAY", "XAUTHORITY") if os.environ.get(v)]
+                if env:
+                    subprocess.run(["systemctl", "--user", "import-environment", *env], capture_output=True)
+                # a package upgrade may have replaced the unit file: re-read it first
                 subprocess.run(["systemctl", "--user", "daemon-reload"], capture_output=True)
             return _service("start" if on else "stop")
         _in_background(work, done)

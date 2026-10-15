@@ -147,12 +147,14 @@ pointer out of areas no real output shows).
 
 ## Install
 
-1. Download `opendisplay-x11_<version>_all.deb`.
+1. Download `opendisplay-x11_<version>_all.deb` from the
+   [latest release](https://github.com/cray2015/opendisplay-x11/releases/latest).
    **First make sure your computer has a free video port** ([above](#why-a-free-video-port-is-required)).
+   To check the download is genuine, see [Verify a release yourself](TRUST.md#verify-a-release-yourself).
 2. Double-click it. Your distribution's package installer opens; click
    **Install** and enter your password. Everything it needs comes with it.
-3. Open **OpenDisplay for X11** from the application menu and turn it on — or simply log out
-   and back in. No restart is needed.
+3. Open **OpenDisplay for X11** from the application menu and turn it on. No log-out or
+   restart is needed.
 
 That's all — from then on odx11 starts with your desktop. First time with the
 iPad: plug it in, unlock it and tap **Trust** when it asks.
