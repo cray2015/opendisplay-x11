@@ -92,6 +92,8 @@ verified by hand against the acceptance criteria in `PROJECT_SPEC.md` §10.
 - **Wrap every user-visible string in `_()` (plurals: `ngettext`) and use `.format()` placeholders, never f-strings, inside them** — logs and the diagnostic report stay English. See `PROJECT_SPEC.md` §8.8.
 - **Keep the desktop entry, icon and AppStream ID equal to the app ID and validated** — the build runs `desktop-file-validate` and `appstreamcli validate`; lintian must stay clean. See `PROJECT_SPEC.md` §8.8.
 - **Keep `upgrade.GUI_ONLY` to modules the daemon never imports** — window-only upgrades skip the service restart by fingerprint; the AST test enforces it. See `PROJECT_SPEC.md` §8.7.
+- **Any new capability (running a program, a socket, a file write, a device path, D-Bus, input, screen, clipboard, dynamic code) is added to `TRUST.md` and, if the rules miss it, to `.semgrep/capabilities.yml` in the same change** — CI fails a PR that adds one unreviewed; TRUST.md is the public promise. See `TRUST.md`.
+- **Pin every GitHub Action to a full commit SHA of a release at least 7 days old, give each workflow no or read-only top-level permissions, and keep zizmor (pedantic) clean** — see `.github/workflows/`.
 - **Ignore unknown control `type`s and fields, logging each unknown type once** — input arrives at hundreds of messages per second. See `PROJECT_SPEC.md` §7.4.
 
 ## Working Rules
