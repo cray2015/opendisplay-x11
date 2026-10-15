@@ -1,0 +1,149 @@
+# SPDX-FileCopyrightText: 2026 Vibhanshu Biswas
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Capability inventory for odx11 (see TRUST.md, "What it can access").
+# Every match is a place where the program reaches outside itself. CI runs these rules
+# on pull requests with --baseline-commit, so only *new* matches fail: adding a capability
+# is allowed, but it must be reviewed and listed in TRUST.md in the same pull request.
+# Run the full inventory: semgrep scan --metrics=off --config .semgrep/capabilities.yml odx11
+rules:
+  - id: cap-exec
+    message: Runs another program. List it in TRUST.md (Running other programs).
+    severity: WARNING
+    languages: [python]
+    pattern-either:
+      - pattern: subprocess.$F(...)
+      - pattern: os.system(...)
+      - pattern: os.popen(...)
+      - patterns:
+          - pattern: os.$EXEC(...)
+          - metavariable-regex: {metavariable: $EXEC, regex: '^(exec[lv]p?e?|spawn[lv]p?e?|posix_spawnp?|fork|forkpty)$'}
+      - pattern: asyncio.create_subprocess_exec(...)
+      - pattern: asyncio.create_subprocess_shell(...)
+      - pattern: Gio.Subprocess(...)
+      - pattern: Gio.Subprocess.new(...)
+      - pattern: GLib.spawn_async(...)
+      - pattern: GLib.spawn_sync(...)
+      - pattern: GLib.spawn_command_line_async(...)
+      - pattern: GLib.spawn_command_line_sync(...)
+
+  - id: cap-network
+    message: Opens a socket or makes a network request. List it in TRUST.md (Sockets / Network).
+    severity: WARNING
+    languages: [python]
+    pattern-either:
+      - pattern: socket.socket(...)
+      - pattern: socket.create_connection(...)
+      - pattern: socket.create_server(...)
+      - pattern: socket.socketpair(...)
+      - pattern: urllib.request.$F(...)
+      - pattern: http.client.$F(...)
+      - pattern: requests.$F(...)
+      - pattern: httpx.$F(...)
+      - pattern: Gio.SocketClient(...)
+      - pattern: Soup.Session(...)
+
+  - id: cap-file-write
+    message: Writes, moves or deletes files. List the path in TRUST.md (File writes).
+    severity: WARNING
+    languages: [python]
+    pattern-either:
+      - pattern: open($P, "=~/[wax+]/", ...)
+      - pattern: open($P, mode="=~/[wax+]/", ...)
+      - pattern: os.fdopen($FD, "=~/[wax+]/", ...)
+      - pattern: os.open(...)
+      - pattern: os.replace(...)
+      - pattern: os.rename(...)
+      - pattern: os.unlink(...)
+      - pattern: os.remove(...)
+      - pattern: os.rmdir(...)
+      - pattern: os.makedirs(...)
+      - pattern: os.mkdir(...)
+      - pattern: os.chmod(...)
+      - pattern: os.chown(...)
+      - pattern: tempfile.mkstemp(...)
+      - patterns:
+          - pattern: shutil.$F(...)
+          - metavariable-regex: {metavariable: $F, regex: '^(copy|copy2|copyfile|copytree|move|rmtree|chown)$'}
+      - pattern: $PATH.write_text(...)
+      - pattern: $PATH.write_bytes(...)
+
+  - id: cap-sysfs-device
+    message: Touches kernel or device files (/sys, /dev, /proc) or the usbmuxd socket. List it in TRUST.md (Hardware).
+    severity: WARNING
+    languages: [python]
+    pattern-regex: '["''](/sys/|/dev/|/proc/|/var/run/usbmuxd)'
+
+  - id: cap-env
+    message: Reads environment variables. List them in TRUST.md (Environment).
+    severity: INFO
+    languages: [python]
+    pattern-either:
+      - pattern: os.environ
+      - pattern: os.getenv(...)
+      - pattern: os.environ.get(...)
+
+  - id: cap-dbus
+    message: Talks to D-Bus. List the service in TRUST.md (D-Bus).
+    severity: WARNING
+    languages: [python]
+    pattern-either:
+      - pattern: Gio.bus_get_sync(...)
+      - pattern: Gio.bus_get(...)
+      - pattern: Gio.DBusProxy.$F(...)
+      - pattern: Gio.DBusConnection.$F(...)
+      - pattern: $BUS.call_sync(...)
+      - pattern: $BUS.signal_subscribe(...)
+      - pattern: Gio.bus_own_name(...)
+      - pattern: dbus.$F(...)
+
+  - id: cap-input-injection
+    message: Synthesises keyboard or pointer input (XTest/uinput). List it in TRUST.md (Input injection).
+    severity: ERROR
+    languages: [python]
+    pattern-either:
+      - pattern: $XT.fake_input(...)
+      - pattern: evdev.UInput(...)
+      - pattern-regex: '["'']/dev/uinput'
+
+  - id: cap-input-monitoring
+    message: Receives keyboard or pointer events from the whole X display (XInput2). List what is read in TRUST.md (Keyboard and mouse events).
+    severity: ERROR
+    languages: [python]
+    pattern-either:
+      - pattern: $W.xinput_select_events(...)
+      - pattern: $W.grab_keyboard(...)
+      - pattern: $W.grab_key(...)
+      - pattern: $D.record_enable_context(...)
+
+  - id: cap-screen-capture
+    message: Reads screen or cursor pixels. List the area in TRUST.md (Screen capture).
+    severity: ERROR
+    languages: [python]
+    pattern-either:
+      - pattern: $X.xfixes_get_cursor_image(...)
+      - pattern: $W.get_image(...)
+      - pattern-regex: '\bximagesrc\b'
+
+  - id: cap-clipboard
+    message: Reads or writes the clipboard. List it in TRUST.md (Clipboard).
+    severity: WARNING
+    languages: [python]
+    pattern-either:
+      - pattern: $W.get_clipboard()
+      - pattern: $W.get_primary_clipboard()
+
+  - id: cap-dynamic-code
+    message: Runs or loads code chosen at run time. Avoid; if needed, justify it in TRUST.md (Dynamic code).
+    severity: ERROR
+    languages: [python]
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: exec(...)
+      - pattern: compile(...)
+      - pattern: __import__(...)
+      - pattern: importlib.import_module(...)
+      - pattern: pickle.$F(...)
+      - pattern: marshal.loads(...)
+      - pattern: ctypes.CDLL(...)
+      - pattern: ctypes.cdll.LoadLibrary(...)

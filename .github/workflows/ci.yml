@@ -122,3 +122,25 @@ jobs:
           python3 -m coverage run --source=odx11 -m pytest -q tests/
           python3 -m coverage report --sort=cover | tee -a "$GITHUB_STEP_SUMMARY"
           python3 -m coverage report --fail-under=50 > /dev/null
+
+  capabilities:
+    name: Capability check (new process, network, file, device, input, D-Bus, dynamic code)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0            # the PR's base commit is needed for the comparison
+          persist-credentials: false
+
+      # On a pull request, only capabilities the PR adds fail the job (--baseline-commit):
+      # each one must be reviewed and added to TRUST.md. On a push, the full inventory is listed.
+      - name: Semgrep with .semgrep/capabilities.yml
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          args=(scan --metrics=off --disable-version-check --config .semgrep/capabilities.yml)
+          if [ -n "$BASE" ]; then args+=(--baseline-commit "$BASE" --error); fi
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp --volume "$PWD:/src" --workdir /src \
+            semgrep/semgrep:1.180.0@sha256:529ee8a277ec8adc5b534d7c74eea0a47e9de21d62852b6ba7ac6ba9566845c3 \
+            semgrep "${args[@]}" odx11
