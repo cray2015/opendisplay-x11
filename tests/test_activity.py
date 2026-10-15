@@ -58,6 +58,14 @@ def test_pointer_wakes_inside_and_once_on_leaving():
     assert not t.pointer(120, 100)
 
 
+
+def test_keys_and_clicks_wake_only_with_the_pointer_over_the_ipad():
+    # Cinnamon draws its Alt+Tab switcher and menus on the pointer's monitor, with no damage
+    t = tracker()
+    assert t.pressed(600, 1500)
+    assert not t.pressed(100, 100)          # typing on the main monitor
+    assert not Tracker().pressed(600, 1500) # no session
+
 def test_no_session_no_wakes():
     t = Tracker()
     t.mapped(6, IPAD_WIN)

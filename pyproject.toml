@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "odx11"
-version = "0.3.6"
+version = "0.3.7"
 description = "iPad as an X11 second monitor over USB, via the OpenDisplay protocol"
 requires-python = ">=3.11"
 license = {text = "GPL-3.0-or-later"}

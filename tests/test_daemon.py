@@ -568,6 +568,14 @@ def test_activity_opens_the_frame_gate_for_the_change_tail():
     assert pipes[0].gates == [0.15, 1.5 / 60, 0.15]
 
 
+
+def test_a_key_or_click_opens_the_gate_for_the_longer_input_tail():
+    # Cinnamon draws its Alt+Tab switcher ~350 ms after the key, with no damage
+    s, clock, pipes = gated()
+    clock.advance(0.5)
+    s.on_activity(s.cfg.video.input_tail_ms)
+    assert pipes[0].gates[-1] == 0.5
+
 def test_zero_tail_never_gates():
     clock = Clock()
     made = []

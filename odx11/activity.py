@@ -14,10 +14,14 @@ capture awake forever. Instead:
 - a window that damages, maps, unmaps or moves wakes us only if it overlaps the
   virtual monitor (before or after a move);
 - XInput2 raw motion catches the cursor, which moves without any repaint and is
-  baked into the video: wake while it is over the virtual monitor or just left it.
+  baked into the video: wake while it is over the virtual monitor or just left it;
+- XInput2 raw key and button events wake while the pointer is over the virtual
+  monitor: pixels the compositor draws itself rather than a window (Cinnamon's
+  Alt+Tab switcher, its menus, OSDs) report no damage at all, and Cinnamon shows
+  them on the pointer's monitor in answer to a key or a click.
 
-Not seen: pixels the compositor draws itself rather than a window — Cinnamon
-panels, OSDs, notifications. By default those live on the primary monitor.
+Still not seen: compositor-drawn pixels that change on their own (a notification
+appearing). By default those live on the primary monitor.
 """
 import logging
 from typing import NamedTuple
@@ -29,8 +33,10 @@ class Activity(NamedTuple):
     wake: bool                  # the virtual monitor's picture may have changed
     pointer: tuple | None       # (x, y) in root coordinates when the pointer moved
     cursor_changed: bool        # the cursor's shape changed (XFixes)
+    pressed: bool = False       # a key or button with the pointer over the virtual monitor
 
 GENERIC_EVENT = 35                       # X protocol event code carrying XInput2 events
+XI_RAW_MOTION = 17                       # XInput2 event type; key/button raw events are 13..16
 
 
 def _overlaps(a, b) -> bool:
@@ -79,6 +85,10 @@ class Tracker:
         self.pointer_inside = inside
         return wake
 
+    def pressed(self, px, py) -> bool:
+        """A key or button went down or up: the compositor may draw on the pointer's monitor."""
+        return self.region is not None and _inside(px, py, self.region)
+
 
 class ActivityMonitor:
     def __init__(self):
@@ -98,7 +108,9 @@ class ActivityMonitor:
         # cursor would freeze during exactly those gestures. 2.1+ delivers raw events regardless.
         xinput.XIQueryVersion(display=self.x.display, opcode=self.x.display.get_extension_major(xinput.extname),
                               major_version=2, minor_version=2)
-        self.root.xinput_select_events([(xinput.AllMasterDevices, xinput.RawMotionMask)])
+        self.root.xinput_select_events([(xinput.AllMasterDevices,
+                                         xinput.RawMotionMask | xinput.RawKeyPressMask | xinput.RawKeyReleaseMask
+                                         | xinput.RawButtonPressMask | xinput.RawButtonReleaseMask)])
         self.root.change_attributes(event_mask=X.SubstructureNotifyMask)
         # The cursor channel needs to know when the sprite changes (arrow → I-beam → hand …).
         self.x.xfixes_query_version()
@@ -173,7 +185,7 @@ class ActivityMonitor:
     def drain(self) -> Activity:
         """Consume pending events: what changed since the last call."""
         X = self._X
-        wake = motion = cursor_changed = False
+        wake = motion = pressed = cursor_changed = False
         rearm = []
         while self.x.pending_events():
             e = self.x.next_event()
@@ -196,19 +208,25 @@ class ActivityMonitor:
                 else:
                     wake |= self._untrack(e.window.id)
             elif e.type == GENERIC_EVENT:
-                motion = True            # XI2 raw motion
+                if getattr(e, "evtype", XI_RAW_MOTION) == XI_RAW_MOTION:
+                    motion = True
+                else:
+                    pressed = True       # XI2 raw key or button, down or up
             elif e.type == self._cursor_event:
                 cursor_changed = True
         for did in rearm:
             self.x.damage_subtract(did)
         pointer = None
+        if motion or pressed:
+            pos = self.pointer_position()            # one round trip per batch, not per event
+            pressed = pressed and self.tracker.pressed(*pos)
         if motion:
-            pointer = self.pointer_position()        # one round trip per batch, not per event
+            pointer = pos
             near = self.tracker.pointer(*pointer)
             wake |= near and self.draw_cursor        # with the cursor channel, motion alone
         if rearm:                                    # never wakes capture
             self.x.flush()
-        return Activity(wake, pointer, cursor_changed)
+        return Activity(wake, pointer, cursor_changed, pressed)
 
     def close(self):
         try:

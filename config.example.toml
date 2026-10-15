@@ -39,6 +39,8 @@ idle_pause_s = 1.0                    # stop capturing after this long with noth
 change_tail_ms = 150                  # after a change, send frames for this long (then only on the next change);
                                       # 0 = send every captured frame
 change_settle_ms = 300                # once quiet this long, send one more frame (catches fades); 0 = off
+input_tail_ms = 500                   # after a key press or click with the pointer on the iPad's monitor, send
+                                      # frames for this long (Cinnamon's Alt+Tab switcher and menus); 0 = off
 
 [cursor]
 enabled = true                        # the iPad draws the cursor from small messages: moves at input speed

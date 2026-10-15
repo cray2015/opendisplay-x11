@@ -227,7 +227,9 @@ went back — smoothness on the iPad comes first.*
   change, frames are sent for 150 ms (`change_tail_ms`, ~9 frames — fewer let the
   iPad's decoder hold back the newest picture) and one more once the screen has
   been quiet for 300 ms (`change_settle_ms`); from about 7 changes a second the
-  cost is the same as continuous change.
+  cost is the same as continuous change. A key press or click with the pointer
+  on the iPad's monitor sends frames for 500 ms (`input_tail_ms`): Cinnamon draws
+  its Alt+Tab switcher and menus itself, and no window reports those changes.
 - The cursor is drawn by the iPad from position messages: moving the mouse costs
   almost nothing and never depends on the frame rate.
 
@@ -289,8 +291,9 @@ loudly. The ones people change:
 
 **Behaviour**
 - **Idle detection doesn't see what the compositor draws itself** (panels,
-  OSDs, notifications). If you move a panel onto the iPad monitor, its changes
-  won't wake a paused stream until something else does.
+  OSDs, notifications) unless you press a key or click with the pointer on the
+  iPad monitor. If you move a panel onto the iPad monitor, a clock or applet
+  updating on its own won't wake a paused stream until something else does.
 - **Locking the iPad longer than 10 s** removes the monitor; it comes back on
   unlock (with the app in front).
 - **Disabling the monitor in display settings** pauses odx11 until the iPad

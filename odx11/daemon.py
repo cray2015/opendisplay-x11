@@ -220,15 +220,16 @@ class Session:
             self._start_pipeline(self.geom)
 
     # --- idle gate (AC 23) -------------------------------------------------------
-    def on_activity(self):
+    def on_activity(self, tail_ms: int | None = None):
         """Something may have changed on screen: make sure frames flow, and push the
         pause back. Cheap enough for every mouse event: one timer per idle period,
-        re-checked when it fires, instead of a reschedule per event."""
+        re-checked when it fires, instead of a reschedule per event. `tail_ms` overrides
+        change_tail_ms (a key or click: the compositor may draw later, without damage)."""
         if self.pipeline is None or self.ended:
             return
         self._last_activity = self.monotonic()
-        tail = self.cfg.video.change_tail_ms / 1000
-        if tail > 0 and hasattr(self.pipeline, "open_gate"):
+        tail = max(self.cfg.video.change_tail_ms, tail_ms or 0) / 1000
+        if self.cfg.video.change_tail_ms > 0 and hasattr(self.pipeline, "open_gate"):
             self.pipeline.open_gate(tail)
             self._settled = False
             settle = self.cfg.video.change_settle_ms / 1000
@@ -873,7 +874,9 @@ def run(cfg, display, injector, make_pipeline, tcp=None, udid=None, config_path=
         activity.draw_cursor = cfg.video.show_pointer
         act = activity.drain()
         if session is not None:
-            if act.wake:
+            if act.pressed:
+                session.on_activity(session.cfg.video.input_tail_ms)
+            elif act.wake:
                 session.on_activity()
             if act.pointer is not None:
                 session.on_pointer(*act.pointer)

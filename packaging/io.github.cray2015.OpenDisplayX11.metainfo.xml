@@ -46,6 +46,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.3.7" date="2026-10-15">
+      <description>
+        <p>Fixes Alt+Tab lagging on the iPad.</p>
+      </description>
+    </release>
     <release version="0.3.6" date="2026-10-15">
       <description>
         <p>Fixes the iPad's cursor standing still while dragging (selecting text) or while a menu is open.</p>
