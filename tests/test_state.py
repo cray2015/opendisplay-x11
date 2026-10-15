@@ -332,3 +332,95 @@ def test_clear_forgets_the_last_write(tmp_path):
     assert f.write({"state": "idle"})        # written again, not skipped as unchanged
     f.clear()
     f.clear()                                # a second clear with no file is fine
+
+
+# --- the D-Bus sender, with a fake session bus ----------------------------------------
+
+class FakeBus:
+    def __init__(self, fail=False):
+        self.fail, self.calls, self.subscribed = fail, [], None
+
+    def signal_subscribe(self, sender, iface, member, path, arg0, flags, callback):
+        self.subscribed = (sender, iface, member, path, callback)
+
+    def call_sync(self, name, path, iface, method, params, reply_type, flags, timeout, cancellable):
+        if self.fail:
+            raise RuntimeError("no notification daemon")
+        self.calls.append((name, path, iface, method, params.unpack(), reply_type.dup_string(), timeout))
+        from gi.repository import GLib
+        return GLib.Variant("(u)", (40 + len(self.calls),))
+
+
+@pytest.fixture
+def bus(monkeypatch):
+    from gi.repository import Gio
+    made = []
+    def get(kind, cancellable):
+        assert kind == Gio.BusType.SESSION
+        made.append(FakeBus())
+        return made[-1]
+    monkeypatch.setattr(Gio, "bus_get_sync", get)
+    return made
+
+
+def test_notifications_go_to_the_freedesktop_service(bus):
+    n = notify.Notifier()
+    n.send("connected", "iPad connected", "Desktop extended")
+    n.send("problem", "Setup needed", "No free port")
+    (name, path, iface, method, params, rtype, timeout), problem = bus[0].calls[0], bus[0].calls[1]
+    assert (name, path, iface, method, rtype, timeout) == (
+        "org.freedesktop.Notifications", "/org/freedesktop/Notifications", "org.freedesktop.Notifications",
+        "Notify", "(u)", 2000)
+    app, replaces, icon, summary, body, actions, hints, expire = params
+    assert (app, replaces, icon, summary, body, expire) == (
+        notify.APP_NAME, 0, notify.ICON, "iPad connected", "Desktop extended", -1)
+    assert actions == ["default", "Open settings"]
+    assert hints == {"urgency": 1, "desktop-entry": notify.ICON}
+    assert problem[4][6]["urgency"] == 2                     # a problem is critical
+    assert bus[0].subscribed[:4] == ("org.freedesktop.Notifications", "org.freedesktop.Notifications",
+                                     "ActionInvoked", "/org/freedesktop/Notifications")
+
+
+def test_clicking_our_notification_opens_the_window(bus, monkeypatch):
+    opened = []
+    monkeypatch.setattr(notify.subprocess, "Popen", lambda cmd, **kw: opened.append((cmd, kw)))
+    from gi.repository import GLib
+    n = notify.Notifier()
+    n.send("problem", "Setup needed", "x")                   # our id: 41
+    click = bus[0].subscribed[4]
+    click(None, None, None, None, None, GLib.Variant("(us)", (99, "default")))   # someone else's
+    click(None, None, None, None, None, GLib.Variant("(us)", (41, "other")))     # another action
+    assert opened == []
+    click(None, None, None, None, None, GLib.Variant("(us)", (41, "default")))
+    assert opened == [(["odx11", "settings"], {"start_new_session": True})]
+
+
+def test_a_window_that_cannot_start_is_logged(bus, monkeypatch, caplog):
+    def fail(cmd, **kw):
+        raise OSError("no odx11")
+    monkeypatch.setattr(notify.subprocess, "Popen", fail)
+    from gi.repository import GLib
+    n = notify.Notifier()
+    n.send("problem", "Setup needed", "x")
+    bus[0].subscribed[4](None, None, None, None, None, GLib.Variant("(us)", (41, "default")))
+    assert "could not open the settings window: no odx11" in caplog.text
+
+
+def test_without_a_notification_daemon_it_warns_once(bus, caplog):
+    n = notify.Notifier()
+    bus[0].fail = True
+    caplog.set_level("INFO")
+    n.send("problem", "a", "b")
+    n.send("problem", "c", "d")
+    assert caplog.text.count("could not show a notification") == 1
+
+
+def test_without_a_session_bus_nothing_is_sent(monkeypatch, caplog):
+    from gi.repository import Gio
+    def no_bus(kind, cancellable):
+        raise RuntimeError("no session bus")
+    monkeypatch.setattr(Gio, "bus_get_sync", no_bus)
+    caplog.set_level("INFO")
+    n = notify.Notifier()
+    n.send("problem", "a", "b")                              # silently nothing
+    assert "desktop notifications unavailable: no session bus" in caplog.text
