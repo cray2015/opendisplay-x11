@@ -16,7 +16,7 @@ import statistics
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PERF = os.path.join(ROOT, "docs", "perf")
-SERIES = [("0.3.3", "results-0.3.3.csv"), ("0.3.4", "results.csv")]
+SERIES = [("0.3.3", "results-0.3.3.csv")]                 # the current sending method (0.3.5)
 CATEGORIES = [("idle", "idle"), ("rate1", "1 / s"), ("rate2", "2 / s"), ("rate5", "5 / s"),
               ("rate10", "10 / s"), ("continuous", "continuous")]
 THEMES = {
@@ -66,9 +66,9 @@ def render(theme):
            'CPU use by how often the iPad\'s screen changes</text>',
            f'<text x="{LEFT}" y="50" {font} font-size="12" fill="{t["muted"]}">'
            '% of one CPU core · lower is better · mean of 3 runs · i5-6500T, HD 530, 60 fps</text>']
-    # legend (two series: always present)
+    # legend only when there are two or more series (a single series is named by the title)
     lx = LEFT
-    for i, (name, _) in enumerate(SERIES):
+    for i, (name, _) in enumerate(SERIES if len(SERIES) > 1 else []):
         out.append(f'<rect x="{lx}" y="64" width="12" height="12" rx="3" fill="{t["series"][i]}"/>')
         out.append(f'<text x="{lx + 18}" y="74" {font} font-size="12" fill="{t["text"]}">version {name}</text>')
         lx += 110
@@ -81,7 +81,7 @@ def render(theme):
                    f'fill="{t["muted"]}">{v}%</text>')
     # bars
     group_w = plot_w / len(CATEGORIES)
-    pair_w = 2 * BAR_W + PAIR_GAP
+    pair_w = len(SERIES) * BAR_W + (len(SERIES) - 1) * PAIR_GAP
     for c, (key, label) in enumerate(CATEGORIES):
         gx = LEFT + c * group_w + (group_w - pair_w) / 2
         for s, (name, _) in enumerate(SERIES):
@@ -93,7 +93,7 @@ def render(theme):
             h = max(1.0, TOP + plot_h - y)
             out.append(f'<path d="{bar_path(x, TOP + plot_h - h, BAR_W, h, RADIUS)}" fill="{t["series"][s]}">'
                        f'<title>{esc(label)}, version {name}: {v:.1f}% of one core</title></path>')
-            if s == len(SERIES) - 1:                       # direct label: the new version only
+            if s == len(SERIES) - 1:                       # direct label: the newest series only
                 out.append(f'<text x="{x + BAR_W / 2:.1f}" y="{TOP + plot_h - h - 6:.1f}" {font} font-size="11" '
                            f'text-anchor="middle" fill="{t["text"]}">{v:.1f}</text>')
         out.append(f'<text x="{LEFT + c * group_w + group_w / 2:.1f}" y="{TOP + plot_h + 20:.1f}" {font} '

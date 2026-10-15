@@ -4,10 +4,6 @@
 <rect width="760" height="380" rx="8" fill="#1a1a19"/>
 <text x="64" y="30" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="16" font-weight="600" fill="#f0efec">CPU use by how often the iPad's screen changes</text>
 <text x="64" y="50" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#c3c2b7">% of one CPU core · lower is better · mean of 3 runs · i5-6500T, HD 530, 60 fps</text>
-<rect x="64" y="64" width="12" height="12" rx="3" fill="#3987e5"/>
-<text x="82" y="74" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#f0efec">version 0.3.3</text>
-<rect x="174" y="64" width="12" height="12" rx="3" fill="#d95926"/>
-<text x="192" y="74" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" fill="#f0efec">version 0.3.4</text>
 <line x1="64" y1="324.0" x2="736" y2="324.0" stroke="#5c5b55" stroke-width="1"/>
 <text x="54" y="328.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="end" fill="#c3c2b7">0%</text>
 <line x1="64" y1="277.6" x2="736" y2="277.6" stroke="#33332f" stroke-width="1"/>
@@ -20,29 +16,23 @@
 <text x="54" y="142.4" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="end" fill="#c3c2b7">40%</text>
 <line x1="64" y1="92.0" x2="736" y2="92.0" stroke="#33332f" stroke-width="1"/>
 <text x="54" y="96.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="end" fill="#c3c2b7">50%</text>
-<path d="M93.0,324.0 V324.0 Q93.0,323.0 94.0,323.0 H118.0 Q119.0,323.0 119.0,324.0 V324.0 Z" fill="#3987e5"><title>idle, version 0.3.3: 0.1% of one core</title></path>
-<path d="M121.0,324.0 V324.0 Q121.0,323.0 122.0,323.0 H146.0 Q147.0,323.0 147.0,324.0 V324.0 Z" fill="#d95926"><title>idle, version 0.3.4: 0.1% of one core</title></path>
-<text x="134.0" y="317.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#f0efec">0.1</text>
+<path d="M107.0,324.0 V324.0 Q107.0,323.0 108.0,323.0 H132.0 Q133.0,323.0 133.0,324.0 V324.0 Z" fill="#3987e5"><title>idle, version 0.3.3: 0.1% of one core</title></path>
+<text x="120.0" y="317.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#f0efec">0.1</text>
 <text x="120.0" y="344.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" text-anchor="middle" fill="#c3c2b7">idle</text>
-<path d="M205.0,324.0 V285.8 Q205.0,281.8 209.0,281.8 H227.0 Q231.0,281.8 231.0,285.8 V324.0 Z" fill="#3987e5"><title>1 / s, version 0.3.3: 9.1% of one core</title></path>
-<path d="M233.0,324.0 V300.2 Q233.0,296.2 237.0,296.2 H255.0 Q259.0,296.2 259.0,300.2 V324.0 Z" fill="#d95926"><title>1 / s, version 0.3.4: 6.0% of one core</title></path>
-<text x="246.0" y="290.2" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#f0efec">6.0</text>
+<path d="M219.0,324.0 V285.8 Q219.0,281.8 223.0,281.8 H241.0 Q245.0,281.8 245.0,285.8 V324.0 Z" fill="#3987e5"><title>1 / s, version 0.3.3: 9.1% of one core</title></path>
+<text x="232.0" y="275.8" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#f0efec">9.1</text>
 <text x="232.0" y="344.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" text-anchor="middle" fill="#c3c2b7">1 / s</text>
-<path d="M317.0,324.0 V255.3 Q317.0,251.3 321.0,251.3 H339.0 Q343.0,251.3 343.0,255.3 V324.0 Z" fill="#3987e5"><title>2 / s, version 0.3.3: 15.7% of one core</title></path>
-<path d="M345.0,324.0 V288.1 Q345.0,284.1 349.0,284.1 H367.0 Q371.0,284.1 371.0,288.1 V324.0 Z" fill="#d95926"><title>2 / s, version 0.3.4: 8.6% of one core</title></path>
-<text x="358.0" y="278.1" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#f0efec">8.6</text>
+<path d="M331.0,324.0 V255.3 Q331.0,251.3 335.0,251.3 H353.0 Q357.0,251.3 357.0,255.3 V324.0 Z" fill="#3987e5"><title>2 / s, version 0.3.3: 15.7% of one core</title></path>
+<text x="344.0" y="245.3" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#f0efec">15.7</text>
 <text x="344.0" y="344.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" text-anchor="middle" fill="#c3c2b7">2 / s</text>
-<path d="M429.0,324.0 V165.1 Q429.0,161.1 433.0,161.1 H451.0 Q455.0,161.1 455.0,165.1 V324.0 Z" fill="#3987e5"><title>5 / s, version 0.3.3: 35.1% of one core</title></path>
-<path d="M457.0,324.0 V263.5 Q457.0,259.5 461.0,259.5 H479.0 Q483.0,259.5 483.0,263.5 V324.0 Z" fill="#d95926"><title>5 / s, version 0.3.4: 13.9% of one core</title></path>
-<text x="470.0" y="253.5" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#f0efec">13.9</text>
+<path d="M443.0,324.0 V165.1 Q443.0,161.1 447.0,161.1 H465.0 Q469.0,161.1 469.0,165.1 V324.0 Z" fill="#3987e5"><title>5 / s, version 0.3.3: 35.1% of one core</title></path>
+<text x="456.0" y="155.1" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#f0efec">35.1</text>
 <text x="456.0" y="344.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" text-anchor="middle" fill="#c3c2b7">5 / s</text>
-<path d="M541.0,324.0 V112.7 Q541.0,108.7 545.0,108.7 H563.0 Q567.0,108.7 567.0,112.7 V324.0 Z" fill="#3987e5"><title>10 / s, version 0.3.3: 46.4% of one core</title></path>
-<path d="M569.0,324.0 V211.5 Q569.0,207.5 573.0,207.5 H591.0 Q595.0,207.5 595.0,211.5 V324.0 Z" fill="#d95926"><title>10 / s, version 0.3.4: 25.1% of one core</title></path>
-<text x="582.0" y="201.5" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#f0efec">25.1</text>
+<path d="M555.0,324.0 V112.7 Q555.0,108.7 559.0,108.7 H577.0 Q581.0,108.7 581.0,112.7 V324.0 Z" fill="#3987e5"><title>10 / s, version 0.3.3: 46.4% of one core</title></path>
+<text x="568.0" y="102.7" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#f0efec">46.4</text>
 <text x="568.0" y="344.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" text-anchor="middle" fill="#c3c2b7">10 / s</text>
-<path d="M653.0,324.0 V115.2 Q653.0,111.2 657.0,111.2 H675.0 Q679.0,111.2 679.0,115.2 V324.0 Z" fill="#3987e5"><title>continuous, version 0.3.3: 45.9% of one core</title></path>
-<path d="M681.0,324.0 V114.9 Q681.0,110.9 685.0,110.9 H703.0 Q707.0,110.9 707.0,114.9 V324.0 Z" fill="#d95926"><title>continuous, version 0.3.4: 45.9% of one core</title></path>
-<text x="694.0" y="104.9" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#f0efec">45.9</text>
+<path d="M667.0,324.0 V115.2 Q667.0,111.2 671.0,111.2 H689.0 Q693.0,111.2 693.0,115.2 V324.0 Z" fill="#3987e5"><title>continuous, version 0.3.3: 45.9% of one core</title></path>
+<text x="680.0" y="105.2" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="11" text-anchor="middle" fill="#f0efec">45.9</text>
 <text x="680.0" y="344.0" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" text-anchor="middle" fill="#c3c2b7">continuous</text>
 <text x="400.0" y="368" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif" font-size="12" text-anchor="middle" fill="#c3c2b7">how often the iPad's screen changes</text>
 </svg>

@@ -67,7 +67,9 @@ class VideoConfig:
     show_pointer: bool = False              # draw the cursor into the video (the [cursor] channel replaces it)
     convert_threads: int = 2                # videoconvert worker threads
     idle_pause_s: float = 1.0               # pause capture after this long with no screen change; 0 = never
-    change_tail_ms: int = 50                # convert/encode only this long after a change; 0 = every frame
+    change_tail_ms: int = 150               # convert/encode only this long after a change; 0 = every frame
+                                            # (shorter froze the iPad: its decoder holds back the newest
+                                            # frame until more arrive — see PROJECT_SPEC.md, 0.3.5)
     change_settle_ms: int = 300             # then one more frame once quiet this long (fades); 0 = off
 
     def effective(self, key: str):

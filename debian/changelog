@@ -1,3 +1,12 @@
+opendisplay-x11 (0.3.5) unstable; urgency=medium
+
+  * Fix freezes on the iPad (for example moving over a right-click menu):
+    send frames for 150 ms after each change again. With 50 ms the iPad's
+    decoder kept the newest picture back until the next change. The settle
+    frame from 0.3.4 stays as an extra safety net.
+
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 17:00:00 +0530
+
 opendisplay-x11 (0.3.4) unstable; urgency=medium
 
   * Fewer frames per change: 50 ms after each change plus one settle frame

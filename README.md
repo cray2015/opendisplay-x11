@@ -180,10 +180,12 @@ systemctl --user stop odx11 && python3 -m odx11 run -v   # foreground, verbose (
 
 ## Performance
 
-Measured on 2026-10-15 (version 0.3.4) — HP EliteDesk 800 G3 DM: Intel Core
+Measured on 2026-10-15 with version 0.3.3 — HP EliteDesk 800 G3 DM: Intel Core
 i5-6500T (4 cores), HD 530 graphics, Linux Mint 22.3 Cinnamon (X11), iPad Air
 (5th gen) over USB, virtual monitor 1568 × 1088, Balanced preset (60 fps).
 Each row is the mean of 3 runs of 25 s after an 8 s warm-up (spread in brackets).
+The current version (0.3.5) sends frames the same way, plus at most one extra
+"settle" frame after the screen goes quiet.
 
 **How often the iPad's screen changes decides the cost**, not which app changes
 it: each change converts and encodes whole frames. "Changes per second" uses a
@@ -193,24 +195,24 @@ video ≈ continuous.
 
 | iPad screen changes | CPU, % of one core | Frames/s sent | Latency median / 95th % | Memory (PSS) |
 |---|---|---|---|---|
-| never (idle) | **0.1** (0.1–0.1) | 0 | — | 52 MB |
-| 1 × per second | **6.0** (5.6–6.3) | 3.7 | 10.7 / 17.4 ms | 57 MB |
-| 2 × per second | **8.6** (8.4–8.8) | 7.4 | 10.5 / 17.2 ms | 59 MB |
-| 5 × per second | **13.9** (13.9–13.9) | 14.3 | 13.7 / 17.9 ms | 59 MB |
-| 10 × per second | **25.1** (25.0–25.2) | 29.1 | 12.3 / 16.9 ms | 57 MB |
-| continuously (video, scrolling) | **45.9** (45.8–46.0) | 59.6 | 10.7 / 15.8 ms | 59 MB |
-| continuously, Power saver (30 fps)¹ | **22.9** (22.8–23.0) | 29.5 | 10.1 / 13.6 ms | 56 MB |
-
-¹ measured with 0.3.3; continuous change is unaffected by the 0.3.4 change.
+| never (idle) | **0.1** (0.1–0.2) | 0 | — | 58 MB |
+| 1 × per second | **9.1** (9.0–9.2) | 8.5 | 10.1 / 16.4 ms | 58 MB |
+| 2 × per second | **15.7** (15.5–15.8) | 17.2 | 10.5 / 16.2 ms | 59 MB |
+| 5 × per second | **35.1** (35.0–35.2) | 44.5 | 10.3 / 16.5 ms | 60 MB |
+| 10 × per second | **46.4** (46.3–46.5) | 58.8 | 10.8 / 15.7 ms | 59 MB |
+| continuously (video, scrolling) | **45.9** (45.1–46.9) | 59.3 | 10.3 / 14.7 ms | 60 MB |
+| continuously, Power saver (30 fps) | **22.9** (22.8–23.0) | 29.5 | 10.1 / 13.6 ms | 56 MB |
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/perf/cpu-by-change-rate-dark.svg">
-  <img alt="Grouped bar chart: CPU use (% of one core) by how often the iPad's screen changes, version 0.3.3 vs 0.3.4. Idle 0.1 vs 0.1; 1/s 9.1 vs 6.0; 2/s 15.7 vs 8.6; 5/s 35.1 vs 13.9; 10/s 46.4 vs 25.1; continuous 45.9 vs 45.9." src="docs/perf/cpu-by-change-rate-light.svg" width="760">
+  <img alt="Bar chart: CPU use (% of one core) by how often the iPad's screen changes. Idle 0.1; 1/s 9.1; 2/s 15.7; 5/s 35.1; 10/s 46.4; continuous 45.9." src="docs/perf/cpu-by-change-rate-light.svg" width="760">
 </picture>
 
-*0.3.3 sent 150 ms of frames after every change; 0.3.4 sends 50 ms plus one settle
-frame. The chart is generated from the CSVs by `tools/perf_chart.py`. Encode time
-on the iPad ~8–9 ms throughout.*
+*Generated from the CSVs by `tools/perf_chart.py`. Encode time on the iPad ~8–9 ms
+throughout. Version 0.3.4 tried sending fewer frames per change (about half the
+CPU at 1–10 changes a second, [`results-0.3.4.csv`](docs/perf/results-0.3.4.csv)),
+but the iPad visibly froze on small changes such as moving over a menu, so 0.3.5
+went back — smoothness on the iPad comes first.*
 
 - **CPU** is for the OpenDisplay for X11 service as a percentage of *one* core; a
   system monitor showing the whole 4-core processor shows a quarter of it
@@ -222,9 +224,10 @@ on the iPad ~8–9 ms throughout.*
 - **Where the CPU goes** at 60 fps: screen capture ~1.5 %, colour conversion ~32 %
   (software: this GPU's free driver has no video-processing unit), handing
   frames to the hardware encoder ~13 %, the program's own code ~1–2 %. After a
-  change, frames are sent for 50 ms (`change_tail_ms`) and one more once the
-  screen has been quiet for 300 ms (`change_settle_ms`, it catches the end of
-  fades and late repaints) — about 3–4 frames per change.
+  change, frames are sent for 150 ms (`change_tail_ms`, ~9 frames — fewer let the
+  iPad's decoder hold back the newest picture) and one more once the screen has
+  been quiet for 300 ms (`change_settle_ms`); from about 7 changes a second the
+  cost is the same as continuous change.
 - The cursor is drawn by the iPad from position messages: moving the mouse costs
   almost nothing and never depends on the frame rate.
 
@@ -237,7 +240,7 @@ python3 tools/perf_bench.py --scenario rate --hz 5 --runs 3 --csv docs/perf/resu
 
 Scenarios: `idle`, `rate --hz N` (a test window, `tools/test_window.py`),
 `continuous`, `continuous30`, `light` (whatever is on the iPad's screen). Raw data:
-[`docs/perf/results.csv`](docs/perf/results.csv) (0.3.4), [`results-0.3.3.csv`](docs/perf/results-0.3.3.csv).
+[`results-0.3.3.csv`](docs/perf/results-0.3.3.csv) (current method), [`results-0.3.4.csv`](docs/perf/results-0.3.4.csv) (reverted experiment).
 
 ## Configure
 

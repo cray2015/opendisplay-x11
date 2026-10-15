@@ -46,6 +46,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.3.5" date="2026-10-15">
+      <description>
+        <p>Fixes the iPad briefly freezing after small changes, such as moving over a menu.</p>
+      </description>
+    </release>
     <release version="0.3.4" date="2026-10-15">
       <description>
         <p>Less CPU when the iPad's screen changes now and then: about half for typing-like activity.</p>
