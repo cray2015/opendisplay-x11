@@ -46,6 +46,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.0" date="2026-10-15">
+      <description>
+        <p>Uses about a third of the CPU on Intel graphics with the non-free video driver installed: the graphics chip now also converts colours.</p>
+      </description>
+    </release>
     <release version="0.3.8" date="2026-10-15">
       <description>
         <p>Balanced and Power saver use less CPU when the iPad's screen changes now and then.</p>

@@ -40,6 +40,7 @@ Depends: ${misc:Depends},
          udev,
          systemd
 Recommends: intel-media-va-driver | va-driver-all
+Suggests: intel-media-va-driver-non-free
 Description: Use an iPad as a second monitor over USB (needs a free HDMI/DisplayPort)
  OpenDisplay for X11: plug in your iPad, open the OpenDisplay app, and your
  desktop extends onto it. Tap, drag, scroll and right-click work on the iPad.

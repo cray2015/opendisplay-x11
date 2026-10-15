@@ -63,7 +63,7 @@ odx11 daemon (systemd --user)
 | Session | X11 | Wayland is not supported (use [opendisplay-linux](https://github.com/tixwho/opendisplay-linux) there). Any X11 desktop or window manager. |
 | **Free video port** | An **empty** HDMI socket, or a DisplayPort socket that accepts HDMI adapters (DP++) | **Hard requirement** — see [below](#why-a-free-video-port-is-required). Nothing may be plugged into it. |
 | GPU | Kernel DRM driver | Tested on Intel `i915`. `amdgpu` should work for the monitor; encoder settings untested. NVIDIA's proprietary driver cannot do this. |
-| Encoder | VA-API H.264 via `gstreamer1.0-vaapi` | Intel: `intel-media-va-driver` (the free build is enough). |
+| Encoder | VA-API H.264 via `gstreamer1.0-vaapi` | Intel: `intel-media-va-driver` (the free build is enough). **Recommended:** `intel-media-va-driver-non-free` — the GPU then also converts colours, for about a third of the CPU ([Performance](#performance)). |
 | OS | systemd user session, Python ≥ 3.11, Debian/Ubuntu packages | Mint 22.3 / Ubuntu 24.04 tested. The installer uses `apt`. |
 | iPad | iPadOS 15+ (upstream; the Linux fork states 16+), OpenDisplay app, a USB **data** cable | The app is a [TestFlight beta](https://testflight.apple.com/join/3NYaY11c). The iPad must be trusted (paired) and unlocked. |
 
@@ -147,6 +147,13 @@ nothing else is needed (no log-out).
 
 Switch it off without uninstalling: the switch in the window, or Start at login.
 
+**Optional, recommended on Intel graphics — about a third of the CPU:** install
+`intel-media-va-driver-non-free` (in Linux Mint: open *Software Manager*, search
+for it, click **Install**; it replaces the free `intel-media-va-driver`). The
+free driver can encode video but not convert colours, so the processor does
+that; the non-free one lets the graphics chip do both. odx11 notices it at the
+next start and uses it on its own (`[video] convert`).
+
 ## Use
 
 Plug in the iPad, unlock it, open OpenDisplay. That's it.
@@ -192,6 +199,19 @@ test window redrawing at a fixed rate, so you can place any app on the curve —
 a clock ≈ 1/s, a system monitor ≈ 2/s, typing ≈ 5–10/s in bursts, scrolling or a
 video ≈ continuous.
 
+**With colour conversion on the graphics chip** (Intel: `intel-media-va-driver-non-free`, [Install](#install)):
+
+| iPad screen changes | Power saver | Balanced (default) | Best quality |
+|---|---|---|---|
+| never (idle) | **0.2 %** | **0.3 %** | **0.1 %** |
+| 1 × per second | **1.9 %** | **3.4 %** | **4.5 %** |
+| 2 × per second | **3.2 %** | **4.3 %** | **6.6 %** |
+| 5 × per second | **4.6 %** | **5.8 %** | **11.3 %** |
+| 10 × per second | **7.7 %** | **8.8 %** | **14.3 %** |
+| continuously (video, scrolling) | **6.9 %** | **13.2 %** | **13.4 %** |
+
+**With colour conversion on the processor** (the free driver, or `convert = "cpu"`):
+
 | iPad screen changes | Power saver | Balanced (default) | Best quality |
 |---|---|---|---|
 | never (idle) | **0.1 %** | **0.1 %** | **0.2 %** |
@@ -209,7 +229,8 @@ CPU is the percentage of **one** core. What the presets differ in:
 
 The same for every preset:
 
-- **Latency** (capture to the iPad's screen): 10–14 ms median, 12–18 ms at the 95th percentile
+- **Latency** (capture to the iPad's screen): 10–14 ms median, 12–18 ms at the 95th
+  percentile; 7–12 ms and 9–15 ms with conversion on the graphics chip
 - **Memory** (PSS): 48–59 MB
 - **Idle** assumes nothing else on the desktop is changing either. Changes in
   other windows are checked and ignored, so a busy window elsewhere (a terminal
@@ -218,11 +239,12 @@ The same for every preset:
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/perf/cpu-by-change-rate-dark.svg">
-  <img alt="Bar chart: CPU use (% of one core) by how often the iPad's screen changes, for each preset. Power saver / Balanced / Best quality — idle 0.1 / 0.1 / 0.2; 1/s 4.4 / 7.0 / 10.5; 2/s 8.5 / 9.3 / 17.8; 5/s 12.7 / 13.8 / 35.4; 10/s 23.8 / 25.1 / 46.6; continuous 22.9 / 45.4 / 45.6." src="docs/perf/cpu-by-change-rate-light.svg" width="760">
+  <img alt="Bar chart: CPU use (% of one core) by how often the iPad's screen changes, for each preset, colour conversion on the graphics chip. Power saver / Balanced / Best quality — idle 0.2 / 0.3 / 0.1; 1/s 1.9 / 3.4 / 4.5; 2/s 3.2 / 4.3 / 6.6; 5/s 4.6 / 5.8 / 11.3; 10/s 7.7 / 8.8 / 14.3; continuous 6.9 / 13.2 / 13.4." src="docs/perf/cpu-by-change-rate-light.svg" width="760">
 </picture>
 
-*Generated from the CSVs by `tools/perf_chart.py`. Encode time on the iPad ~9 ms
-throughout. Version 0.3.4 first tried 50 ms (`results-0.3.4.csv`), but the iPad
+*The chart shows the graphics-chip numbers; generated from the CSVs by
+`tools/perf_chart.py`. Encode time on the iPad ~7 ms (graphics chip) and ~9 ms
+(processor). Version 0.3.4 first tried 50 ms (`results-0.3.4.csv`), but the iPad
 seemed to freeze on small changes such as moving over a menu, so 0.3.5 went
 back to 150 ms. The freezes turned out to be the cursor (fixed in 0.3.6) and
 Alt+Tab (0.3.7); with those fixed, 50 ms tested smooth and became Balanced's in
@@ -230,14 +252,17 @@ Alt+Tab (0.3.7); with those fixed, 50 ms tested smooth and became Balanced's in
 
 - **CPU** is for the OpenDisplay for X11 service as a percentage of *one* core; a
   system monitor showing the whole 4-core processor shows a quarter of it
-  (worst case ≈ 12 %).
+  (worst case ≈ 3 % with the graphics chip converting, ≈ 12 % without).
 - **Memory** is the service's own share (PSS) and stays flat under load; a
   system monitor's "resident" figure (~92 MB) also counts shared libraries.
 - **Latency** is end to end, capture to the iPad's screen, and with the **encode
   time** is reported by the iPad itself. At 60 fps a frame starts every 16.7 ms.
-- **Where the CPU goes** at 60 fps: screen capture ~1.5 %, colour conversion ~32 %
-  (software: this GPU's free driver has no video-processing unit), handing
-  frames to the hardware encoder ~13 %, the program's own code ~1–2 %. After a
+- **Where the CPU goes** at 60 fps with conversion on the processor: screen
+  capture ~1.5 %, colour conversion ~32 %, handing frames to the hardware encoder
+  ~13 %, the program's own code ~1–2 %. The free Intel driver has no
+  video-processing unit; with the non-free one the graphics chip converts
+  (`vaapipostproc`) and the frames it is handed are smaller, so the whole stream
+  costs ~13 % at 60 fps. After a
   change, frames are sent for a short while — 100 ms in Power saver, 50 ms in
   Balanced, 150 ms in Best quality (`change_tail_ms`) — and one more once the screen has
   been quiet for 300 ms (`change_settle_ms`). With Best quality the cost reaches
@@ -252,12 +277,12 @@ Reproduce (iPad attached, OpenDisplay open, nothing else changing on its screen;
 the user service is stopped during the runs and restarted after):
 
 ```bash
-python3 tools/perf_bench.py --scenario rate --hz 5 --runs 3 --csv docs/perf/results.csv
+python3 tools/perf_bench.py --preset balanced --scenario rate --hz 5 --runs 3 --csv docs/perf/results.csv
 ```
 
 Scenarios: `idle`, `rate --hz N` (a test window, `tools/test_window.py`),
-`continuous`, `continuous30`, `light` (whatever is on the iPad's screen). Raw data:
-[`results-0.3.3.csv`](docs/perf/results-0.3.3.csv) (current method), [`results-0.3.4.csv`](docs/perf/results-0.3.4.csv) (reverted experiment).
+`continuous`, `continuous30`, `light` (whatever is on the iPad's screen). Raw data in [`docs/perf/`](docs/perf/): `results-0.3.8-gpu-<preset>.csv` (graphics chip),
+`results-0.3.8-<preset>.csv` (processor), and the older single-preset runs.
 
 ## Configure
 

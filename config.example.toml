@@ -34,6 +34,8 @@ fps = 60                              # frames per second while the screen chang
 qp = 26                               # CQP quantiser, 0..51: lower = sharper and bigger
 keyframe_period = 1000000             # frames between unprompted IDRs; large = effectively never
 show_pointer = false                  # draw the cursor into the video (slower; [cursor] does it better)
+convert = "auto"                      # colour conversion: "auto" = on the GPU when the driver offers it
+                                      # (Intel: intel-media-va-driver-non-free), else in software; "gpu" | "cpu"
 convert_threads = 2                   # software colour-conversion threads
 idle_pause_s = 1.0                    # stop capturing after this long with nothing changing; 0 = always capture
 change_tail_ms = 150                  # after a change, send frames for this long (then only on the next change);

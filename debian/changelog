@@ -1,3 +1,12 @@
+opendisplay-x11 (0.4.0) unstable; urgency=medium
+
+  * Convert colours on the graphics chip when the video driver supports it
+    (Intel: intel-media-va-driver-non-free): about a third of the CPU, e.g.
+    13 % instead of 45 % of one core while the screen changes continuously.
+    Falls back to the processor otherwise. New setting video.convert.
+
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 15 Oct 2026 22:00:00 +0530
+
 opendisplay-x11 (0.3.8) unstable; urgency=medium
 
   * Each performance preset now also sets how long frames are sent after a

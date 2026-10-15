@@ -19,9 +19,9 @@ import statistics
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PERF = os.path.join(ROOT, "docs", "perf")
 VERSION = "0.3.8"
-SERIES = [("Power saver", f"results-{VERSION}-power_saver.csv"),
-          ("Balanced", f"results-{VERSION}-balanced.csv"),
-          ("Best quality", f"results-{VERSION}-best_quality.csv")]
+SERIES = [("Power saver", f"results-{VERSION}-gpu-power_saver.csv"),     # colour conversion on the GPU
+          ("Balanced", f"results-{VERSION}-gpu-balanced.csv"),
+          ("Best quality", f"results-{VERSION}-gpu-best_quality.csv")]
 CATEGORIES = [("idle", "idle"), ("rate1", "1 / s"), ("rate2", "2 / s"), ("rate5", "5 / s"),
               ("rate10", "10 / s"), ("continuous", "continuous")]
 THEMES = {
@@ -58,7 +58,9 @@ def esc(s):
 def render(theme):
     t = THEMES[theme]
     data = [load(f) for _, f in SERIES]
-    Y_MAX = Y_STEP * math.ceil(max(v for d in data for v in d.values()) / Y_STEP)
+    top = max(v for d in data for v in d.values())
+    step = Y_STEP if top > 25 else Y_STEP // 2
+    Y_MAX = step * math.ceil(top / step)
     plot_w, plot_h = W - LEFT - RIGHT, H - TOP - BOTTOM
     y_of = lambda v: TOP + plot_h * (1 - min(v, Y_MAX) / Y_MAX)
     font = "font-family=\"-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif\""
@@ -71,7 +73,7 @@ def render(theme):
            f'<text x="{LEFT}" y="30" {font} font-size="16" font-weight="600" fill="{t["text"]}">'
            'CPU use by how often the iPad\'s screen changes</text>',
            f'<text x="{LEFT}" y="50" {font} font-size="12" fill="{t["muted"]}">'
-           f'% of one CPU core · lower is better · mean of 3 runs · i5-6500T, HD 530 · version {VERSION}</text>']
+           f'% of one CPU core · lower is better · mean of 3 runs · i5-6500T, HD 530 converting colours · version {VERSION}</text>']
     # legend only when there are two or more series (a single series is named by the title)
     lx = LEFT
     for i, (name, _) in enumerate(SERIES if len(SERIES) > 1 else []):
@@ -79,7 +81,7 @@ def render(theme):
         out.append(f'<text x="{lx + 18}" y="74" {font} font-size="12" fill="{t["text"]}">{esc(name)}</text>')
         lx += 18 + 8 * len(name) + 24
     # grid + y axis labels (recessive)
-    for v in range(0, Y_MAX + 1, Y_STEP):
+    for v in range(0, Y_MAX + 1, step):
         y = y_of(v)
         colour = t["axis"] if v == 0 else t["grid"]
         out.append(f'<line x1="{LEFT}" y1="{y:.1f}" x2="{W - RIGHT}" y2="{y:.1f}" stroke="{colour}" stroke-width="1"/>')
