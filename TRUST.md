@@ -56,7 +56,7 @@ Developer-only (not shipped): `install.sh` uses `pkexec` to install build tools 
 
 | Claim | Check | Runs | Defined in |
 |---|---|---|---|
-| The package builds from this source; the 234 unit tests pass; the desktop entry and AppStream file are valid; lintian has no errors or warnings | Build job | Every push and PR | `.github/workflows/ci.yml` (`build`) |
+| The package builds from this source; the unit tests pass (510); the desktop entry and AppStream file are valid; lintian has no errors or warnings | Build job | Every push and PR | `.github/workflows/ci.yml` (`build`) |
 | The build is reproducible: two builds give the identical `.deb` | Two builds compared with `cmp` | Every push and PR | `ci.yml` (`reproducible`) |
 | A release `.deb` was built by this repository's release workflow, from the tagged commit | Sigstore-signed build provenance | Every release | `.github/workflows/release.yml` |
 | A release's files are the ones published | `SHA256SUMS`; SPDX SBOM | Every release | `release.yml` |
@@ -112,7 +112,7 @@ Recorded here so CI fails only on new problems. Nothing was silently suppressed.
 | ruff | `S101` (assert) disabled in `tests/` | pytest asserts |
 | ruff | `odx11/activity.py` `close()`: `S110` (`except: pass`) marked `noqa` | Closing an X connection that is already gone; nothing to handle |
 | ruff, shellcheck | `spike/` excluded | Throwaway M0 feasibility scripts, not shipped |
-| coverage | Floor 65 % (measured 69 %) | 100 %: annexb, checks, config, cursor, notify, protocol, usbmux; ≥ 97 %: `__main__`, daemon (91 %), settings, state, upgrade. 0 %: gui, pipeline; activity 34 %, display 50 %, input 64 % (they need an X server; see above) |
+| coverage | Floor 65 % (measured 69 %) | 100 %: annexb, checks, config, cursor, notify, protocol, usbmux; ≥ 97 %: `__main__`, settings, state, upgrade; daemon 91 %. 0 %: gui, pipeline; activity 34 %, display 50 %, input 64 % (they need an X server; see above) |
 | mutation testing | 1,687 mutants, 91 % killed (2026-10-15). annexb, config, cursor, protocol, settings and state: 100 %. edid.py is excluded: it serves only a boot-time EDID fallback that is unused at runtime (`docs/decisions.md`). input 48 %: its 147 untested mutants are all in the X11 injector, which needs an X server | Raised from ~70 % by tests for every config limit, exact messages and wording, the iPad's `hello` fields, the liveness check (a mutant sending SIGHUP survived before), PNG structure and touch edges. Mutants that cannot change behaviour are marked `# pragma: no mutate` with the reason (about 15). Reported monthly; not a gate yet |
 | capability check | `odx11/pipeline.py:169` matches `cap-screen-capture` | A docstring mentioning `ximagesrc`; harmless |
 | lintian | `appstream-metadata-missing-modalias-provide` for the udev rule | The rule grants a permission; it is not hardware support that AppStream should advertise |
