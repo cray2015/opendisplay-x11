@@ -22,7 +22,7 @@ handshake), never `DP-n`. Unforce it on every exit path.
 - **EVDI** (DisplayLink's virtual-display module): out-of-tree kernel module, reported black screens after updates.
 - **Intel `VIRTUAL` outputs:** need the old xf86-video-intel driver; Mint runs `modesetting`.
 - **A DP dummy plug:** the monitor would always exist, even with no iPad: windows land on an invisible screen.
-- **A software region (`--fb`/`--setmonitor`):** not a real output; desktops don't treat it as a monitor.
+- **A software region (`--fb`/`--setmonitor`):** not a real output; desktops don't treat it as a monitor. *Re-evaluated 2026-10-22:* with `--panning` the pointer does reach it (container spike); whether desktops accept it is open — `PROJECT_SPEC.md` §4, §11, `docs/decisions.md`.
 
 ## Consequences
 - **Hard requirement:** a free HDMI/DP++ port. Stated first in the README and the package description (the owner asked for this, 2026-10-14).
