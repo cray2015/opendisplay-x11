@@ -35,6 +35,7 @@ class NotificationsConfig:
 class TransportConfig:
     usbmuxd_socket: str = "/var/run/usbmuxd"
     device_port: int = 9000                 # the receiver's listening port
+    usbmuxd_timeout_s: float = 5.0          # wait this long for usbmuxd to answer; retry after it
 
 
 @dataclass
@@ -141,6 +142,7 @@ def _validate(cfg: Config):
     def need(ok, msg):
         if not ok:
             raise ValueError(msg)
+    need(cfg.transport.usbmuxd_timeout_s > 0, "transport.usbmuxd_timeout_s must be > 0")
     need(cfg.display.divisor > 0, "display.divisor must be > 0")
     need(cfg.display.refresh_hz > 0, "display.refresh_hz must be > 0")
     need(cfg.display.connect_timeout_s > 0 and cfg.display.settle_timeout_s >= 0,

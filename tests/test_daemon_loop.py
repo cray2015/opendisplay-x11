@@ -469,6 +469,63 @@ def test_watcher_follows_usbmuxd_starting_reporting_and_exiting(tmp_path, caplog
     mux.server.close()
 
 
+class SilentMux(ListenMux):
+    """A usbmuxd that ignores the first `silent` subscriptions (stuck on a device handshake),
+    then answers like ListenMux."""
+
+    def __init__(self, path, silent=1):
+        self.silent = silent
+        self.ignored = []
+        super().__init__(path)
+
+    def _accept(self):
+        while True:
+            try:
+                c, _ = self.server.accept()
+            except OSError:
+                return
+            if self.silent:
+                self.silent -= 1
+                self.ignored.append(c)                     # never answered
+                continue
+            head = c.recv(16, socket.MSG_WAITALL)
+            c.recv(usbmux.HEADER.unpack(head)[0] - 16, socket.MSG_WAITALL)
+            c.sendall(usbmux.encode({"MessageType": "Result", "Number": 0}))
+            self.clients.append(c)
+
+
+def test_a_usbmuxd_that_never_answers_is_retried_not_waited_on(tmp_path, caplog):
+    """2026-10-22: usbmuxd took the Listen request and never replied; the watcher blocked the
+    main loop for good (no stop, no iPad). Now it gives up after the time limit, keeps the loop
+    running and asks again after the same interval."""
+    path = tmp_path / "usbmuxd"
+    mux = SilentMux(path)
+    caplog.set_level("INFO")
+    start = time.monotonic()
+    w = daemon.MuxWatcher(str(path), Recorder(), timeout_s=0.2)
+    assert time.monotonic() - start < 2                    # did not hang
+    assert w.sock is None
+    assert "usbmuxd did not answer within 0.2 s" in caplog.text
+    iterate(lambda: w.sock is not None)                    # the retry subscribed
+    assert len(mux.clients) == 1
+    w.close()
+    mux.server.close()
+
+
+def test_closing_the_watcher_cancels_a_pending_retry(tmp_path):
+    path = tmp_path / "usbmuxd"
+    mux = SilentMux(path, silent=5)
+    w = daemon.MuxWatcher(str(path), Recorder(), timeout_s=0.2)
+    w.close()
+    from gi.repository import GLib
+    end = time.monotonic() + 0.6
+    while time.monotonic() < end:
+        GLib.MainContext.default().iteration(False)
+        time.sleep(0.01)
+    assert len(mux.ignored) == 1                           # no retry after close
+    mux.server.close()
+
+
 def test_a_stale_usbmuxd_socket_is_waited_out(tmp_path):
     path = tmp_path / "usbmuxd"
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)

@@ -413,6 +413,7 @@ to verify a release yourself: **[TRUST.md](TRUST.md)**. To report a vulnerabilit
 |---|---|
 | Nothing happens when the app opens | `journalctl --user -u odx11 -f`. "dial refused" = the app is not in front or the iPad is locked. |
 | `no USB iOS device` / not paired | Unlock, tap Trust, `idevicepair pair`, `idevicepair validate`. Charge-only cables don't work. |
+| iPad shows up as a camera; `idevice_id -l` lists nothing; `journalctl -u usbmuxd` says `lockdown error -8` | usbmuxd's first handshake failed (usually: the iPad was locked or asking "Trust?" when plugged in) and it does not retry. Unlock the iPad, then `sudo systemctl restart usbmuxd`. If it keeps happening, plug the iPad straight into the computer, not a hub. |
 | "Setup is not finished: this account may not switch HDMI-A-n" | Your user must be in `plugdev` (Users and Groups settings); log out and back in. |
 | "HDMI-A-n has a real monitor plugged in" / "no HDMI-A-n port" | Set `[display] connector` to a free HDMI port (`ls /sys/class/drm`). |
 | Monitor appears but iPad stays black | Make sure the app is in front; check `journalctl` for pipeline errors; `gst-inspect-1.0 vaapih264enc` must succeed. |

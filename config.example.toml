@@ -18,6 +18,7 @@ problems = true                       # "Setup needed: …"
 [transport]
 usbmuxd_socket = "/var/run/usbmuxd"
 device_port = 9000                    # port the OpenDisplay receiver listens on
+usbmuxd_timeout_s = 5.0               # seconds to wait for usbmuxd to answer; it is asked again after the same time
 
 [display]
 connector = "auto"                    # "auto" = first free HDMI port; or e.g. "HDMI-A-2" (see /sys/class/drm)
