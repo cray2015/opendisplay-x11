@@ -15,7 +15,7 @@ Status: **Active**, **Superseded**, **Deferred** (agreed, not built yet), **Open
 |---|---|---|---|
 | 2026-10-14 | Validate the spec and prove feasibility (M0 spike) before building | The spec was written without hardware; every risky assumption (transport, forced connector, encoder) had to be shown on this machine first | Active |
 | 2026-10-14 | Use the **unmodified OpenDisplay iPad app**; never modify the receiver | Building it needs Xcode on a Mac; the receiver is consumed as shipped (TestFlight / App Store) [§3] | Active |
-| 2026-10-14 | **X11 only**; no Wayland | Cinnamon on X11 is the target; Wayland senders already exist upstream [§3] | Active |
+| 2026-10-14 | **X11 only**; no Wayland | Cinnamon on X11 is the target; Wayland senders already exist upstream [§3] | **Superseded** 2026-10-22: Wayland becomes a direction — see the three directions below |
 | 2026-10-14 | **No terminal for end users, ever** — a Windows-like experience | The user's stated agenda: install by double-click, everything else through a window or the package manager; a step that needs a command is a design bug [§2] | Active |
 | 2026-10-14 | **Every tunable lives in the config file**, never as a constant in code | User: "anything configurable should land in a config file"; only protocol- or hardware-fixed values stay in code [§8.6] | Active |
 | 2026-10-14 | **No Cinnamon applet**; a desktop-agnostic app instead | User: an applet ties the project to one desktop; it must work on any X11 desktop [§3] | Active |
@@ -24,6 +24,7 @@ Status: **Active**, **Superseded**, **Deferred** (agreed, not built yet), **Open
 | 2026-10-15 | Licence **GPL-3.0-or-later**, © Vibhanshu Biswas, DCO sign-off for contributions | Others can contribute, credit is kept in every copy, changed versions must stay open; matches upstream | Active |
 | 2026-10-15 | **One set of settings for every iPad**; only capabilities adapt per iPad (automatically) | Per-iPad preferences add UI for a rare case; decode limits from `hello` are honoured automatically [§8.8] | Active |
 | 2026-10-15 | Pencil pressure/tilt, Wi-Fi transport, KMS zero-copy capture, mirror/audio/clipboard | Out of v1 scope; each needs its own milestone | Deferred (M5, M6, v2) |
+| 2026-10-22 | **Three directions for the project:** (1) **Wayland** support; (2) a **headless, sole-monitor setup** — the iPad as the only screen of a machine with a pinned connector, opening the door to a Raspberry Pi or similar SBC with an iPad as its wired monitor; (3) **keep supporting X11** as today | Owner, after the r/linuxmint alpha thread: Wayland was the most requested feature (several users; KDE is dropping X11, Mint's next release adds Wayland). The owner ran the HP EliteDesk headless at their parents' house for several days with a pinned connector; a Pi/SBC with an iPad over USB is a setup they have wanted for a long time, and earlier ways (VNC and others) were flaky. X11 stays supported as long as people use it. Work started on `feat/headless-pi-backends` (always-on output, Pi encoders, wlroots/labwc backend) | Active |
 
 ## Architecture
 
