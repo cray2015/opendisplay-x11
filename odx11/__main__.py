@@ -58,7 +58,7 @@ def publish_problem(cfg, problem):
 
 
 def cmd_list(cfg, args):
-    devices = usbmux.list_devices(cfg.transport.usbmuxd_socket)
+    devices = usbmux.list_devices(cfg.transport.usbmuxd_socket, timeout=cfg.transport.usbmuxd_timeout_s)
     if not devices:
         print("no USB iOS devices attached")
     for d in devices:

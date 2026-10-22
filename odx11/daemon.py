@@ -664,15 +664,19 @@ class MuxWatcher:
 
     usbmuxd is started by udev when an Apple device appears and exits with the last
     one, removing its socket; a Gio file monitor (inotify) on that path tells us when
-    to Listen again. No polling."""
+    to Listen again. No polling. A usbmuxd that does not answer within `timeout_s` (stuck
+    on a device handshake, 2026-10-22) is asked again once after the same interval: it
+    stays running, so no new socket would ever appear to wake us."""
 
-    def __init__(self, socket_path, daemon):
+    def __init__(self, socket_path, daemon, timeout_s=5.0):
         from gi.repository import Gio, GLib
         self._GLib = GLib
         self.path = socket_path
         self.daemon = daemon
+        self.timeout_s = timeout_s
         self.sock = None
         self._watch = None
+        self._retry = None
         self.reader = None
         self.monitor = Gio.File.new_for_path(socket_path).monitor_file(Gio.FileMonitorFlags.NONE, None)
         self.monitor.connect("changed", self._on_file_event)
@@ -688,8 +692,14 @@ class MuxWatcher:
         if not os.path.exists(self.path):
             log.info("waiting for an iPad (usbmuxd not running)")
             return
+        self._cancel_retry()
         try:
-            self.sock = usbmux.listen(self.path)
+            self.sock = usbmux.listen(self.path, timeout=self.timeout_s)
+        except TimeoutError:
+            log.info("usbmuxd did not answer within %s s; asking again", self.timeout_s)
+            self.sock = None
+            self._retry = self._GLib.timeout_add(int(self.timeout_s * 1000), self._on_retry)
+            return
         except (OSError, EOFError, usbmux.MuxError) as e:
             log.debug("usbmuxd Listen failed: %s", e)   # stale socket; wait for the next CREATED
             self.sock = None
@@ -699,6 +709,17 @@ class MuxWatcher:
         self._watch = self._GLib.io_add_watch(self.sock.fileno(), self._GLib.PRIORITY_DEFAULT,
                                               self._GLib.IO_IN | self._GLib.IO_HUP | self._GLib.IO_ERR,
                                               self._on_readable)
+
+    def _on_retry(self):
+        self._retry = None
+        if self.sock is None:
+            self._listen()
+        return self._GLib.SOURCE_REMOVE
+
+    def _cancel_retry(self):
+        if self._retry and self._GLib.MainContext.default().find_source_by_id(self._retry):
+            self._GLib.source_remove(self._retry)
+        self._retry = None
 
     def _on_readable(self, fd, cond):
         data = b""
@@ -724,6 +745,7 @@ class MuxWatcher:
         return self._GLib.SOURCE_CONTINUE
 
     def close(self):
+        self._cancel_retry()
         if self._watch and self._GLib.MainContext.default().find_source_by_id(self._watch):
             self._GLib.source_remove(self._watch)
         if self.sock:
@@ -830,7 +852,8 @@ def run(cfg, display, injector, make_pipeline, tcp=None, udid=None, config_path=
                 return socket.create_connection(tcp, timeout=cfg.session.silence_timeout_s)
             except ConnectionRefusedError:
                 raise usbmux.MuxError(usbmux.RESULT_REFUSED) from None
-        return usbmux.connect(cfg.transport.usbmuxd_socket, device_id, cfg.transport.device_port)
+        return usbmux.connect(cfg.transport.usbmuxd_socket, device_id, cfg.transport.device_port,
+                              timeout=cfg.transport.usbmuxd_timeout_s)
 
     def open_connection(sock, on_end, on_hello):
         return Connection(cfg, sock, display, injector, make_pipeline, on_end, on_hello,
@@ -921,7 +944,7 @@ def run(cfg, display, injector, make_pipeline, tcp=None, udid=None, config_path=
         if udid:
             original = daemon.on_attached
             daemon.on_attached = lambda d, s=None: original(d, s) if s == udid else None
-        watcher = MuxWatcher(cfg.transport.usbmuxd_socket, daemon)
+        watcher = MuxWatcher(cfg.transport.usbmuxd_socket, daemon, cfg.transport.usbmuxd_timeout_s)
     restart = [False]
 
     def on_upgraded():

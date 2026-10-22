@@ -46,6 +46,11 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.4.5" date="2026-10-22">
+      <description>
+        <p>No longer freezes when the iPad's USB service stops answering; it gives up after a few seconds and asks again.</p>
+      </description>
+    </release>
     <release version="0.4.4" date="2026-10-15">
       <description>
         <p>Turning it on in the window works right after installing, with no need to log out.</p>

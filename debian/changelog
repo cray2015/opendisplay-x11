@@ -1,3 +1,14 @@
+opendisplay-x11 (0.4.5) unstable; urgency=medium
+
+  * Fix: the service froze when usbmuxd (the system's iPad USB service) took a
+    request and never answered, e.g. stuck on a failed handshake with the
+    iPad. The screen never extended and stopping the service took 90 s.
+    Every request to usbmuxd now gives up after [transport]
+    usbmuxd_timeout_s (5 s) and is asked again.
+  * README: what to do when usbmuxd logs "lockdown error -8".
+
+ -- Vibhanshu Biswas <16113990+cray2015@users.noreply.github.com>  Thu, 22 Oct 2026 15:46:38 +0530
+
 opendisplay-x11 (0.4.4) unstable; urgency=medium
 
   * Settings window: turning it on hands the desktop session's display to

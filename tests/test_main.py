@@ -40,7 +40,7 @@ def fake_module(monkeypatch, name, **attrs):
 # --- list ------------------------------------------------------------------------------
 
 def test_list_prints_each_device(monkeypatch, cfgfile, capsys):
-    monkeypatch.setattr(usbmux, "list_devices", lambda path: [
+    monkeypatch.setattr(usbmux, "list_devices", lambda path, timeout=None: [
         {"DeviceID": 3, "Properties": {"SerialNumber": "00008103-ABC", "ConnectionType": "USB"}}])
     cli.main(["--config", cfgfile(), "list"])
     assert capsys.readouterr().out == "3\t00008103-ABC\tUSB\n"
@@ -48,10 +48,10 @@ def test_list_prints_each_device(monkeypatch, cfgfile, capsys):
 
 def test_list_says_when_nothing_is_attached(monkeypatch, cfgfile, capsys):
     seen = []
-    monkeypatch.setattr(usbmux, "list_devices", lambda path: seen.append(path) or [])
-    cli.main(["--config", cfgfile('[transport]\nusbmuxd_socket = "/run/test-mux"\n'), "list"])
+    monkeypatch.setattr(usbmux, "list_devices", lambda path, timeout=None: seen.append((path, timeout)) or [])
+    cli.main(["--config", cfgfile('[transport]\nusbmuxd_socket = "/run/test-mux"\nusbmuxd_timeout_s = 2.5\n'), "list"])
     assert capsys.readouterr().out == "no USB iOS devices attached\n"
-    assert seen == ["/run/test-mux"]
+    assert seen == [("/run/test-mux", 2.5)]                # a stuck usbmuxd cannot hang `list`
 
 
 # --- autostart -------------------------------------------------------------------------
@@ -199,14 +199,14 @@ def test_publishing_a_problem_survives_an_unwritable_state_folder(monkeypatch, c
 
 
 def test_verbose_is_accepted_after_the_subcommand(monkeypatch, cfgfile, capsys):
-    monkeypatch.setattr(usbmux, "list_devices", lambda path: [])
+    monkeypatch.setattr(usbmux, "list_devices", lambda path, timeout=None: [])
     cli.main(["--config", cfgfile(), "list", "-v"])
     assert "no USB iOS devices attached" in capsys.readouterr().out
 
 
 def test_config_is_the_validated_one(monkeypatch, cfgfile):
     seen = []
-    monkeypatch.setattr(usbmux, "list_devices", lambda path: [])
+    monkeypatch.setattr(usbmux, "list_devices", lambda path, timeout=None: [])
     monkeypatch.setattr(config, "load", lambda path: seen.append(path) or config.parse({}))
     cli.main(["--config", "/x/config.toml", "list"])
     assert seen == ["/x/config.toml"]

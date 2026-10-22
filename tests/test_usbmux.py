@@ -4,6 +4,7 @@
 import plistlib
 import socket
 import threading
+import time
 
 import pytest
 
@@ -80,7 +81,7 @@ def test_connect_sends_the_port_in_network_byte_order(tmp_path):
 def test_connect_failure_names_the_reason_and_closes(tmp_path, monkeypatch, number, text):
     opened = []
     real_open = usbmux._open
-    monkeypatch.setattr(usbmux, "_open", lambda p: opened.append(real_open(p)) or opened[-1])
+    monkeypatch.setattr(usbmux, "_open", lambda *a: opened.append(real_open(*a)) or opened[-1])
     mux = FakeMux(tmp_path / "mux", {"MessageType": "Result", "Number": number})
     with pytest.raises(usbmux.MuxError) as e:
         usbmux.connect(mux.path, 42, 9000)
@@ -100,7 +101,7 @@ def test_listen_returns_the_subscribed_socket(tmp_path):
 def test_listen_failure_raises_and_closes(tmp_path, monkeypatch):
     opened = []
     real_open = usbmux._open
-    monkeypatch.setattr(usbmux, "_open", lambda p: opened.append(real_open(p)) or opened[-1])
+    monkeypatch.setattr(usbmux, "_open", lambda *a: opened.append(real_open(*a)) or opened[-1])
     mux = FakeMux(tmp_path / "mux", {"MessageType": "Result", "Number": 3})
     with pytest.raises(usbmux.MuxError, match="connection refused"):
         usbmux.listen(mux.path)
@@ -112,6 +113,35 @@ def test_usbmuxd_hanging_up_mid_reply_is_an_eof(tmp_path):
     mux = FakeMux(tmp_path / "mux", {"MessageType": "Result", "Number": 0}, close_early=True)
     with pytest.raises(EOFError, match="usbmuxd closed the connection"):
         usbmux.connect(mux.path, 42, 9000)
+    mux.done()
+
+
+@pytest.mark.parametrize("call", [
+    lambda path, t: usbmux.listen(path, timeout=t),
+    lambda path, t: usbmux.connect(path, 42, 9000, timeout=t),
+    lambda path, t: usbmux.list_devices(path, timeout=t),
+])
+def test_a_usbmuxd_that_never_answers_times_out_and_closes(tmp_path, monkeypatch, call):
+    """usbmuxd stuck on a device handshake accepted the request and never replied; the daemon's
+    main loop froze until systemd killed it (2026-10-22). Every request now has a time limit."""
+    opened = []
+    real_open = usbmux._open
+    monkeypatch.setattr(usbmux, "_open", lambda *a: opened.append(real_open(*a)) or opened[-1])
+    mux = FakeMux(tmp_path / "mux", None)                 # reads the request, never replies
+    start = time.monotonic()
+    with pytest.raises(TimeoutError):
+        call(mux.path, 0.2)
+    assert time.monotonic() - start < 2
+    assert opened[0].fileno() == -1
+    mux.done()
+
+
+def test_a_subscribed_listen_socket_blocks_again(tmp_path):
+    """The time limit covers the handshake only; afterwards the socket is read when readable."""
+    mux = FakeMux(tmp_path / "mux", {"MessageType": "Result", "Number": 0})
+    s = usbmux.listen(mux.path, timeout=0.2)
+    assert s.gettimeout() is None
+    s.close()
     mux.done()
 
 

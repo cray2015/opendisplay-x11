@@ -46,23 +46,32 @@ def read_message(sock) -> dict:
     return plistlib.loads(_recv_exact(sock, length - HEADER.size))
 
 
-def _open(path):
+def _open(path, timeout=None):
+    """A connection to usbmuxd whose every send and receive gives up after `timeout` seconds
+    (TimeoutError, an OSError): usbmuxd stuck on a device handshake can accept a request and
+    never answer, and the daemon makes these calls on its main loop."""
     s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    s.connect(path)
+    s.settimeout(timeout)
+    try:
+        s.connect(path)
+    except BaseException:
+        s.close()
+        raise
     return s
 
 
-def list_devices(socket_path: str) -> list[dict]:
+def list_devices(socket_path: str, timeout: float | None = None) -> list[dict]:
     """USB-attached devices only; network-paired entries are ignored."""
-    with _open(socket_path) as s:
+    with _open(socket_path, timeout) as s:
         s.sendall(encode({"MessageType": "ListDevices"}))
         devs = read_message(s).get("DeviceList", [])
     return [d for d in devs if d.get("Properties", {}).get("ConnectionType") == "USB"]
 
 
-def connect(socket_path: str, device_id: int, port: int) -> socket.socket:
-    """A byte pipe to `port` on the device. PortNumber goes in network byte order."""
-    s = _open(socket_path)
+def connect(socket_path: str, device_id: int, port: int, timeout: float | None = None) -> socket.socket:
+    """A byte pipe to `port` on the device. PortNumber goes in network byte order. `timeout`
+    covers usbmuxd's answer only; the pipe is returned blocking."""
+    s = _open(socket_path, timeout)
     try:
         s.sendall(encode({"MessageType": "Connect", "DeviceID": device_id,
                           "PortNumber": socket.htons(port)}))
@@ -72,12 +81,15 @@ def connect(socket_path: str, device_id: int, port: int) -> socket.socket:
     except BaseException:
         s.close()
         raise
+    s.settimeout(None)
     return s
 
 
-def listen(socket_path: str) -> socket.socket:
-    """A socket subscribed to Attached/Detached events, positioned after the OK result."""
-    s = _open(socket_path)
+def listen(socket_path: str, timeout: float | None = None) -> socket.socket:
+    """A socket subscribed to Attached/Detached events, positioned after the OK result.
+    `timeout` covers usbmuxd's answer only; the subscription is returned blocking (it is read
+    when the main loop reports it readable)."""
+    s = _open(socket_path, timeout)
     try:
         s.sendall(encode({"MessageType": "Listen"}))
         result = read_message(s).get("Number")
@@ -86,6 +98,7 @@ def listen(socket_path: str) -> socket.socket:
     except BaseException:
         s.close()
         raise
+    s.settimeout(None)
     return s
 
 

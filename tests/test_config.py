@@ -32,6 +32,8 @@ def test_device_table():
     {"display": {"connector": "DP-1"}},                  # DP alias fails link training
     {"session": {"ping_interval_s": 3}},                 # receiver would drop us
     {"session": {"ping_interval_s": 2, "silence_timeout_s": 1}},
+    {"transport": {"usbmuxd_timeout_s": 0}},
+    {"transport": {"usbmuxd_timeout_s": -1}},
     {"video": {"keyframe_period": 0}},                   # 0 means every 30 frames
     {"video": {"qp": 60}},
     {"devices": {"x": {"side": "behind"}}},
